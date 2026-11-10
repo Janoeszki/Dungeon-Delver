@@ -1,0 +1,13 @@
+{
+  "name": "threejs-dungeon-crawl",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "8-Bit Point and Click Dungeon Crawl Game built with Three.js",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": ["threejs", "game", "dungeon-crawl", "point-and-click", "retro"],
+  "author": "",
+  "license": "MIT"
+}

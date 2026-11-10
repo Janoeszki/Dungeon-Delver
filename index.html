@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dungeon Crawl - Chronicles of Eldoria</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=VT323&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0a0c12;
+            --panel-bg: rgba(18, 23, 34, 0.94);
+            --panel-border: #3d4a66;
+            --gold-primary: #f5a623;
+            --gold-bright: #ffcf40;
+            --gold-border: #7c5820;
+            --cyan-accent: #38bdf8;
+            --text-light: #e2e8f0;
+            --text-muted: #94a3b8;
+            --red-hp: #ef4444;
+            --blue-mp: #3b82f6;
+            --green-stamina: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            font-family: 'VT323', monospace;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Navigation Header */
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 24px;
+            background: rgba(11, 14, 21, 0.96);
+            border-bottom: 3px solid var(--gold-border);
+            z-index: 10;
+        }
+
+        .game-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .game-title h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 1.45rem;
+            letter-spacing: 2px;
+            color: var(--gold-bright);
+            text-shadow: 0 0 10px rgba(245, 166, 35, 0.4);
+        }
+
+        .game-title span {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+        }
+
+        .top-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .retro-btn {
+            background: #1e2638;
+            border: 2px solid var(--gold-border);
+            color: var(--gold-bright);
+            padding: 5px 12px;
+            font-family: 'VT323', monospace;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.15s ease;
+            box-shadow: 0 4px 0 #0d121c;
+        }
+
+        .retro-btn:hover {
+            background: #2a354f;
+            border-color: var(--gold-primary);
+            transform: translateY(-1px);
+            box-shadow: 0 5px 0 #0d121c;
+        }
+
+        .retro-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #0d121c;
+        }
+
+        /* Views Container */
+        .screen-view {
+            flex: 1;
+            position: relative;
+            display: flex;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 3D Canvas Viewport */
+        .canvas-3d {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        #viewportCreator { cursor: grab; }
+        #viewportCreator:active { cursor: grabbing; }
+        #viewportAdventure { cursor: crosshair; }
+
+        /* UI Overlay Layout */
+        .overlay-layer {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 14px;
+            pointer-events: none;
+        }
+
+        .side-panel {
+            pointer-events: auto;
+            width: 330px;
+            background: var(--panel-bg);
+            border: 2px solid var(--gold-border);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.75), inset 0 0 16px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            padding: 14px 16px;
+            gap: 12px;
+            overflow-y: auto;
+            backdrop-filter: blur(8px);
+        }
+
+        .side-panel::-webkit-scrollbar { width: 6px; }
+        .side-panel::-webkit-scrollbar-track { background: #0d121c; }
+        .side-panel::-webkit-scrollbar-thumb { background: var(--gold-border); border-radius: 3px; }
+
+        .panel-heading {
+            font-family: 'Cinzel', serif;
+            font-size: 1.15rem;
+            color: var(--gold-bright);
+            border-bottom: 2px solid var(--panel-border);
+            padding-bottom: 4px;
+            text-align: center;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
+        .form-label { font-size: 1.15rem; color: var(--text-muted); letter-spacing: 0.5px; }
+
+        .retro-input {
+            background: #0d111a;
+            border: 2px solid var(--panel-border);
+            padding: 6px 10px;
+            font-family: 'VT323', monospace;
+            font-size: 1.35rem;
+            color: var(--gold-bright);
+            outline: none;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.6);
+        }
+
+        .grid-select { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .grid-select-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+
+        .select-card {
+            background: #141b29;
+            border: 2px solid var(--panel-border);
+            padding: 6px 4px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.12s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .select-card .icon { font-size: 1.5rem; }
+        .select-card .title { font-size: 1.05rem; color: var(--text-light); }
+        .select-card:hover { border-color: var(--gold-primary); background: #1b2438; }
+        .select-card.active {
+            border-color: var(--gold-bright);
+            background: #252b40;
+            box-shadow: 0 0 10px rgba(245, 166, 35, 0.35);
+        }
+        .select-card.active .title { color: var(--gold-bright); font-weight: bold; }
+
+        .color-palette { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+        .color-dot {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #2d3748;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            transition: transform 0.12s;
+        }
+        .color-dot:hover { transform: scale(1.15); }
+        .color-dot.active { border-color: #ffffff; box-shadow: 0 0 8px rgba(255,255,255,0.7); transform: scale(1.2); }
+
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 8px;
+            background: #111622;
+            border: 1px solid var(--panel-border);
+            cursor: pointer;
+        }
+
+        .center-showcase {
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 10px;
+            padding-bottom: 16px;
+        }
+
+        .nameplate-banner {
+            background: rgba(14, 18, 27, 0.9);
+            border: 2px solid var(--gold-border);
+            padding: 6px 20px;
+            text-align: center;
+            border-radius: 4px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+        }
+
+        .hero-name-badge { font-family: 'Cinzel', serif; font-size: 1.55rem; color: var(--gold-bright); letter-spacing: 2px; }
+        .hero-race-class-badge { font-size: 1.2rem; color: var(--cyan-accent); letter-spacing: 1px; }
+
+        .turntable-controls {
+            pointer-events: auto;
+            display: flex;
+            gap: 12px;
+            background: rgba(14, 18, 27, 0.88);
+            border: 1px solid var(--panel-border);
+            padding: 5px 14px;
+            border-radius: 20px;
+        }
+
+        .turntable-btn {
+            background: none;
+            border: none;
+            color: var(--text-light);
+            font-size: 1.2rem;
+            cursor: pointer;
+            font-family: 'VT323', monospace;
+            padding: 2px 8px;
+        }
+        .turntable-btn:hover { color: var(--gold-bright); }
+
+        .stat-row { display: flex; flex-direction: column; gap: 2px; }
+        .stat-header { display: flex; justify-content: space-between; font-size: 1.15rem; }
+        .stat-val { font-weight: bold; color: var(--gold-bright); }
+        .stat-track { height: 10px; background: #0d121c; border: 1px solid #2d3748; overflow: hidden; position: relative; }
+        .stat-fill { height: 100%; width: 50%; transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        .fill-hp { background: linear-gradient(90deg, #b91c1c, #ef4444); }
+        .fill-mp { background: linear-gradient(90deg, #1d4ed8, #3b82f6); }
+        .fill-str { background: linear-gradient(90deg, #c2410c, #f97316); }
+        .fill-agi { background: linear-gradient(90deg, #047857, #10b981); }
+        .fill-int { background: linear-gradient(90deg, #6d28d9, #8b5cf6); }
+        .fill-vit { background: linear-gradient(90deg, #b45309, #f59e0b); }
+
+        .trait-box {
+            background: #101522;
+            border: 1px solid var(--panel-border);
+            padding: 8px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .trait-title { color: var(--gold-bright); font-size: 1.15rem; font-weight: bold; }
+        .trait-desc { color: var(--text-muted); font-size: 1.05rem; line-height: 1.2; }
+
+        .primary-action-btn {
+            background: linear-gradient(180deg, #2ecc71, #27ae60);
+            border: 2px solid #58d68d;
+            color: #0b2212;
+            font-family: 'VT323', monospace;
+            font-size: 1.45rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+            padding: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #145a32, 0 0 15px rgba(46, 204, 113, 0.4);
+            text-align: center;
+            transition: all 0.12s;
+        }
+        .primary-action-btn:hover {
+            background: linear-gradient(180deg, #48c774, #2ecc71);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 0 #145a32, 0 0 20px rgba(46, 204, 113, 0.6);
+        }
+        .primary-action-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #145a32; }
+
+        /* ========================================= */
+        /* ADVENTURE MODE HUD & ENCOUNTER STYLES    */
+        /* ========================================= */
+        #screenAdventure { display: none; }
+
+        .adventure-hud-top {
+            position: absolute;
+            top: 14px;
+            left: 14px;
+            right: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .hero-status-card {
+            pointer-events: auto;
+            background: var(--panel-bg);
+            border: 2px solid var(--gold-border);
+            padding: 10px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.8);
+            min-width: 280px;
+        }
+
+        .status-hero-name {
+            font-family: 'Cinzel', serif;
+            color: var(--gold-bright);
+            font-size: 1.3rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .hud-bar-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.15rem;
+        }
+        .hud-bar-label { width: 34px; font-weight: bold; }
+        .hud-bar-track {
+            flex: 1;
+            height: 12px;
+            background: #0d121c;
+            border: 1px solid #334155;
+            position: relative;
+        }
+        .hud-bar-val { width: 65px; text-align: right; font-size: 1.05rem; }
+
+        .adventure-inventory-card {
+            pointer-events: auto;
+            background: var(--panel-bg);
+            border: 2px solid var(--gold-border);
+            padding: 8px 14px;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.8);
+            font-size: 1.25rem;
+            color: var(--gold-bright);
+        }
+
+        /* Adventure Bottom Log Box */
+        .adventure-hud-bottom {
+            position: absolute;
+            bottom: 14px;
+            left: 14px;
+            right: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .event-log-panel {
+            pointer-events: auto;
+            width: 480px;
+            max-width: 50vw;
+            background: rgba(14, 18, 27, 0.94);
+            border: 2px solid var(--gold-border);
+            padding: 10px 14px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 140px;
+        }
+
+        .log-title {
+            font-family: 'Cinzel', serif;
+            font-size: 1.05rem;
+            color: var(--gold-bright);
+            border-bottom: 1px solid #2d3748;
+            padding-bottom: 2px;
+        }
+
+        .log-messages {
+            overflow-y: auto;
+            font-size: 1.15rem;
+            line-height: 1.25;
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 4px;
+        }
+
+        .log-msg { color: var(--text-light); }
+        .log-msg.roll { color: var(--cyan-accent); }
+        .log-msg.success { color: #4ade80; font-weight: bold; }
+        .log-msg.fail { color: #f87171; }
+        .log-msg.crit { color: #facc15; font-weight: bold; text-shadow: 0 0 6px rgba(250, 204, 21, 0.6); }
+
+        .click-hint-banner {
+            pointer-events: none;
+            background: rgba(11, 14, 21, 0.85);
+            border: 1px solid var(--gold-border);
+            padding: 6px 14px;
+            color: var(--text-muted);
+            font-size: 1.15rem;
+            border-radius: 4px;
+        }
+
+        /* ========================================= */
+        /* D20 ACTION ENCOUNTER MODAL                */
+        /* ========================================= */
+        .encounter-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(4, 6, 10, 0.82);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(6px);
+        }
+
+        .encounter-card {
+            background: #111624;
+            border: 3px solid var(--gold-bright);
+            width: 540px;
+            max-width: 92vw;
+            padding: 22px;
+            box-shadow: 0 0 40px rgba(245, 166, 35, 0.45), inset 0 0 20px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .encounter-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 2px solid var(--gold-border);
+            padding-bottom: 8px;
+        }
+
+        .encounter-icon { font-size: 2.2rem; }
+        .encounter-title { font-family: 'Cinzel', serif; font-size: 1.45rem; color: var(--gold-bright); }
+
+        .encounter-story {
+            font-size: 1.25rem;
+            line-height: 1.35;
+            color: var(--text-light);
+            background: #090c14;
+            padding: 10px 14px;
+            border-left: 3px solid var(--cyan-accent);
+        }
+
+        .encounter-options-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .encounter-choice-btn {
+            background: #1a2234;
+            border: 2px solid #3b82f6;
+            color: #ffffff;
+            font-family: 'VT323', monospace;
+            font-size: 1.3rem;
+            padding: 10px 14px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-align: left;
+            transition: all 0.15s;
+            box-shadow: 0 3px 0 #0d131f;
+        }
+        .encounter-choice-btn:hover {
+            background: #25334d;
+            border-color: var(--gold-bright);
+            transform: translateX(3px);
+            color: var(--gold-bright);
+        }
+        .check-badge {
+            background: #0b0f1a;
+            border: 1px solid var(--gold-border);
+            color: var(--cyan-accent);
+            padding: 2px 8px;
+            font-size: 1.1rem;
+            border-radius: 2px;
+        }
+
+        /* D20 Visual Dice Roll Display */
+        .dice-roll-stage {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0;
+            background: #0a0e17;
+            border: 2px dashed var(--gold-border);
+        }
+
+        .d20-icosahedron {
+            width: 72px;
+            height: 72px;
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            border: 3px solid var(--gold-bright);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Cinzel', serif;
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: var(--gold-bright);
+            box-shadow: 0 0 20px rgba(245, 166, 35, 0.4);
+            transform: rotate(45deg);
+        }
+        .d20-num { transform: rotate(-45deg); }
+        .d20-rolling { animation: d20Shake 0.12s infinite; }
+
+        @keyframes d20Shake {
+            0% { transform: rotate(45deg) translate(0, 0); }
+            50% { transform: rotate(48deg) translate(2px, -2px); }
+            100% { transform: rotate(42deg) translate(-2px, 2px); }
+        }
+
+        .roll-formula-text {
+            font-size: 1.35rem;
+            color: var(--cyan-accent);
+        }
+
+        .roll-outcome-banner {
+            font-family: 'Cinzel', serif;
+            font-size: 1.45rem;
+            padding: 4px 16px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .outcome-success { background: rgba(34, 197, 94, 0.2); border: 2px solid #22c55e; color: #4ade80; }
+        .outcome-fail { background: rgba(239, 68, 68, 0.2); border: 2px solid #ef4444; color: #f87171; }
+        .outcome-crit { background: rgba(234, 179, 8, 0.3); border: 2px solid #eab308; color: #fde047; }
+
+        .result-dismiss-btn {
+            display: none;
+            background: var(--gold-primary);
+            border: 2px solid var(--gold-bright);
+            color: #0b0f1a;
+            font-family: 'VT323', monospace;
+            font-size: 1.4rem;
+            font-weight: bold;
+            padding: 10px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #7c5820;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <div class="game-title">
+            <span>⚔️</span>
+            <h1>DUNGEON CRAWL</h1>
+            <span>| The Lost Crypt of Eldoria</span>
+        </div>
+        <div class="top-actions">
+            <button id="btnSoundToggle" class="retro-btn">🔊 SOUND: ON</button>
+            <button id="btnSwitchMode" class="retro-btn" style="display:none;">🏕️ CHARACTER FORGE</button>
+            <button id="btnRandomize" class="retro-btn">🎲 RANDOM HERO</button>
+        </div>
+    </header>
+
+    <!-- Main Screens Container -->
+    <main>
+        
+        <!-- SCREEN 1: CHARACTER FORGE -->
+        <section id="screenCreator" class="screen-view">
+            <div id="viewportCreator" class="canvas-3d"></div>
+
+            <div class="overlay-layer">
+                <!-- Left Side Panel: Hero Customization -->
+                <aside class="side-panel">
+                    <h2 class="panel-heading">Character Forge</h2>
+
+                    <div class="form-group">
+                        <label class="form-label" for="heroNameInput">Hero Name</label>
+                        <input type="text" id="heroNameInput" class="retro-input" value="Valerius" maxlength="16" />
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Ancestry</label>
+                        <div class="grid-select-3">
+                            <div class="select-card active" data-race="human"><span class="icon">🧑</span><span class="title">Human</span></div>
+                            <div class="select-card" data-race="elf"><span class="icon">🧝</span><span class="title">Elf</span></div>
+                            <div class="select-card" data-race="dwarf"><span class="icon">🧔</span><span class="title">Dwarf</span></div>
+                            <div class="select-card" data-race="orc"><span class="icon">👹</span><span class="title">Orc</span></div>
+                            <div class="select-card" data-race="goblin"><span class="icon">👺</span><span class="title">Goblin</span></div>
+                            <div class="select-card" data-race="catfolk"><span class="icon">🐱</span><span class="title">Catfolk</span></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Hero Class</label>
+                        <div class="grid-select">
+                            <div class="select-card active" data-class="warrior"><span class="icon">⚔️</span><span class="title">Warrior</span></div>
+                            <div class="select-card" data-class="mage"><span class="icon">🔮</span><span class="title">Mage</span></div>
+                        </div>
+                    </div>
+
+                    <label class="checkbox-row">
+                        <span class="form-label" style="margin: 0;">Equip Helmet / Headgear</span>
+                        <input type="checkbox" id="checkHelm" checked />
+                    </label>
+
+                    <div class="form-group">
+                        <label class="form-label">Skin / Fur Complexion</label>
+                        <div class="color-palette" id="skinPalette">
+                            <div class="color-dot active" style="background:#ffd2b2;" data-color="#ffd2b2" title="Fair"></div>
+                            <div class="color-dot" style="background:#f3b48b;" data-color="#f3b48b" title="Tan"></div>
+                            <div class="color-dot" style="background:#996035;" data-color="#996035" title="Dark Bronze"></div>
+                            <div class="color-dot" style="background:#d1e8e2;" data-color="#d1e8e2" title="Elf Mystic Pale"></div>
+                            <div class="color-dot" style="background:#4d7c2a;" data-color="#4d7c2a" title="Orc Battle Green"></div>
+                            <div class="color-dot" style="background:#2f521b;" data-color="#2f521b" title="Dark Moss Olive"></div>
+                            <div class="color-dot" style="background:#7cb342;" data-color="#7cb342" title="Goblin Lime"></div>
+                            <div class="color-dot" style="background:#d98236;" data-color="#d98236" title="Catfolk Tawny"></div>
+                            <div class="color-dot" style="background:#22242a;" data-color="#22242a" title="Midnight Panther"></div>
+                            <div class="color-dot" style="background:#f0f4f8;" data-color="#f0f4f8" title="Snow Leopard"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Hair / Fur / Beard Hue</label>
+                        <div class="color-palette" id="hairPalette">
+                            <div class="color-dot active" style="background:#4a2e1b;" data-color="#4a2e1b" title="Chestnut"></div>
+                            <div class="color-dot" style="background:#1b1b1b;" data-color="#1b1b1b" title="Ebony"></div>
+                            <div class="color-dot" style="background:#b55221;" data-color="#b55221" title="Fiery Copper"></div>
+                            <div class="color-dot" style="background:#f1c40f;" data-color="#f1c40f" title="Golden"></div>
+                            <div class="color-dot" style="background:#ecf0f1;" data-color="#ecf0f1" title="Silver White"></div>
+                            <div class="color-dot" style="background:#8e44ad;" data-color="#8e44ad" title="Arcane Violet"></div>
+                            <div class="color-dot" style="background:#3b5e28;" data-color="#3b5e28" title="Moss Green"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Armor / Robe Tint</label>
+                        <div class="color-palette" id="armorPalette">
+                            <div class="color-dot active" style="background:#2b4c7e;" data-color="#2b4c7e" title="Cobalt"></div>
+                            <div class="color-dot" style="background:#991b1b;" data-color="#991b1b" title="Crimson"></div>
+                            <div class="color-dot" style="background:#065f46;" data-color="#065f46" title="Emerald"></div>
+                            <div class="color-dot" style="background:#5b21b6;" data-color="#5b21b6" title="Royal Amethyst"></div>
+                            <div class="color-dot" style="background:#374151;" data-color="#374151" title="Shadow Slate"></div>
+                            <div class="color-dot" style="background:#95a5a6;" data-color="#95a5a6" title="Steel Grey"></div>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- Center Showcase -->
+                <div class="center-showcase">
+                    <div class="nameplate-banner">
+                        <div class="hero-name-badge" id="heroNameBadge">Valerius</div>
+                        <div class="hero-race-class-badge" id="heroRaceClassBadge">Human Warrior</div>
+                    </div>
+
+                    <div class="turntable-controls">
+                        <button class="turntable-btn" id="btnRotateLeft">⟲ Left</button>
+                        <span style="color:var(--text-muted); line-height: 1.8;">| Drag to Orbit |</span>
+                        <button class="turntable-btn" id="btnRotateRight">Right ⟳</button>
+                    </div>
+                </div>
+
+                <!-- Right Side Panel: Attributes & Adventure Launch -->
+                <aside class="side-panel">
+                    <h2 class="panel-heading">Hero Attributes</h2>
+
+                    <div class="stat-row">
+                        <div class="stat-header"><span>❤️ Health Points</span><span class="stat-val" id="statHpVal">168</span></div>
+                        <div class="stat-track"><div class="stat-fill fill-hp" id="statHpBar"></div></div>
+                    </div>
+
+                    <div class="stat-row">
+                        <div class="stat-header"><span>💧 Mana Pool</span><span class="stat-val" id="statMpVal">42</span></div>
+                        <div class="stat-track"><div class="stat-fill fill-mp" id="statMpBar"></div></div>
+                    </div>
+
+                    <div class="stat-row">
+                        <div class="stat-header"><span>🗡️ Strength</span><span class="stat-val" id="statStrVal">16</span></div>
+                        <div class="stat-track"><div class="stat-fill fill-str" id="statStrBar"></div></div>
+                    </div>
+
+                    <div class="stat-row">
+                        <div class="stat-header"><span>🏹 Agility</span><span class="stat-val" id="statAgiVal">10</span></div>
+                        <div class="stat-track"><div class="stat-fill fill-agi" id="statAgiBar"></div></div>
+                    </div>
+
+                    <div class="stat-row">
+                        <div class="stat-header"><span>📜 Intelligence</span><span class="stat-val" id="statIntVal">7</span></div>
+                        <div class="stat-track"><div class="stat-fill fill-int" id="statIntBar"></div></div>
+                    </div>
+
+                    <div class="stat-row">
+                        <div class="stat-header"><span>🛡️ Vitality</span><span class="stat-val" id="statVitVal">14</span></div>
+                        <div class="stat-track"><div class="stat-fill fill-vit" id="statVitBar"></div></div>
+                    </div>
+
+                    <div class="trait-box">
+                        <span class="trait-title" id="racialPerkTitle">🧑 Human Ancestry Trait</span>
+                        <span class="trait-desc" id="racialPerkDesc">Adaptable: +10% bonus to all attributes.</span>
+                    </div>
+
+                    <div class="trait-box">
+                        <span class="trait-title" id="classAbilityTitle">⚔️ Warrior Signature</span>
+                        <span class="trait-desc" id="classAbilityDesc">Whirlwind Slash: Sweeping circular melee strike dealing massive damage.</span>
+                    </div>
+
+                    <button class="primary-action-btn" id="btnEnterDungeon">
+                        ⚔️ ENTER THE CRYPT ⚔️
+                    </button>
+                    <div style="font-size:1.05rem; color:var(--text-muted); text-align:center;">Launch 3D Adventure & D20 Rolls</div>
+                </aside>
+            </div>
+        </section>
+
+        <!-- SCREEN 2: 3D ADVENTURE WORLD -->
+        <section id="screenAdventure" class="screen-view">
+            <div id="viewportAdventure" class="canvas-3d"></div>
+
+            <!-- Adventure Top HUD -->
+            <div class="adventure-hud-top">
+                <div class="hero-status-card">
+                    <div class="status-hero-name">
+                        <span id="advHeroName">Valerius</span>
+                        <span id="advHeroClass" style="color:var(--cyan-accent); font-size:1.15rem;">Human Warrior</span>
+                    </div>
+                    <div class="hud-bar-row">
+                        <span class="hud-bar-label" style="color:var(--red-hp);">HP</span>
+                        <div class="hud-bar-track"><div class="stat-fill fill-hp" id="advHpFill" style="width:100%;"></div></div>
+                        <span class="hud-bar-val" id="advHpText">168 / 168</span>
+                    </div>
+                    <div class="hud-bar-row">
+                        <span class="hud-bar-label" style="color:var(--blue-mp);">MP</span>
+                        <div class="hud-bar-track"><div class="stat-fill fill-mp" id="advMpFill" style="width:100%;"></div></div>
+                        <span class="hud-bar-val" id="advMpText">42 / 42</span>
+                    </div>
+                </div>
+
+                <div class="adventure-inventory-card">
+                    <span>🪙 <strong id="advGold">0</strong> Gold</span>
+                    <span>⭐ <strong id="advXp">0</strong> XP</span>
+                    <span id="advItemSlot" style="color:#a78bfa; font-size:1.15rem;">🎒 Gear: Basic</span>
+                </div>
+            </div>
+
+            <!-- Adventure Bottom HUD: Log & Hint -->
+            <div class="adventure-hud-bottom">
+                <div class="event-log-panel">
+                    <div class="log-title">📜 Crypt Chronicle & Dice Rolls</div>
+                    <div class="log-messages" id="advLog">
+                        <div class="log-msg">You step through the archway into the Crypt of Eldoria. Click anywhere on the ground to move!</div>
+                    </div>
+                </div>
+
+                <div class="click-hint-banner">
+                    🖱️ Click ground to walk | Click glowing beacons [⯁] to trigger D20 events
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- D20 ACTION ENCOUNTER MODAL -->
+    <div class="encounter-overlay" id="encounterModal">
+        <div class="encounter-card">
+            <div class="encounter-header">
+                <span class="encounter-icon" id="encIcon">🚪</span>
+                <div>
+                    <h2 class="encounter-title" id="encTitle">Rusted Iron Portcullis</h2>
+                    <span style="color:var(--text-muted); font-size:1.1rem;">Skill Check Encounter</span>
+                </div>
+            </div>
+
+            <p class="encounter-story" id="encStory">
+                A heavy iron portcullis blocks the archway leading deeper into the Royal Crypt.
+            </p>
+
+            <!-- Action Options Buttons -->
+            <div class="encounter-options-group" id="encOptionsList"></div>
+
+            <!-- Rolling Dice Animation Box -->
+            <div class="dice-roll-stage" id="diceRollStage">
+                <div class="d20-icosahedron" id="d20Die">
+                    <span class="d20-num" id="d20Value">20</span>
+                </div>
+                <div class="roll-formula-text" id="rollFormula">Rolling D20 + STR...</div>
+                <div class="roll-outcome-banner" id="rollOutcomeBanner">SUCCESS!</div>
+                <p id="rollResultText" style="font-size:1.2rem; color:var(--text-light); text-align:center; padding:0 8px;"></p>
+            </div>
+
+            <button class="result-dismiss-btn" id="btnDismissEncounter">CONTINUE ADVENTURE</button>
+        </div>
+    </div>
+
+    <!-- Application Controller -->
+    <script type="module">
+        import { CharacterCreatorApp } from './js/characterCreator.js';
+        import { DungeonWorldApp } from './js/dungeonWorld.js';
+        import { sound } from './js/audio.js';
+        import { RACE_DATA, calculateStats } from './js/stats.js';
+        import { rollD20, getStatModifier, formatModifier, animateDiceRoll } from './js/dice.js';
+
+        // State & Mode
+        let currentMode = 'creator'; // 'creator' | 'adventure'
+        let creatorApp = null;
+        let adventureApp = null;
+
+        // Player Live Adventure Stats
+        let playerStats = {
+            currentHp: 168,
+            maxHp: 168,
+            currentMp: 42,
+            maxMp: 42,
+            gold: 0,
+            xp: 0,
+            inventory: []
+        };
+
+        // Initialize Character Forge
+        const viewportCreator = document.getElementById('viewportCreator');
+        creatorApp = new CharacterCreatorApp(viewportCreator);
+
+        // Sound Toggle
+        const btnSoundToggle = document.getElementById('btnSoundToggle');
+        btnSoundToggle.addEventListener('click', () => {
+            sound.enabled = !sound.enabled;
+            btnSoundToggle.textContent = sound.enabled ? '🔊 SOUND: ON' : '🔇 SOUND: OFF';
+            if (sound.enabled) sound.playSelect();
+        });
+
+        // Switch Mode Button (Return to Forge)
+        const btnSwitchMode = document.getElementById('btnSwitchMode');
+        btnSwitchMode.addEventListener('click', () => {
+            sound.playSelect();
+            switchToCreator();
+        });
+
+        // Name input
+        const nameInput = document.getElementById('heroNameInput');
+        nameInput.addEventListener('input', (e) => {
+            creatorApp.updateConfig({ name: e.target.value.trim() || 'Hero' }, 'silent');
+        });
+
+        // Palette selector helper
+        function setActiveColorDot(containerId, color) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.querySelectorAll('.color-dot').forEach(dot => {
+                dot.classList.toggle('active', dot.dataset.color.toLowerCase() === color.toLowerCase());
+            });
+        }
+
+        // Ancestry Cards
+        document.querySelectorAll('[data-race]').forEach(card => {
+            card.addEventListener('click', () => {
+                const raceKey = card.dataset.race;
+                document.querySelectorAll('[data-race]').forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+
+                const raceInfo = RACE_DATA[raceKey];
+                const configUpdate = { race: raceKey };
+                if (raceInfo && raceInfo.defaultSkin) {
+                    configUpdate.skinColor = raceInfo.defaultSkin;
+                    setActiveColorDot('skinPalette', raceInfo.defaultSkin);
+                }
+                if (raceInfo && raceInfo.defaultHair) {
+                    configUpdate.hairColor = raceInfo.defaultHair;
+                    setActiveColorDot('hairPalette', raceInfo.defaultHair);
+                }
+                creatorApp.updateConfig(configUpdate);
+            });
+        });
+
+        // Class Cards
+        document.querySelectorAll('[data-class]').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('[data-class]').forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+                creatorApp.updateConfig({ charClass: card.dataset.class });
+            });
+        });
+
+        // Helm Checkbox
+        document.getElementById('checkHelm').addEventListener('change', (e) => {
+            sound.playSelect();
+            creatorApp.updateConfig({ showHelm: e.target.checked });
+        });
+
+        // Color Palettes
+        function setupPalette(containerId, configKey) {
+            const container = document.getElementById(containerId);
+            container.querySelectorAll('.color-dot').forEach(dot => {
+                dot.addEventListener('click', () => {
+                    container.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+                    dot.classList.add('active');
+                    creatorApp.updateConfig({ [configKey]: dot.dataset.color });
+                });
+            });
+        }
+        setupPalette('skinPalette', 'skinColor');
+        setupPalette('hairPalette', 'hairColor');
+        setupPalette('armorPalette', 'armorColor');
+
+        // Turntable buttons
+        document.getElementById('btnRotateLeft').addEventListener('click', () => {
+            sound.playSelect();
+            creatorApp.rotateCharacter(-0.6);
+        });
+        document.getElementById('btnRotateRight').addEventListener('click', () => {
+            sound.playSelect();
+            creatorApp.rotateCharacter(0.6);
+        });
+
+        // Random Hero
+        const HERO_NAMES = {
+            human: ['Valerius', 'Althea', 'Arthur', 'Gwendolyn', 'Roderic'],
+            elf: ['Elarion', 'Silvanis', 'Faerand', 'Lunaria', 'Aelidor'],
+            dwarf: ['Bromdur', 'Thorik', 'Dain', 'Hulda', 'Gimrok'],
+            orc: ['Gorgok', 'Kragh', 'Azgash', 'Morga', 'Thrumk'],
+            goblin: ['Grik', 'Snazz', 'Skitter', 'Nox', 'Frazzle'],
+            catfolk: ['Miko', 'Whisper', 'Shadowclaw', 'Kaelen', 'Nyx']
+        };
+
+        document.getElementById('btnRandomize').addEventListener('click', () => {
+            sound.playRandomize();
+            const races = ['human', 'elf', 'dwarf', 'orc', 'goblin', 'catfolk'];
+            const classes = ['warrior', 'mage'];
+            const randomRace = races[Math.floor(Math.random() * races.length)];
+            const randomClass = classes[Math.floor(Math.random() * classes.length)];
+            const namePool = HERO_NAMES[randomRace] || HERO_NAMES.human;
+            const randomName = namePool[Math.floor(Math.random() * namePool.length)];
+
+            const pickRandomDot = (id) => {
+                const dots = document.querySelectorAll(`#${id} .color-dot`);
+                return dots[Math.floor(Math.random() * dots.length)].dataset.color;
+            };
+
+            const defaultSkin = (RACE_DATA[randomRace] && RACE_DATA[randomRace].defaultSkin) || pickRandomDot('skinPalette');
+            const defaultHair = (RACE_DATA[randomRace] && RACE_DATA[randomRace].defaultHair) || pickRandomDot('hairPalette');
+            const armor = pickRandomDot('armorPalette');
+            const helm = Math.random() > 0.35;
+
+            nameInput.value = randomName;
+            document.getElementById('checkHelm').checked = helm;
+
+            document.querySelectorAll('[data-race]').forEach(c => c.classList.toggle('active', c.dataset.race === randomRace));
+            document.querySelectorAll('[data-class]').forEach(c => c.classList.toggle('active', c.dataset.class === randomClass));
+
+            setActiveColorDot('skinPalette', defaultSkin);
+            setActiveColorDot('hairPalette', defaultHair);
+            setActiveColorDot('armorPalette', armor);
+
+            creatorApp.updateConfig({
+                name: randomName,
+                race: randomRace,
+                charClass: randomClass,
+                skinColor: defaultSkin,
+                hairColor: defaultHair,
+                armorColor: armor,
+                clothColor: armor,
+                showHelm: helm
+            }, 'random');
+        });
+
+        // ==========================================
+        // LAUNCH ADVENTURE WORLD MODE
+        // ==========================================
+        const screenCreator = document.getElementById('screenCreator');
+        const screenAdventure = document.getElementById('screenAdventure');
+        const viewportAdventure = document.getElementById('viewportAdventure');
+        const btnEnterDungeon = document.getElementById('btnEnterDungeon');
+
+        btnEnterDungeon.addEventListener('click', () => {
+            sound.playFanfare();
+            switchToAdventure();
+        });
+
+        function switchToAdventure() {
+            currentMode = 'adventure';
+            screenCreator.style.display = 'none';
+            screenAdventure.style.display = 'flex';
+            btnSwitchMode.style.display = 'flex';
+            document.getElementById('btnRandomize').style.display = 'none';
+
+            // Calculate Base Stats
+            const conf = creatorApp.config;
+            const stats = calculateStats(conf.race, conf.charClass);
+            playerStats.maxHp = stats.maxHp;
+            playerStats.currentHp = stats.maxHp;
+            playerStats.maxMp = stats.maxMp;
+            playerStats.currentMp = stats.maxMp;
+
+            // Update Adventure HUD
+            document.getElementById('advHeroName').textContent = conf.name;
+            document.getElementById('advHeroClass').textContent = `${stats.race.name} ${stats.charClass.name}`;
+            updateAdventureHUD();
+
+            // Spawn or restart 3D Adventure World
+            if (!adventureApp) {
+                adventureApp = new DungeonWorldApp(
+                    viewportAdventure,
+                    conf,
+                    (encounter) => triggerEncounterModal(encounter),
+                    () => updateAdventureHUD()
+                );
+            } else {
+                // Remove previous canvas and rebuild for updated hero
+                viewportAdventure.innerHTML = '';
+                adventureApp = new DungeonWorldApp(
+                    viewportAdventure,
+                    conf,
+                    (encounter) => triggerEncounterModal(encounter),
+                    () => updateAdventureHUD()
+                );
+            }
+
+            addLogMessage(`⚡ ${conf.name} entered the Crypt of Eldoria! High danger lies ahead...`, 'crit');
+        }
+
+        function switchToCreator() {
+            currentMode = 'creator';
+            screenAdventure.style.display = 'none';
+            screenCreator.style.display = 'flex';
+            btnSwitchMode.style.display = 'none';
+            document.getElementById('btnRandomize').style.display = 'flex';
+        }
+
+        function updateAdventureHUD() {
+            const hpPct = Math.max(0, Math.min(100, (playerStats.currentHp / playerStats.maxHp) * 100));
+            const mpPct = Math.max(0, Math.min(100, (playerStats.currentMp / playerStats.maxMp) * 100));
+
+            document.getElementById('advHpFill').style.width = `${hpPct}%`;
+            document.getElementById('advHpText').textContent = `${playerStats.currentHp} / ${playerStats.maxHp}`;
+            document.getElementById('advMpFill').style.width = `${mpPct}%`;
+            document.getElementById('advMpText').textContent = `${playerStats.currentMp} / ${playerStats.maxMp}`;
+            document.getElementById('advGold').textContent = playerStats.gold;
+            document.getElementById('advXp').textContent = playerStats.xp;
+
+            if (playerStats.inventory.length > 0) {
+                document.getElementById('advItemSlot').textContent = `🎒 ${playerStats.inventory[playerStats.inventory.length - 1]}`;
+            }
+        }
+
+        function addLogMessage(msg, type = 'normal') {
+            const advLog = document.getElementById('advLog');
+            const el = document.createElement('div');
+            el.className = `log-msg ${type}`;
+            el.textContent = `> ${msg}`;
+            advLog.prepend(el);
+        }
+
+        // ==========================================
+        // D20 ENCOUNTER & ACTION SYSTEM
+        // ==========================================
+        const encounterModal = document.getElementById('encounterModal');
+        const encIcon = document.getElementById('encIcon');
+        const encTitle = document.getElementById('encTitle');
+        const encStory = document.getElementById('encStory');
+        const encOptionsList = document.getElementById('encOptionsList');
+        const diceRollStage = document.getElementById('diceRollStage');
+        const d20Die = document.getElementById('d20Die');
+        const d20Value = document.getElementById('d20Value');
+        const rollFormula = document.getElementById('rollFormula');
+        const rollOutcomeBanner = document.getElementById('rollOutcomeBanner');
+        const rollResultText = document.getElementById('rollResultText');
+        const btnDismissEncounter = document.getElementById('btnDismissEncounter');
+
+        let currentEncounter = null;
+
+        function triggerEncounterModal(enc) {
+            currentEncounter = enc;
+            sound.playSelect();
+
+            encIcon.textContent = enc.icon;
+            encTitle.textContent = enc.name;
+            encStory.textContent = enc.description;
+
+            // Reset modal stages
+            encOptionsList.style.display = 'flex';
+            diceRollStage.style.display = 'none';
+            btnDismissEncounter.style.display = 'none';
+            encOptionsList.innerHTML = '';
+
+            const conf = creatorApp.config;
+            const stats = calculateStats(conf.race, conf.charClass);
+
+            enc.options.forEach(opt => {
+                const statVal = stats[opt.stat] || 10;
+                const mod = getStatModifier(statVal);
+                const modStr = formatModifier(mod);
+
+                const btn = document.createElement('button');
+                btn.className = 'encounter-choice-btn';
+                btn.innerHTML = `
+                    <span>⚔️ ${opt.label}</span>
+                    <span class="check-badge">[${opt.statName.toUpperCase()} ${modStr} vs DC ${opt.dc}]</span>
+                `;
+
+                btn.addEventListener('click', () => {
+                    executeD20Check(opt, statVal);
+                });
+
+                encOptionsList.appendChild(btn);
+            });
+
+            encounterModal.style.display = 'flex';
+        }
+
+        function executeD20Check(opt, statVal) {
+            // Hide choice buttons, reveal dice roll stage
+            encOptionsList.style.display = 'none';
+            diceRollStage.style.display = 'flex';
+            d20Die.classList.add('d20-rolling');
+            rollOutcomeBanner.style.display = 'none';
+            rollResultText.textContent = '';
+
+            const mod = getStatModifier(statVal);
+            rollFormula.textContent = `Rolling D20 + ${opt.statName} (${formatModifier(mod)}) vs DC ${opt.dc}...`;
+
+            animateDiceRoll(
+                (tempNum) => {
+                    d20Value.textContent = tempNum;
+                },
+                () => {
+                    // Dice has landed!
+                    d20Die.classList.remove('d20-rolling');
+                    const outcome = rollD20(statVal, opt.statName, opt.dc);
+                    d20Value.textContent = outcome.rawRoll;
+
+                    sound.playDiceLand(outcome.isNat20);
+
+                    // Outcome Evaluation
+                    rollOutcomeBanner.style.display = 'block';
+                    rollOutcomeBanner.className = 'roll-outcome-banner';
+
+                    let logClass = 'normal';
+                    let outcomeText = '';
+
+                    if (outcome.isNat20) {
+                        rollOutcomeBanner.classList.add('outcome-crit');
+                        rollOutcomeBanner.textContent = '🌟 NATURAL 20! CRITICAL SUCCESS! 🌟';
+                        outcomeText = `NATURAL 20! (${outcome.rawRoll} + ${formatModifier(outcome.modifier)} = ${outcome.total} vs DC ${outcome.dc})`;
+                        logClass = 'crit';
+                    } else if (outcome.isNat1) {
+                        rollOutcomeBanner.classList.add('outcome-fail');
+                        rollOutcomeBanner.textContent = '💀 NATURAL 1! CRITICAL BLUNDER! 💀';
+                        outcomeText = `NATURAL 1! (${outcome.rawRoll} + ${formatModifier(outcome.modifier)} = ${outcome.total} vs DC ${outcome.dc})`;
+                        logClass = 'fail';
+                    } else if (outcome.success) {
+                        rollOutcomeBanner.classList.add('outcome-success');
+                        rollOutcomeBanner.textContent = '✨ CHECK PASSED! SUCCESS! ✨';
+                        outcomeText = `Check Passed! (${outcome.rawRoll} + ${formatModifier(outcome.modifier)} = ${outcome.total} vs DC ${outcome.dc})`;
+                        logClass = 'success';
+                    } else {
+                        rollOutcomeBanner.classList.add('outcome-fail');
+                        rollOutcomeBanner.textContent = '❌ CHECK FAILED! ❌';
+                        outcomeText = `Check Failed! (${outcome.rawRoll} + ${formatModifier(outcome.modifier)} = ${outcome.total} vs DC ${outcome.dc})`;
+                        logClass = 'fail';
+                    }
+
+                    // Process results (rewards or damage)
+                    if (outcome.success) {
+                        sound.playSuccess();
+                        rollResultText.textContent = opt.successMsg;
+                        addLogMessage(`${outcomeText}: ${opt.successMsg}`, logClass);
+
+                        if (opt.reward) {
+                            if (opt.reward.gold) playerStats.gold += opt.reward.gold;
+                            if (opt.reward.xp) playerStats.xp += opt.reward.xp;
+                            if (opt.reward.item) playerStats.inventory.push(opt.reward.item);
+                            if (opt.reward.mpRestore) playerStats.currentMp = Math.min(playerStats.maxMp, playerStats.currentMp + opt.reward.mpRestore);
+                            if (opt.reward.fullHeal) {
+                                playerStats.currentHp = playerStats.maxHp;
+                                playerStats.currentMp = playerStats.maxMp;
+                            }
+                        }
+                        if (adventureApp) {
+                            adventureApp.resolveEncounterVisual(currentEncounter.id, true);
+                        }
+                    } else {
+                        sound.playFailure();
+                        rollResultText.textContent = opt.failMsg;
+                        addLogMessage(`${outcomeText}: ${opt.failMsg}`, logClass);
+
+                        if (opt.penalty && opt.penalty.hpDamage) {
+                            sound.playHit();
+                            playerStats.currentHp = Math.max(1, playerStats.currentHp - opt.penalty.hpDamage);
+                            addLogMessage(`💥 Took ${opt.penalty.hpDamage} damage! Current HP: ${playerStats.currentHp}`, 'fail');
+                        }
+                        if (opt.penalty && opt.penalty.partialHeal) {
+                            playerStats.currentHp = Math.min(playerStats.maxHp, playerStats.currentHp + opt.penalty.partialHeal);
+                        }
+                        if (adventureApp) {
+                            adventureApp.resolveEncounterVisual(currentEncounter.id, false);
+                        }
+                    }
+
+                    updateAdventureHUD();
+                    btnDismissEncounter.style.display = 'block';
+                }
+            );
+        }
+
+        btnDismissEncounter.addEventListener('click', () => {
+            sound.playSelect();
+            encounterModal.style.display = 'none';
+        });
+    </script>
+</body>
+</html>
