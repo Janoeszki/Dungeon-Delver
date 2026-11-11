@@ -142,6 +142,13 @@ export class CharacterBuilder {
         // Apply Race Scale & Proportions
         this.applyRaceScaling(modelRoot, race);
 
+        // Enable shadow casting for all character meshes
+        characterGroup.traverse((child) => {
+            if (child.isMesh) {
+                child.castShadow = true;
+            }
+        });
+
         // Create animation controller helper
         const animState = {
             time: 0,
@@ -813,28 +820,26 @@ export class CharacterBuilder {
         if (race === 'dwarf') {
             // Short, broad shoulders, sturdy stance
             modelRoot.scale.set(1.25, 0.78, 1.2);
-            modelRoot.position.y = -0.35;
         } else if (race === 'elf') {
             // Slender, graceful, taller
             modelRoot.scale.set(0.88, 1.12, 0.88);
-            modelRoot.position.y = -0.2;
         } else if (race === 'orc') {
             // Hulking juggernaut
             modelRoot.scale.set(1.35, 1.18, 1.3);
-            modelRoot.position.y = -0.15;
         } else if (race === 'goblin') {
             // Small, nimble, hunched scavver
             modelRoot.scale.set(0.72, 0.68, 0.72);
-            modelRoot.position.y = -0.42;
         } else if (race === 'catfolk') {
             // Agile, tall, sleek feline
             modelRoot.scale.set(0.92, 1.08, 0.92);
-            modelRoot.position.y = -0.22;
         } else {
             // Human: balanced standard
             modelRoot.scale.set(1.0, 1.0, 1.0);
-            modelRoot.position.y = -0.25;
         }
+
+        // Align the bottom of character's boots cleanly at y = 0
+        // (Boot soles sit at y = -0.425 within unscaled body coordinates)
+        modelRoot.position.y = 0.425 * modelRoot.scale.y;
     }
 
     animateIdle(anim, delta) {

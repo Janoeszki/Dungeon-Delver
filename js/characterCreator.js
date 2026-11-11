@@ -18,8 +18,8 @@ export class CharacterCreatorApp {
         this.prevMousePos = { x: 0, y: 0 };
         this.rotationY = 0.4;
         this.targetRotationY = 0.4;
-        this.cameraDistance = 3.6;
-        this.targetCameraDistance = 3.6;
+        this.cameraDistance = 4.0;
+        this.targetCameraDistance = 4.0;
 
         // Current hero configuration
         this.config = {
@@ -55,7 +55,8 @@ export class CharacterCreatorApp {
 
         // Camera
         this.camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 50);
-        this.camera.position.set(0, 1.2, this.cameraDistance);
+        this.camera.position.set(0, 1.35, this.cameraDistance);
+        this.camera.lookAt(0, 1.15, 0);
 
         // Renderer
         this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
@@ -80,9 +81,9 @@ export class CharacterCreatorApp {
         rimLight.position.set(-4, 3, -4);
         this.scene.add(rimLight);
 
-        // Character Anchor group for rotation
+        // Character Anchor group for rotation - resting cleanly on top of pedestal (y = 0.28)
         this.characterAnchor = new THREE.Group();
-        this.characterAnchor.position.y = 0.25;
+        this.characterAnchor.position.y = 0.28;
         this.scene.add(this.characterAnchor);
     }
 
@@ -135,7 +136,7 @@ export class CharacterCreatorApp {
             const angle = Math.random() * Math.PI * 2;
             const radius = 0.2 + Math.random() * 1.1;
             positions[i * 3] = Math.cos(angle) * radius;
-            positions[i * 3 + 1] = 0.3 + Math.random() * 2.2;
+            positions[i * 3 + 1] = 0.32 + Math.random() * 2.5;
             positions[i * 3 + 2] = Math.sin(angle) * radius;
             speeds[i] = 0.2 + Math.random() * 0.4;
         }
@@ -297,6 +298,7 @@ export class CharacterCreatorApp {
         // Camera distance smooth zoom
         this.cameraDistance += (this.targetCameraDistance - this.cameraDistance) * 0.1;
         this.camera.position.z = this.cameraDistance;
+        this.camera.lookAt(0, 1.15, 0);
 
         // Character idle animation
         if (this.currentCharacter) {
@@ -309,8 +311,8 @@ export class CharacterCreatorApp {
             const speeds = this.particles.userData.speeds;
             for (let i = 0; i < speeds.length; i++) {
                 positions[i * 3 + 1] += speeds[i] * delta;
-                if (positions[i * 3 + 1] > 2.8) {
-                    positions[i * 3 + 1] = 0.25;
+                if (positions[i * 3 + 1] > 3.0) {
+                    positions[i * 3 + 1] = 0.28;
                 }
             }
             this.particles.geometry.attributes.position.needsUpdate = true;
