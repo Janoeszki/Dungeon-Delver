@@ -47,9 +47,9 @@ export const ENCOUNTERS = [
                 stat: 'str',
                 statName: 'Strength',
                 dc: 13,
-                successMsg: 'You shove the massive granite slab off with brute force! Inside lies the mummy of Lord Kaelen, clutching 50 Gold and an Ancient Ruby Amulet!',
+                successMsg: 'You shove the massive granite slab off with brute force! Inside lies the mummy of Lord Kaelen, clutching 50 Gold, a Ruby Amulet, and a Greater Healing Potion!',
                 failMsg: 'The slab slips from your grip and crushes your knuckles against the stone pedestal.',
-                reward: { gold: 50, item: 'Ruby Amulet (+15 HP)', xp: 35 },
+                reward: { gold: 50, item: 'Ruby Amulet (+15 HP)', consumable: 'Greater Healing Potion', xp: 35 },
                 penalty: { hpDamage: 14 }
             },
             {
@@ -108,29 +108,17 @@ export const ENCOUNTERS = [
         id: 'skeleton',
         name: 'Skeletal Vanguard',
         icon: '💀',
+        isCombat: true,
+        monsterId: 'skeleton',
         pos: { x: -7.5, z: 2.5 },
         description: 'An ancient animated skeleton clad in tarnished mail raises a rusty halberd and turns its hollow, glowing eye sockets toward you!',
         resolved: false,
         options: [
             {
-                label: 'Charge and cleave the undead into splinters',
+                label: 'Engage in Tactical Turn-Based Combat',
+                action: 'combat',
                 stat: 'str',
-                statName: 'Strength',
-                dc: 12,
-                successMsg: 'You smash into the skeleton at full speed! Your strike shatters its ribcage into a hundred bone fragments. It drops 30 Gold and a Knight Ring.',
-                failMsg: 'The skeleton parries your blow with its halberd shaft and thrusts the spear point into your shoulder!',
-                reward: { gold: 30, item: 'Knight Crest Ring', xp: 35 },
-                penalty: { hpDamage: 16 }
-            },
-            {
-                label: 'Cast a blinding magical disruption',
-                stat: 'int',
-                statName: 'Intelligence',
-                dc: 12,
-                successMsg: 'You unleash a blinding flare of raw energy! The dark necromancy binding the bones is unraveled, and the vanguard collapses into inert dust.',
-                failMsg: 'The skeleton dodges the blast and slashes you with its rusty blade before retreating!',
-                reward: { gold: 30, item: 'Knight Crest Ring', xp: 35 },
-                penalty: { hpDamage: 14 }
+                statName: 'Strength'
             }
         ]
     },

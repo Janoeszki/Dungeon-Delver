@@ -613,6 +613,235 @@
         }
 
         /* ========================================= */
+        /* TURN-BASED COMBAT ARENA MODAL             */
+        /* ========================================= */
+        .combat-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(3, 5, 8, 0.88);
+            z-index: 120;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(8px);
+        }
+
+        .combat-arena-card {
+            background: #0d121c;
+            border: 3px solid var(--gold-bright);
+            border-radius: 8px;
+            width: 760px;
+            max-width: 95vw;
+            padding: 18px 22px;
+            box-shadow: 0 0 50px rgba(245, 166, 35, 0.4), inset 0 0 30px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .combat-stage {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            gap: 16px;
+            background: rgba(18, 24, 38, 0.9);
+            padding: 16px 20px;
+            border: 2px solid var(--panel-border);
+            border-radius: 6px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .combatant-card {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .combatant-name {
+            font-family: 'Cinzel', serif;
+            font-size: 1.35rem;
+            color: var(--gold-bright);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .combatant-stats-line {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.15rem;
+            color: var(--text-muted);
+        }
+
+        .combat-bar {
+            width: 100%;
+            height: 18px;
+            background: #060911;
+            border: 2px solid #2e384d;
+            border-radius: 3px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .combat-bar-fill {
+            height: 100%;
+            width: 100%;
+            transition: width 0.35s ease;
+        }
+        .combat-hp-player { background: linear-gradient(90deg, #dc2626, #ef4444); }
+        .combat-hp-enemy { background: linear-gradient(90deg, #b91c1c, #f87171); }
+        .combat-mp-player { background: linear-gradient(90deg, #2563eb, #38bdf8); }
+
+        .combat-bar-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1rem;
+            color: #fff;
+            text-shadow: 1px 1px 2px #000;
+            pointer-events: none;
+        }
+
+        .combat-vs-divider {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 0 10px;
+        }
+
+        .combat-turn-badge {
+            font-family: 'Cinzel', serif;
+            font-size: 1.1rem;
+            padding: 4px 10px;
+            border-radius: 4px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            box-shadow: 0 0 12px rgba(245, 166, 35, 0.4);
+        }
+        .turn-player { background: #1e3a8a; border: 2px solid #38bdf8; color: #93c5fd; }
+        .turn-enemy { background: #7f1d1d; border: 2px solid #ef4444; color: #fca5a5; }
+
+        .combat-log-box {
+            height: 110px;
+            background: #07090f;
+            border: 2px solid var(--panel-border);
+            border-radius: 4px;
+            padding: 8px 12px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 4px;
+            font-size: 1.25rem;
+            line-height: 1.3;
+        }
+
+        .combat-log-entry {
+            margin: 0;
+        }
+        .combat-log-entry.crit { color: #facc15; font-weight: bold; }
+        .combat-log-entry.dmg { color: #f87171; }
+        .combat-log-entry.heal { color: #4ade80; }
+        .combat-log-entry.guard { color: #38bdf8; }
+        .combat-log-entry.info { color: #e2e8f0; }
+
+        .combat-actions-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .combat-menu-tabs {
+            display: flex;
+            gap: 8px;
+        }
+
+        .combat-tab-btn {
+            flex: 1;
+            background: #172033;
+            border: 2px solid var(--panel-border);
+            color: var(--gold-bright);
+            font-family: 'VT323', monospace;
+            font-size: 1.35rem;
+            padding: 6px 12px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .combat-tab-btn.active, .combat-tab-btn:hover {
+            background: #25334d;
+            border-color: var(--gold-bright);
+            transform: translateY(-2px);
+        }
+
+        .combat-submenu-container {
+            min-height: 84px;
+            background: #0f1422;
+            border: 2px solid #222d42;
+            padding: 10px;
+            border-radius: 4px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .combat-action-btn {
+            background: #182338;
+            border: 2px solid #3b82f6;
+            color: #ffffff;
+            font-family: 'VT323', monospace;
+            font-size: 1.25rem;
+            padding: 8px 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.12s;
+        }
+        .combat-action-btn:hover:not(:disabled) {
+            background: #233454;
+            border-color: var(--gold-bright);
+            transform: translateY(-1px);
+        }
+        .combat-action-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            border-color: #4b5563;
+        }
+
+        .combat-action-cost {
+            font-size: 1.05rem;
+            color: var(--cyan-accent);
+            background: #0b101c;
+            padding: 1px 6px;
+            border-radius: 2px;
+        }
+
+        .combat-anim-shake {
+            animation: combatShake 0.25s ease-in-out;
+        }
+        @keyframes combatShake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-8px); }
+            40% { transform: translateX(8px); }
+            60% { transform: translateX(-5px); }
+            80% { transform: translateX(5px); }
+        }
+
+        .combat-anim-flash {
+            animation: combatFlash 0.3s ease-out;
+        }
+        @keyframes combatFlash {
+            0% { filter: brightness(2.5); background-color: rgba(239, 68, 68, 0.4); }
+            100% { filter: brightness(1); }
+        }
+
+        /* ========================================= */
         /* SCREEN 0: KICKASS STARTING PAGE           */
         /* ========================================= */
         #screenCreator { display: none; }
@@ -1479,6 +1708,96 @@
         </div>
     </div>
 
+    <!-- TURN-BASED COMBAT ARENA MODAL -->
+    <div class="combat-overlay" id="combatModal">
+        <div class="combat-arena-card" id="combatArenaCard">
+            <!-- Header -->
+            <div class="encounter-header" style="justify-content: space-between;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <span class="encounter-icon" id="combatMonsterIcon">💀</span>
+                    <div>
+                        <h2 class="encounter-title" id="combatArenaTitle">BATTLE: Skeletal Vanguard</h2>
+                        <span style="color:var(--text-muted); font-size:1.1rem;">Turn-Based D&amp;D Tactical Combat</span>
+                    </div>
+                </div>
+                <div id="combatTurnBadge" class="combat-turn-badge turn-player">HERO TURN</div>
+            </div>
+
+            <!-- Combat Stage: Hero vs Monster -->
+            <div class="combat-stage" id="combatStage">
+                <!-- Hero Side -->
+                <div class="combatant-card" id="combatHeroCard">
+                    <div class="combatant-name" id="combatHeroName">🛡️ Hero</div>
+                    <div class="combatant-stats-line">
+                        <span>HP</span>
+                        <span id="combatHeroHpVal">100 / 100</span>
+                    </div>
+                    <div class="combat-bar">
+                        <div class="combat-bar-fill combat-hp-player" id="combatHeroHpBar"></div>
+                    </div>
+                    <div class="combatant-stats-line" style="margin-top:2px;">
+                        <span>MP</span>
+                        <span id="combatHeroMpVal">40 / 40</span>
+                    </div>
+                    <div class="combat-bar" style="height:12px;">
+                        <div class="combat-bar-fill combat-mp-player" id="combatHeroMpBar"></div>
+                    </div>
+                    <div style="font-size:1.1rem; color:var(--cyan-accent); margin-top:4px;" id="combatHeroBuffs">
+                        AC: <span id="combatHeroAc">14</span> | Stance: Normal
+                    </div>
+                </div>
+
+                <!-- VS Center & Dice Tray -->
+                <div class="combat-vs-divider">
+                    <span style="font-family:'Cinzel', serif; font-size:2rem; color:var(--gold-bright); text-shadow:0 0 10px rgba(245,166,35,0.6);">VS</span>
+                    <span id="combatRoundText" style="font-size:1.15rem; color:var(--text-muted);">Round 1</span>
+                    <div class="d20-icosahedron" id="combatD20" style="width:48px; height:48px; font-size:1.5rem; margin-top:8px;">
+                        <span class="d20-num" id="combatD20Val">20</span>
+                    </div>
+                </div>
+
+                <!-- Monster Side -->
+                <div class="combatant-card" id="combatEnemyCard">
+                    <div class="combatant-name" id="combatMonsterName">💀 Skeletal Vanguard</div>
+                    <div class="combatant-stats-line">
+                        <span>HP</span>
+                        <span id="combatMonsterHpVal">38 / 38</span>
+                    </div>
+                    <div class="combat-bar">
+                        <div class="combat-bar-fill combat-hp-enemy" id="combatMonsterHpBar"></div>
+                    </div>
+                    <div style="font-size:1.1rem; color:#f87171; margin-top:18px;" id="combatMonsterBuffs">
+                        AC: <span id="combatMonsterAc">12</span> | Undead Crypt Guard
+                    </div>
+                </div>
+            </div>
+
+            <!-- Combat Action Log -->
+            <div class="combat-log-box" id="combatLogBox">
+                <!-- Log entries will be inserted here -->
+            </div>
+
+            <!-- Tactical Action Selector -->
+            <div class="combat-actions-panel" id="combatActionsPanel">
+                <!-- Top Tabs -->
+                <div class="combat-menu-tabs">
+                    <button class="combat-tab-btn active" id="btnTabAttack">⚔️ ATTACK</button>
+                    <button class="combat-tab-btn" id="btnTabDefend">🛡️ DEFEND</button>
+                    <button class="combat-tab-btn" id="btnTabItems">🎒 ITEMS</button>
+                    <button class="combat-tab-btn" id="btnTabFlee">🏃 FLEE</button>
+                </div>
+
+                <!-- Submenu Display Box -->
+                <div class="combat-submenu-container" id="combatSubmenu">
+                    <!-- Populated dynamically based on chosen tab -->
+                </div>
+            </div>
+
+            <!-- Combat Victory / Defeat Dismiss Button -->
+            <button class="result-dismiss-btn" id="btnDismissCombat">CONTINUE EXPEDITION</button>
+        </div>
+    </div>
+
     <!-- CHRONICLES & GUIDE MODAL -->
     <div class="encounter-overlay" id="loreModal">
         <div class="encounter-card">
@@ -1521,6 +1840,7 @@
         import { music } from './js/music.js';
         import { ANCESTRY_DATA, calculateStats } from './js/stats.js';
         import { rollD20, getStatModifier, formatModifier, animateDiceRoll } from './js/dice.js';
+        import { MONSTERS, CONSUMABLE_ITEMS, rollDiceFormula } from './js/combat.js';
 
         // DOM Screen & Header References
         const mainHeader = document.getElementById('mainHeader');
@@ -1545,7 +1865,8 @@
             maxMp: 42,
             gold: 0,
             xp: 0,
-            inventory: []
+            inventory: [],
+            consumables: ['Lesser Healing Potion', 'Mana Draught'] // Starting combat consumables
         };
 
         // Initialize Title 3D Backdrop & inactive Character Forge
@@ -1930,6 +2251,9 @@
             playerStats.currentHp = stats.maxHp;
             playerStats.maxMp = stats.maxMp;
             playerStats.currentMp = stats.maxMp;
+            if (!playerStats.consumables || playerStats.consumables.length === 0) {
+                playerStats.consumables = ['Lesser Healing Potion', 'Mana Draught'];
+            }
 
             // Update Adventure HUD
             document.getElementById('advHeroName').textContent = conf.name;
@@ -1984,6 +2308,8 @@
 
             if (playerStats.inventory.length > 0) {
                 document.getElementById('advItemSlot').textContent = `🎒 ${playerStats.inventory[playerStats.inventory.length - 1]}`;
+            } else if (playerStats.consumables && playerStats.consumables.length > 0) {
+                document.getElementById('advItemSlot').textContent = `🧪 ${playerStats.consumables[0]} (x${playerStats.consumables.length})`;
             }
         }
 
@@ -2016,6 +2342,11 @@
         function triggerEncounterModal(enc) {
             currentEncounter = enc;
             sound.playSelect();
+
+            if (enc.isCombat) {
+                startCombatEncounter(enc);
+                return;
+            }
 
             encIcon.textContent = enc.icon;
             encTitle.textContent = enc.name;
@@ -2114,6 +2445,7 @@
                             if (opt.reward.gold) playerStats.gold += opt.reward.gold;
                             if (opt.reward.xp) playerStats.xp += opt.reward.xp;
                             if (opt.reward.item) playerStats.inventory.push(opt.reward.item);
+                            if (opt.reward.consumable) playerStats.consumables.push(opt.reward.consumable);
                             if (opt.reward.mpRestore) playerStats.currentMp = Math.min(playerStats.maxMp, playerStats.currentMp + opt.reward.mpRestore);
                             if (opt.reward.fullHeal) {
                                 playerStats.currentHp = playerStats.maxHp;
@@ -2150,6 +2482,558 @@
         btnDismissEncounter.addEventListener('click', () => {
             sound.playSelect();
             encounterModal.style.display = 'none';
+        });
+
+        // ==========================================
+        // D&D TURN-BASED COMBAT SYSTEM
+        // ==========================================
+        const combatModal = document.getElementById('combatModal');
+        const combatArenaCard = document.getElementById('combatArenaCard');
+        const combatMonsterIcon = document.getElementById('combatMonsterIcon');
+        const combatArenaTitle = document.getElementById('combatArenaTitle');
+        const combatTurnBadge = document.getElementById('combatTurnBadge');
+        const combatHeroName = document.getElementById('combatHeroName');
+        const combatHeroHpVal = document.getElementById('combatHeroHpVal');
+        const combatHeroHpBar = document.getElementById('combatHeroHpBar');
+        const combatHeroMpVal = document.getElementById('combatHeroMpVal');
+        const combatHeroMpBar = document.getElementById('combatHeroMpBar');
+        const combatHeroAc = document.getElementById('combatHeroAc');
+        const combatHeroBuffs = document.getElementById('combatHeroBuffs');
+        const combatMonsterName = document.getElementById('combatMonsterName');
+        const combatMonsterHpVal = document.getElementById('combatMonsterHpVal');
+        const combatMonsterHpBar = document.getElementById('combatMonsterHpBar');
+        const combatMonsterAc = document.getElementById('combatMonsterAc');
+        const combatMonsterBuffs = document.getElementById('combatMonsterBuffs');
+        const combatRoundText = document.getElementById('combatRoundText');
+        const combatD20 = document.getElementById('combatD20');
+        const combatD20Val = document.getElementById('combatD20Val');
+        const combatLogBox = document.getElementById('combatLogBox');
+        const combatActionsPanel = document.getElementById('combatActionsPanel');
+        const combatSubmenu = document.getElementById('combatSubmenu');
+        const btnDismissCombat = document.getElementById('btnDismissCombat');
+
+        const btnTabAttack = document.getElementById('btnTabAttack');
+        const btnTabDefend = document.getElementById('btnTabDefend');
+        const btnTabItems = document.getElementById('btnTabItems');
+        const btnTabFlee = document.getElementById('btnTabFlee');
+
+        let combatState = null;
+
+        function startCombatEncounter(enc) {
+            const monsterTemplate = MONSTERS[enc.monsterId] || MONSTERS.skeleton;
+            const conf = creatorApp.config;
+            const stats = calculateStats(conf.ancestry, conf.charClass);
+
+            // Compute player AC: base 10 + AGI mod + (Warrior shield/armor bonus = +3, Mage ward = +1)
+            const agiMod = getStatModifier(stats.agi);
+            const classAcBonus = conf.charClass === 'warrior' ? 4 : 2;
+            const basePlayerAc = 10 + agiMod + classAcBonus;
+
+            combatState = {
+                encounterId: enc.id,
+                monster: {
+                    ...monsterTemplate,
+                    currentHp: monsterTemplate.maxHp,
+                    isDefending: false
+                },
+                player: {
+                    name: conf.name,
+                    charClass: conf.charClass,
+                    ancestry: conf.ancestry,
+                    stats,
+                    baseAc: basePlayerAc,
+                    effectiveAc: basePlayerAc,
+                    isDefending: false
+                },
+                round: 1,
+                turn: 'player', // 'player' | 'enemy' | 'ended'
+                currentTab: 'attack',
+                busy: false
+            };
+
+            // Setup UI
+            combatMonsterIcon.textContent = combatState.monster.icon;
+            combatArenaTitle.textContent = `BATTLE: ${combatState.monster.name}`;
+            combatHeroName.textContent = `🛡️ ${conf.name} (${stats.charClass.name})`;
+            combatMonsterName.textContent = `${combatState.monster.icon} ${combatState.monster.name}`;
+            combatMonsterAc.textContent = combatState.monster.ac;
+            combatMonsterBuffs.textContent = `AC: ${combatState.monster.ac} | ${combatState.monster.description}`;
+
+            btnDismissCombat.style.display = 'none';
+            combatActionsPanel.style.display = 'flex';
+            combatLogBox.innerHTML = '';
+
+            addCombatLog(`⚔️ Combat Initiated! You encounter a ${combatState.monster.name}!`, 'crit');
+            
+            // Initiative Roll Check
+            const playerInit = rollDiceFormula(1, 20, agiMod);
+            addCombatLog(`🎲 Initiative: ${conf.name} rolled D20 (${playerInit.rolls[0]}) + ${agiMod} = ${playerInit.total}! You take the initiative!`, 'info');
+
+            updateCombatHUD();
+            switchCombatTab('attack');
+
+            combatModal.style.display = 'flex';
+            music.playTrack('crypt', { reset: false });
+        }
+
+        function addCombatLog(msg, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `combat-log-entry ${type}`;
+            entry.textContent = `> ${msg}`;
+            combatLogBox.prepend(entry);
+        }
+
+        function updateCombatHUD() {
+            if (!combatState) return;
+
+            // Player HP & MP
+            const heroHpPct = Math.max(0, Math.min(100, (playerStats.currentHp / playerStats.maxHp) * 100));
+            const heroMpPct = Math.max(0, Math.min(100, (playerStats.currentMp / playerStats.maxMp) * 100));
+            combatHeroHpBar.style.width = `${heroHpPct}%`;
+            combatHeroHpVal.textContent = `${playerStats.currentHp} / ${playerStats.maxHp}`;
+            combatHeroMpBar.style.width = `${heroMpPct}%`;
+            combatHeroMpVal.textContent = `${playerStats.currentMp} / ${playerStats.maxMp}`;
+
+            const stanceText = combatState.player.isDefending ? '🛡️ Guard Stance (+4 AC)' : 'Normal Stance';
+            combatHeroBuffs.textContent = `AC: ${combatState.player.effectiveAc} | Stance: ${stanceText}`;
+
+            // Monster HP
+            const monHpPct = Math.max(0, Math.min(100, (combatState.monster.currentHp / combatState.monster.maxHp) * 100));
+            combatMonsterHpBar.style.width = `${monHpPct}%`;
+            combatMonsterHpVal.textContent = `${combatState.monster.currentHp} / ${combatState.monster.maxHp}`;
+
+            // Round & Turn Badge
+            combatRoundText.textContent = `Round ${combatState.round}`;
+            if (combatState.turn === 'player') {
+                combatTurnBadge.className = 'combat-turn-badge turn-player';
+                combatTurnBadge.textContent = 'HERO TURN';
+            } else if (combatState.turn === 'enemy') {
+                combatTurnBadge.className = 'combat-turn-badge turn-enemy';
+                combatTurnBadge.textContent = 'ENEMY TURN';
+            } else {
+                combatTurnBadge.className = 'combat-turn-badge turn-player';
+                combatTurnBadge.textContent = 'VICTORY!';
+            }
+
+            // Sync main adventure HUD
+            updateAdventureHUD();
+        }
+
+        function switchCombatTab(tabKey) {
+            if (!combatState) return;
+            combatState.currentTab = tabKey;
+
+            [btnTabAttack, btnTabDefend, btnTabItems, btnTabFlee].forEach(btn => btn.classList.remove('active'));
+
+            if (tabKey === 'attack') btnTabAttack.classList.add('active');
+            if (tabKey === 'defend') btnTabDefend.classList.add('active');
+            if (tabKey === 'items') btnTabItems.classList.add('active');
+            if (tabKey === 'flee') btnTabFlee.classList.add('active');
+
+            renderCombatSubmenu();
+        }
+
+        btnTabAttack.addEventListener('click', () => { sound.playSelect(); switchCombatTab('attack'); });
+        btnTabDefend.addEventListener('click', () => { sound.playSelect(); switchCombatTab('defend'); });
+        btnTabItems.addEventListener('click', () => { sound.playSelect(); switchCombatTab('items'); });
+        btnTabFlee.addEventListener('click', () => { sound.playSelect(); switchCombatTab('flee'); });
+
+        function renderCombatSubmenu() {
+            combatSubmenu.innerHTML = '';
+            if (!combatState || combatState.turn !== 'player' || combatState.busy) {
+                combatSubmenu.innerHTML = `<span style="color:var(--text-muted); font-size:1.2rem; padding:6px;">Waiting for turn resolution...</span>`;
+                return;
+            }
+
+            const { stats, charClass } = combatState.player;
+            const strMod = getStatModifier(stats.str);
+            const agiMod = getStatModifier(stats.agi);
+            const intMod = getStatModifier(stats.int);
+
+            if (combatState.currentTab === 'attack') {
+                // 1. Basic Strike
+                const basicBtn = document.createElement('button');
+                basicBtn.className = 'combat-action-btn';
+                if (charClass === 'warrior') {
+                    basicBtn.innerHTML = `<span>⚔️ Weapon Strike</span> <span class="combat-action-cost">+${strMod} vs AC</span>`;
+                    basicBtn.addEventListener('click', () => executePlayerAttack('basic_melee'));
+                } else {
+                    basicBtn.innerHTML = `<span>🪄 Arcane Bolt</span> <span class="combat-action-cost">+${intMod} vs AC</span>`;
+                    basicBtn.addEventListener('click', () => executePlayerAttack('basic_magic'));
+                }
+                combatSubmenu.appendChild(basicBtn);
+
+                // 2. Class Special Technique (Costs MP)
+                const specialBtn = document.createElement('button');
+                specialBtn.className = 'combat-action-btn';
+                if (charClass === 'warrior') {
+                    const mpCost = 15;
+                    const canAfford = playerStats.currentMp >= mpCost;
+                    specialBtn.disabled = !canAfford;
+                    specialBtn.innerHTML = `<span>🌪️ Whirlwind Cleave</span> <span class="combat-action-cost">15 MP | High DMG</span>`;
+                    specialBtn.addEventListener('click', () => executePlayerAttack('special_cleave', mpCost));
+                } else {
+                    const mpCost = 18;
+                    const canAfford = playerStats.currentMp >= mpCost;
+                    specialBtn.disabled = !canAfford;
+                    specialBtn.innerHTML = `<span>🔥 Firebolt Flare</span> <span class="combat-action-cost">18 MP | Massive DMG</span>`;
+                    specialBtn.addEventListener('click', () => executePlayerAttack('special_firebolt', mpCost));
+                }
+                combatSubmenu.appendChild(specialBtn);
+
+            } else if (combatState.currentTab === 'defend') {
+                const defendBtn = document.createElement('button');
+                defendBtn.className = 'combat-action-btn';
+                defendBtn.innerHTML = `<span>🛡️ Shield / Ward Stance</span> <span class="combat-action-cost">+4 AC &amp; Half Damage</span>`;
+                defendBtn.addEventListener('click', () => executePlayerDefend());
+                combatSubmenu.appendChild(defendBtn);
+
+            } else if (combatState.currentTab === 'items') {
+                if (!playerStats.consumables || playerStats.consumables.length === 0) {
+                    combatSubmenu.innerHTML = `<span style="color:var(--text-muted); font-size:1.2rem; padding:6px;">Your battle belt holds no potions or consumables!</span>`;
+                    return;
+                }
+
+                // Group consumables by name to display quantity count
+                const counts = {};
+                playerStats.consumables.forEach(item => { counts[item] = (counts[item] || 0) + 1; });
+
+                Object.keys(counts).forEach(itemName => {
+                    const def = CONSUMABLE_ITEMS[itemName] || { icon: '🧪', desc: 'Consumable item' };
+                    const itemBtn = document.createElement('button');
+                    itemBtn.className = 'combat-action-btn';
+                    itemBtn.innerHTML = `<span>${def.icon} ${itemName} (x${counts[itemName]})</span> <span class="combat-action-cost">${def.desc}</span>`;
+                    itemBtn.addEventListener('click', () => executePlayerItem(itemName));
+                    combatSubmenu.appendChild(itemBtn);
+                });
+
+            } else if (combatState.currentTab === 'flee') {
+                const fleeBtn = document.createElement('button');
+                fleeBtn.className = 'combat-action-btn';
+                fleeBtn.innerHTML = `<span>🏃 Tactical Retreat</span> <span class="combat-action-cost">D20 + AGI Check</span>`;
+                fleeBtn.addEventListener('click', () => executePlayerFlee());
+                combatSubmenu.appendChild(fleeBtn);
+            }
+        }
+
+        function rollCombatD20(modifier, onComplete) {
+            combatD20.classList.add('d20-rolling');
+            sound.playDiceRoll();
+
+            let ticks = 0;
+            const timer = setInterval(() => {
+                combatD20Val.textContent = Math.floor(Math.random() * 20) + 1;
+                ticks++;
+                if (ticks >= 7) {
+                    clearInterval(timer);
+                    combatD20.classList.remove('d20-rolling');
+                    const rawRoll = Math.floor(Math.random() * 20) + 1;
+                    combatD20Val.textContent = rawRoll;
+                    const isNat20 = rawRoll === 20;
+                    const isNat1 = rawRoll === 1;
+                    const total = rawRoll + modifier;
+                    sound.playDiceLand(isNat20);
+                    onComplete({ rawRoll, modifier, total, isNat20, isNat1 });
+                }
+            }, 60);
+        }
+
+        function executePlayerAttack(type, mpCost = 0) {
+            if (combatState.busy) return;
+            combatState.busy = true;
+            renderCombatSubmenu();
+
+            if (mpCost > 0) {
+                playerStats.currentMp = Math.max(0, playerStats.currentMp - mpCost);
+                updateCombatHUD();
+            }
+
+            const { stats, charClass } = combatState.player;
+            const statBonus = charClass === 'warrior' ? getStatModifier(stats.str) : getStatModifier(stats.int);
+            const targetAc = combatState.monster.ac;
+
+            rollCombatD20(statBonus, (d20) => {
+                const isHit = (!d20.isNat1 && (d20.isNat20 || d20.total >= targetAc));
+
+                if (isHit) {
+                    let dmgTotal = 0;
+                    let formulaDesc = '';
+
+                    if (type === 'basic_melee') {
+                        sound.playSlash();
+                        const dmg = rollDiceFormula(d20.isNat20 ? 2 : 1, 8, Math.max(1, statBonus));
+                        dmgTotal = dmg.total;
+                        formulaDesc = `${dmg.rolls.join('+')} + ${statBonus}`;
+                    } else if (type === 'basic_magic') {
+                        sound.playSpellCast();
+                        const dmg = rollDiceFormula(d20.isNat20 ? 2 : 1, 8, Math.max(1, statBonus));
+                        dmgTotal = dmg.total;
+                        formulaDesc = `${dmg.rolls.join('+')} + ${statBonus}`;
+                    } else if (type === 'special_cleave') {
+                        sound.playSlash();
+                        const dmg = rollDiceFormula(d20.isNat20 ? 4 : 2, 8, statBonus * 2);
+                        dmgTotal = dmg.total;
+                        formulaDesc = `${dmg.rolls.join('+')} + ${statBonus * 2}`;
+                    } else if (type === 'special_firebolt') {
+                        sound.playSpellCast();
+                        const dmg = rollDiceFormula(d20.isNat20 ? 4 : 2, 10, statBonus * 2);
+                        dmgTotal = dmg.total;
+                        formulaDesc = `${dmg.rolls.join('+')} + ${statBonus * 2}`;
+                    }
+
+                    combatState.monster.currentHp = Math.max(0, combatState.monster.currentHp - dmgTotal);
+                    const enemyCard = document.getElementById('combatEnemyCard');
+                    enemyCard.classList.remove('combat-anim-shake', 'combat-anim-flash');
+                    void enemyCard.offsetWidth;
+                    enemyCard.classList.add('combat-anim-shake', 'combat-anim-flash');
+
+                    if (d20.isNat20) {
+                        addCombatLog(`🌟 CRITICAL HIT! D20 (${d20.rawRoll}) + ${statBonus} = ${d20.total} vs AC ${targetAc}! Smashed for ${dmgTotal} DAMAGE (${formulaDesc})!`, 'crit');
+                    } else {
+                        addCombatLog(`⚔️ HIT! D20 (${d20.rawRoll}) + ${statBonus} = ${d20.total} vs AC ${targetAc}! Dealt ${dmgTotal} damage (${formulaDesc})!`, 'dmg');
+                    }
+
+                } else {
+                    sound.playHit();
+                    if (d20.isNat1) {
+                        addCombatLog(`💀 CRITICAL MISS! D20 (${d20.rawRoll})! Your strike fumbles wide!`, 'dmg');
+                    } else {
+                        addCombatLog(`🛡️ Attack Deflected! D20 (${d20.rawRoll}) + ${statBonus} = ${d20.total} missed AC ${targetAc}!`, 'info');
+                    }
+                }
+
+                updateCombatHUD();
+
+                setTimeout(() => {
+                    checkCombatEndOrPassTurn();
+                }, 900);
+            });
+        }
+
+        function executePlayerDefend() {
+            if (combatState.busy) return;
+            combatState.busy = true;
+            sound.playShieldBlock();
+
+            combatState.player.isDefending = true;
+            combatState.player.effectiveAc = combatState.player.baseAc + 4;
+            // Minor stamina/mana recovery
+            playerStats.currentMp = Math.min(playerStats.maxMp, playerStats.currentMp + 4);
+
+            addCombatLog(`🛡️ You brace into a defensive guard! AC boosted to ${combatState.player.effectiveAc} (+4 AC), damage taken will be halved! (+4 MP restored)`, 'guard');
+            updateCombatHUD();
+
+            setTimeout(() => {
+                checkCombatEndOrPassTurn();
+            }, 700);
+        }
+
+        function executePlayerItem(itemName) {
+            if (combatState.busy) return;
+            const itemIdx = playerStats.consumables.indexOf(itemName);
+            if (itemIdx === -1) return;
+
+            combatState.busy = true;
+            playerStats.consumables.splice(itemIdx, 1);
+            const def = CONSUMABLE_ITEMS[itemName];
+
+            if (def && def.type === 'heal_hp') {
+                sound.playPotionDrink();
+                const healed = Math.min(playerStats.maxHp - playerStats.currentHp, def.value);
+                playerStats.currentHp = Math.min(playerStats.maxHp, playerStats.currentHp + def.value);
+                addCombatLog(`🍷 Drank ${itemName}! Restored +${healed} HP!`, 'heal');
+
+            } else if (def && def.type === 'heal_mp') {
+                sound.playPotionDrink();
+                const healed = Math.min(playerStats.maxMp - playerStats.currentMp, def.value);
+                playerStats.currentMp = Math.min(playerStats.maxMp, playerStats.currentMp + def.value);
+                addCombatLog(`🧪 Drank ${itemName}! Restored +${healed} MP!`, 'heal');
+
+            } else if (def && def.type === 'damage_undead') {
+                sound.playSpellCast();
+                const dmg = def.value;
+                combatState.monster.currentHp = Math.max(0, combatState.monster.currentHp - dmg);
+                addCombatLog(`✨ Hurled ${itemName}! Smashed foe dealing ${dmg} Radiant Damage!`, 'crit');
+            }
+
+            updateCombatHUD();
+
+            setTimeout(() => {
+                checkCombatEndOrPassTurn();
+            }, 800);
+        }
+
+        function executePlayerFlee() {
+            if (combatState.busy) return;
+            combatState.busy = true;
+            const agiMod = getStatModifier(combatState.player.stats.agi);
+
+            rollCombatD20(agiMod, (d20) => {
+                if (d20.total >= 11 || d20.isNat20) {
+                    sound.playFlee();
+                    addCombatLog(`🏃 Escape Succeeded! D20 (${d20.rawRoll}) + ${agiMod} = ${d20.total} vs DC 11. You slipped away into the shadows!`, 'heal');
+                    setTimeout(() => {
+                        combatModal.style.display = 'none';
+                        combatState = null;
+                    }, 1100);
+                } else {
+                    sound.playHit();
+                    addCombatLog(`❌ Escape Blocked! D20 (${d20.rawRoll}) + ${agiMod} = ${d20.total} vs DC 11. The vanguard corners you!`, 'dmg');
+                    setTimeout(() => {
+                        checkCombatEndOrPassTurn();
+                    }, 900);
+                }
+            });
+        }
+
+        function checkCombatEndOrPassTurn() {
+            if (!combatState) return;
+
+            // 1. Monster Defeated?
+            if (combatState.monster.currentHp <= 0) {
+                handleCombatVictory();
+                return;
+            }
+
+            // 2. Player Defeated?
+            if (playerStats.currentHp <= 0) {
+                handleCombatDefeat();
+                return;
+            }
+
+            // Switch to Enemy Turn
+            combatState.turn = 'enemy';
+            combatState.busy = true;
+            updateCombatHUD();
+            renderCombatSubmenu();
+
+            setTimeout(() => {
+                executeEnemyTurn();
+            }, 800);
+        }
+
+        function executeEnemyTurn() {
+            if (!combatState || combatState.turn !== 'enemy') return;
+
+            const mon = combatState.monster;
+            const atkBonus = mon.attackBonus;
+            const playerAc = combatState.player.effectiveAc;
+
+            addCombatLog(`💀 ${mon.name} prepares to strike with ${mon.attackName}...`, 'info');
+
+            rollCombatD20(atkBonus, (d20) => {
+                const isHit = (!d20.isNat1 && (d20.isNat20 || d20.total >= playerAc));
+
+                if (isHit) {
+                    sound.playHit();
+                    const dice = mon.damageDice;
+                    let dmgResult = rollDiceFormula(d20.isNat20 ? dice.count * 2 : dice.count, dice.sides, dice.mod);
+                    let finalDmg = dmgResult.total;
+
+                    // Half damage if player was in Defend Guard stance
+                    if (combatState.player.isDefending) {
+                        finalDmg = Math.max(1, Math.floor(finalDmg / 2));
+                        addCombatLog(`🛡️ Guard Absorbed blow! Damage reduced from ${dmgResult.total} down to ${finalDmg}!`, 'guard');
+                    }
+
+                    playerStats.currentHp = Math.max(0, playerStats.currentHp - finalDmg);
+                    
+                    const heroCard = document.getElementById('combatHeroCard');
+                    heroCard.classList.remove('combat-anim-shake', 'combat-anim-flash');
+                    void heroCard.offsetWidth;
+                    heroCard.classList.add('combat-anim-shake', 'combat-anim-flash');
+
+                    if (d20.isNat20) {
+                        addCombatLog(`💀 ENEMY CRIT! ${mon.name} struck for ${finalDmg} DAMAGE!`, 'dmg');
+                    } else {
+                        addCombatLog(`💥 ${mon.name} hits! (${d20.rawRoll} + ${atkBonus} = ${d20.total} vs AC ${playerAc}) dealing ${finalDmg} damage!`, 'dmg');
+                    }
+
+                } else {
+                    sound.playShieldBlock();
+                    addCombatLog(`✨ You evaded ${mon.name}'s strike! (${d20.rawRoll} + ${atkBonus} = ${d20.total} vs AC ${playerAc})`, 'heal');
+                }
+
+                // Reset player defending stance at the end of enemy turn
+                combatState.player.isDefending = false;
+                combatState.player.effectiveAc = combatState.player.baseAc;
+                combatState.round++;
+                combatState.turn = 'player';
+                combatState.busy = false;
+
+                updateCombatHUD();
+
+                if (playerStats.currentHp <= 0) {
+                    setTimeout(() => handleCombatDefeat(), 600);
+                } else {
+                    renderCombatSubmenu();
+                }
+            });
+        }
+
+        function handleCombatVictory() {
+            sound.playFanfare();
+            combatState.turn = 'ended';
+            updateCombatHUD();
+
+            const mon = combatState.monster;
+            playerStats.xp += mon.xpReward;
+            playerStats.gold += mon.goldReward;
+
+            let lootAwarded = [];
+            if (mon.loot) {
+                mon.loot.forEach(l => {
+                    if (Math.random() <= l.chance) {
+                        playerStats.consumables.push(l.item);
+                        lootAwarded.push(l.item);
+                    }
+                });
+            }
+
+            addCombatLog(`🏆 VICTORY! You vanquished ${mon.name}!`, 'crit');
+            addCombatLog(`💰 Gained +${mon.xpReward} XP and +${mon.goldReward} Gold!`, 'heal');
+            if (lootAwarded.length > 0) {
+                addCombatLog(`🎁 Loot Acquired: ${lootAwarded.join(', ')}!`, 'crit');
+            }
+
+            if (adventureApp) {
+                adventureApp.resolveEncounterVisual(combatState.encounterId, true);
+            }
+
+            combatActionsPanel.style.display = 'none';
+            btnDismissCombat.style.display = 'block';
+            btnDismissCombat.textContent = 'CLAIM VICTORY & CONTINUE';
+        }
+
+        function handleCombatDefeat() {
+            sound.playFailure();
+            combatState.turn = 'ended';
+            updateCombatHUD();
+
+            addCombatLog(`💀 DEFEATED! Your vision fades as the crypt claims your bones...`, 'dmg');
+
+            combatActionsPanel.style.display = 'none';
+            btnDismissCombat.style.display = 'block';
+            btnDismissCombat.textContent = 'RESTORE & RETREAT TO ENTRANCE';
+
+            btnDismissCombat.onclick = () => {
+                sound.playSelect();
+                combatModal.style.display = 'none';
+                // Revive player with half health
+                playerStats.currentHp = Math.floor(playerStats.maxHp / 2);
+                updateAdventureHUD();
+                addLogMessage(`⚠️ Revived at the entrance with ${playerStats.currentHp} HP. Be prepared next time!`, 'fail');
+                if (adventureApp && adventureApp.player) {
+                    adventureApp.player.position.set(0, 0, 10);
+                    adventureApp.targetPos.copy(adventureApp.player.position);
+                }
+            };
+        }
+
+        btnDismissCombat.addEventListener('click', () => {
+            sound.playSelect();
+            combatModal.style.display = 'none';
+            combatState = null;
         });
     </script>
 </body>
