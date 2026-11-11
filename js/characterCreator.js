@@ -1,7 +1,7 @@
 import * as THREE from '../vendor/three.module.js';
 import { CharacterBuilder } from './characterBuilder.js';
 import { sound } from './audio.js';
-import { calculateStats, RACE_DATA, CLASS_DATA } from './stats.js';
+import { calculateStats, ANCESTRY_DATA, CLASS_DATA } from './stats.js';
 
 export class CharacterCreatorApp {
     constructor(canvasContainer) {
@@ -24,6 +24,7 @@ export class CharacterCreatorApp {
         // Current hero configuration
         this.config = {
             name: 'Valerius',
+            ancestry: 'human',
             race: 'human',
             charClass: 'warrior',
             showHelm: true,
@@ -168,12 +169,16 @@ export class CharacterCreatorApp {
     }
 
     updateConfig(newConfig, soundType = 'select') {
-        const raceChanged = newConfig.race && newConfig.race !== this.config.race;
+        const ancestryChanged = (newConfig.ancestry && newConfig.ancestry !== this.config.ancestry) ||
+                                (newConfig.race && newConfig.race !== this.config.race);
         const classChanged = newConfig.charClass && newConfig.charClass !== this.config.charClass;
+
+        if (newConfig.ancestry && !newConfig.race) newConfig.race = newConfig.ancestry;
+        if (newConfig.race && !newConfig.ancestry) newConfig.ancestry = newConfig.race;
 
         Object.assign(this.config, newConfig);
 
-        if (raceChanged) {
+        if (ancestryChanged) {
             sound.playRaceSwitch();
         } else if (classChanged) {
             sound.playClassEquip(this.config.charClass);
@@ -185,20 +190,23 @@ export class CharacterCreatorApp {
     }
 
     updateStatsUI() {
-        const stats = calculateStats(this.config.race, this.config.charClass);
+        const stats = calculateStats(this.config.ancestry || this.config.race, this.config.charClass);
 
         const elName = document.getElementById('heroNameBadge');
         if (elName) elName.textContent = this.config.name || 'Hero';
 
-        const elRaceClass = document.getElementById('heroRaceClassBadge');
-        if (elRaceClass) {
-            elRaceClass.textContent = `${stats.race.name} ${stats.charClass.name}`;
+        const elAncestryClass = document.getElementById('heroAncestryClassBadge') ||
+                                document.getElementById('heroancestryClassBadge') ||
+                                document.getElementById('heroRaceClassBadge');
+        if (elAncestryClass) {
+            elAncestryClass.textContent = `${(stats.ancestry || stats.race).name} ${stats.charClass.name}`;
         }
 
-        const elPerkTitle = document.getElementById('racialPerkTitle');
-        const elPerkDesc = document.getElementById('racialPerkDesc');
-        if (elPerkTitle) elPerkTitle.textContent = `${stats.race.icon} ${stats.race.name} Ancestry Trait`;
-        if (elPerkDesc) elPerkDesc.textContent = stats.race.perk;
+        const ancestryObj = stats.ancestry || stats.race;
+        const elPerkTitle = document.getElementById('racialPerkTitle') || document.getElementById('ancestryPerkTitle');
+        const elPerkDesc = document.getElementById('racialPerkDesc') || document.getElementById('ancestryPerkDesc');
+        if (elPerkTitle) elPerkTitle.textContent = `${ancestryObj.icon} ${ancestryObj.name} Ancestry Trait`;
+        if (elPerkDesc) elPerkDesc.textContent = ancestryObj.perk;
 
         const elAbilityTitle = document.getElementById('classAbilityTitle');
         const elAbilityDesc = document.getElementById('classAbilityDesc');
