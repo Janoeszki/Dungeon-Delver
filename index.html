@@ -1584,20 +1584,27 @@
             }
         });
 
-        // Attempt autoplay immediately on load; falls back cleanly to gesture prompt if suspended
+        // Attempt autoplay immediately on load
         music.tryStart('title');
 
-        // First gesture anywhere unlocks browser audio for the Intro Theme
+        // Immediate unblock on any user interaction (click, tap, key, or mouse movement over page)
+        const awakenEvents = ['pointerdown', 'mousedown', 'keydown', 'touchstart', 'pointermove', 'mousemove', 'wheel', 'focus'];
         const awakenAudioOnGesture = (e) => {
-            if (e.target && e.target.closest('#btnStartMusicToggle, #btnMusicToggle, #btnStartSfxToggle, #btnSoundToggle')) {
+            if (e && e.target && e.target.closest && e.target.closest('#btnStartMusicToggle, #btnMusicToggle, #btnStartSfxToggle, #btnSoundToggle')) {
                 return;
             }
             if (music.enabled && (music.awaitingGesture || !music.isPlaying)) {
-                music.tryStart(music.currentTrack);
+                music.tryStart(music.currentTrack).then((started) => {
+                    if (started) {
+                        awakenEvents.forEach((ev) => window.removeEventListener(ev, awakenAudioOnGesture, true));
+                    }
+                });
             }
         };
-        window.addEventListener('pointerdown', awakenAudioOnGesture, { passive: true });
-        window.addEventListener('keydown', awakenAudioOnGesture);
+
+        awakenEvents.forEach((ev) => {
+            window.addEventListener(ev, awakenAudioOnGesture, { capture: true, passive: true });
+        });
 
         // Animate Start Screen Audio Visualizer Bars
         function updateVisualizer() {
