@@ -57,6 +57,14 @@
             gap: 12px;
         }
 
+        .header-logo-img {
+            width: 38px;
+            height: 38px;
+            object-fit: contain;
+            filter: drop-shadow(0 0 8px rgba(245, 166, 35, 0.5));
+            border-radius: 4px;
+        }
+
         .game-title h1 {
             font-family: 'Cinzel', serif;
             font-size: 1.45rem;
@@ -176,26 +184,6 @@
             text-align: center;
             letter-spacing: 1px;
             text-transform: uppercase;
-        }
-
-        .panel-logo-header {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .panel-logo-img {
-            width: 84px;
-            height: auto;
-            max-width: 100%;
-            object-fit: contain;
-            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.7));
-            transition: transform 0.2s ease;
-        }
-
-        .panel-logo-img:hover {
-            transform: scale(1.05);
         }
 
         .form-group { display: flex; flex-direction: column; gap: 5px; }
@@ -630,7 +618,7 @@
     <!-- Header -->
     <header>
         <div class="game-title">
-            <span>⚔️</span>
+            <img src="dungeon_delver_logo_small.png" alt="Dungeon Delver Logo" class="header-logo-img" />
             <h1>DUNGEON DELVER</h1>
             <span>| The Lost Crypt of Phusza</span>
         </div>
@@ -651,10 +639,7 @@
             <div class="overlay-layer">
                 <!-- Left Side Panel: Hero Customization -->
                 <aside class="side-panel">
-                    <div class="panel-logo-header">
-                        <img src="dungeon_delver_logo_small.png" alt="Dungeon Delver Logo" class="panel-logo-img" />
-                        <h2 class="panel-heading" style="width: 100%;">Character Forge</h2>
-                    </div>
+                    <h2 class="panel-heading">Character Forge</h2>
 
                     <div class="form-group">
                         <label class="form-label" for="heroNameInput">Hero Name</label>
