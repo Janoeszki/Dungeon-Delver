@@ -862,7 +862,7 @@
         import { CharacterCreatorApp } from './js/characterCreator.js';
         import { DungeonWorldApp } from './js/dungeonWorld.js';
         import { sound } from './js/audio.js';
-        import { ancestry_DATA, calculateStats } from './js/stats.js';
+        import { ANCESTRY_DATA, calculateStats } from './js/stats.js';
         import { rollD20, getStatModifier, formatModifier, animateDiceRoll } from './js/dice.js';
 
         // State & Mode
@@ -922,7 +922,7 @@
                 document.querySelectorAll('[data-ancestry]').forEach(c => c.classList.remove('active'));
                 card.classList.add('active');
 
-                const ancestryInfo = ancestry_DATA[ancestryKey];
+                const ancestryInfo = ANCESTRY_DATA[ancestryKey];
                 const configUpdate = { ancestry: ancestryKey };
                 if (ancestryInfo && ancestryInfo.defaultSkin) {
                     configUpdate.skinColor = ancestryInfo.defaultSkin;
@@ -1000,8 +1000,8 @@
                 return dots[Math.floor(Math.random() * dots.length)].dataset.color;
             };
 
-            const defaultSkin = (ancestry_DATA[randomancestry] && ancestry_DATA[randomancestry].defaultSkin) || pickRandomDot('skinPalette');
-            const defaultHair = (ancestry_DATA[randomancestry] && ancestry_DATA[randomancestry].defaultHair) || pickRandomDot('hairPalette');
+            const defaultSkin = (ANCESTRY_DATA[randomancestry] && ANCESTRY_DATA[randomancestry].defaultSkin) || pickRandomDot('skinPalette');
+            const defaultHair = (ANCESTRY_DATA[randomancestry] && ANCESTRY_DATA[randomancestry].defaultHair) || pickRandomDot('hairPalette');
             const armor = pickRandomDot('armorPalette');
             const helm = Math.random() > 0.35;
 
