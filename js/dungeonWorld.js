@@ -39,6 +39,9 @@ export class DungeonWorldApp {
         // Click waypoint reticle
         this.clickReticle = null;
         this.torches = [];
+        this.disposed = false;
+        this.rafId = null;
+        this._onResize = null;
 
         this.initScene();
         this.buildDungeonEnvironment();
@@ -411,13 +414,16 @@ export class DungeonWorldApp {
     }
 
     setupEventListeners() {
-        window.addEventListener('resize', () => {
+        this._onResize = () => {
+            if (this.disposed) return;
             const width = this.container.clientWidth;
             const height = this.container.clientHeight;
+            if (width <= 0 || height <= 0) return;
             this.camera.aspect = width / height;
             this.camera.updateProjectionMatrix();
             this.renderer.setSize(width, height);
-        });
+        };
+        window.addEventListener('resize', this._onResize);
 
         // Click to Move / Click to Interact
         this.renderer.domElement.addEventListener('pointerdown', (e) => {
@@ -585,8 +591,23 @@ export class DungeonWorldApp {
         if (beacon) beacon.visible = false;
     }
 
+    dispose() {
+        this.disposed = true;
+        if (this.rafId !== null) {
+            cancelAnimationFrame(this.rafId);
+            this.rafId = null;
+        }
+        if (this._onResize) {
+            window.removeEventListener('resize', this._onResize);
+        }
+        if (this.renderer) {
+            this.renderer.dispose();
+        }
+    }
+
     animate() {
-        requestAnimationFrame(() => this.animate());
+        if (this.disposed) return;
+        this.rafId = requestAnimationFrame(() => this.animate());
 
         const delta = this.clock.getDelta();
         const time = this.clock.getElapsedTime();

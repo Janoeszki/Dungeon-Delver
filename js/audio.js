@@ -13,8 +13,9 @@ class SoundController {
             }
         }
         if (this.ctx && this.ctx.state === 'suspended') {
-            this.ctx.resume();
+            this.ctx.resume().catch(() => {});
         }
+        return this.ctx;
     }
 
     playTone(freq, type = 'square', duration = 0.1, gainVal = 0.15) {
@@ -189,6 +190,61 @@ class SoundController {
                 this.playTone(250 + Math.random() * 400, 'triangle', 0.06, 0.12);
             }, i * 40);
         }
+    }
+
+    /** Deep fantasy brass/bell swell when entering the realm from the title screen. */
+    playTitleEnter() {
+        if (!this.enabled) return;
+        const ctx = this.init();
+        if (!ctx) return;
+
+        const now = ctx.currentTime;
+        // Resonant low D gong + fifth + bright shimmer
+        const voices = [
+            { freq: 146.83, type: 'triangle', gain: 0.24, dur: 1.4, delay: 0 },
+            { freq: 220.0, type: 'sine', gain: 0.16, dur: 1.2, delay: 0.04 },
+            { freq: 293.66, type: 'triangle', gain: 0.14, dur: 1.1, delay: 0.08 },
+            { freq: 440.0, type: 'sine', gain: 0.11, dur: 0.95, delay: 0.14 },
+            { freq: 587.33, type: 'sine', gain: 0.09, dur: 0.9, delay: 0.2 }
+        ];
+
+        voices.forEach((v) => {
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.type = v.type;
+            osc.frequency.setValueAtTime(v.freq, now + v.delay);
+
+            g.gain.setValueAtTime(0.0001, now + v.delay);
+            g.gain.linearRampToValueAtTime(v.gain, now + v.delay + 0.03);
+            g.gain.exponentialRampToValueAtTime(0.0001, now + v.delay + v.dur);
+
+            osc.connect(g);
+            g.connect(ctx.destination);
+            osc.start(now + v.delay);
+            osc.stop(now + v.delay + v.dur + 0.02);
+        });
+    }
+
+    /** Sparkling arcane crystal chord when interacting with the Phusza rune emblem. */
+    playCrystalChime() {
+        if (!this.enabled) return;
+        const ctx = this.init();
+        if (!ctx) return;
+
+        const now = ctx.currentTime;
+        [587.33, 880.0, 1046.5, 1318.51].forEach((freq, i) => {
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now + i * 0.055);
+            g.gain.setValueAtTime(0.0001, now + i * 0.055);
+            g.gain.linearRampToValueAtTime(0.1, now + i * 0.055 + 0.015);
+            g.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.055 + 0.8);
+            osc.connect(g);
+            g.connect(ctx.destination);
+            osc.start(now + i * 0.055);
+            osc.stop(now + i * 0.055 + 0.85);
+        });
     }
 }
 

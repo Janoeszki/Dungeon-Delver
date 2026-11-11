@@ -4,7 +4,7 @@ import { sound } from './audio.js';
 import { calculateStats, ANCESTRY_DATA, CLASS_DATA } from './stats.js';
 
 export class CharacterCreatorApp {
-    constructor(canvasContainer) {
+    constructor(canvasContainer, options = {}) {
         this.container = canvasContainer;
         this.scene = null;
         this.camera = null;
@@ -12,6 +12,9 @@ export class CharacterCreatorApp {
         this.builder = new CharacterBuilder();
         this.currentCharacter = null;
         this.characterAnchor = null;
+
+        this.active = options.active !== undefined ? options.active : true;
+        this.rafId = null;
 
         // Turntable interaction state
         this.isDragging = false;
@@ -42,7 +45,9 @@ export class CharacterCreatorApp {
         this.createParticles();
         this.setupEventListeners();
         this.rebuildCharacter();
-        this.animate();
+        if (this.active) {
+            this.animate();
+        }
     }
 
     initScene() {
@@ -232,14 +237,31 @@ export class CharacterCreatorApp {
         }
     }
 
+    resize() {
+        if (!this.renderer || !this.camera || !this.container) return;
+        const width = this.container.clientWidth;
+        const height = this.container.clientHeight;
+        if (width <= 0 || height <= 0) return;
+        this.camera.aspect = width / height;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(width, height);
+    }
+
+    setActive(isActive) {
+        if (this.active === isActive) return;
+        this.active = isActive;
+        if (this.active) {
+            this.clock.getDelta();
+            this.resize();
+            this.animate();
+        } else if (this.rafId !== null) {
+            cancelAnimationFrame(this.rafId);
+            this.rafId = null;
+        }
+    }
+
     setupEventListeners() {
-        window.addEventListener('resize', () => {
-            const width = this.container.clientWidth;
-            const height = this.container.clientHeight;
-            this.camera.aspect = width / height;
-            this.camera.updateProjectionMatrix();
-            this.renderer.setSize(width, height);
-        });
+        window.addEventListener('resize', () => this.resize());
 
         // Mouse Drag Turntable
         const canvas = this.renderer.domElement;
@@ -295,7 +317,8 @@ export class CharacterCreatorApp {
     }
 
     animate() {
-        requestAnimationFrame(() => this.animate());
+        if (!this.active) return;
+        this.rafId = requestAnimationFrame(() => this.animate());
 
         const delta = this.clock.getDelta();
 

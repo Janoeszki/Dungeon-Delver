@@ -40,9 +40,9 @@
             flex-direction: column;
         }
 
-        /* Top Navigation Header */
+        /* Top Navigation Header (visible in Forge & Adventure) */
         header {
-            display: flex;
+            display: none;
             align-items: center;
             justify-content: space-between;
             padding: 8px 24px;
@@ -611,19 +611,513 @@
             cursor: pointer;
             box-shadow: 0 4px 0 #7c5820;
         }
+
+        /* ========================================= */
+        /* SCREEN 0: KICKASS STARTING PAGE           */
+        /* ========================================= */
+        #screenCreator { display: none; }
+        #screenStart {
+            display: flex;
+            position: relative;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            background: radial-gradient(circle at 50% 35%, #111b2e 0%, #06080f 70%);
+        }
+
+        .start-vignette {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            pointer-events: none;
+            background:
+                radial-gradient(ellipse at 50% 42%, transparent 32%, rgba(4, 6, 11, 0.62) 78%, rgba(2, 3, 6, 0.92) 100%),
+                linear-gradient(180deg, rgba(4, 6, 12, 0.65) 0%, transparent 18%, transparent 72%, rgba(4, 6, 12, 0.88) 100%);
+        }
+
+        .start-ui {
+            position: relative;
+            z-index: 3;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 26px 20px;
+            pointer-events: none;
+        }
+
+        .start-topbar {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            flex-wrap: wrap;
+            pointer-events: auto;
+        }
+
+        .realm-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(11, 15, 25, 0.82);
+            border: 1px solid rgba(124, 88, 32, 0.8);
+            border-radius: 4px;
+            padding: 6px 14px;
+            font-size: 1.15rem;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            backdrop-filter: blur(6px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.55);
+        }
+
+        .realm-badge strong {
+            font-family: 'Cinzel', serif;
+            color: var(--gold-bright);
+            font-size: 0.98rem;
+            letter-spacing: 1.5px;
+        }
+
+        .music-player-hud {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(11, 15, 25, 0.86);
+            border: 1px solid var(--gold-border);
+            border-radius: 4px;
+            padding: 6px 12px;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.65), inset 0 0 12px rgba(56, 189, 248, 0.08);
+        }
+
+        .visualizer-bars {
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            height: 20px;
+            width: 44px;
+            padding: 2px 0;
+        }
+
+        .vis-bar {
+            flex: 1;
+            min-height: 3px;
+            height: 3px;
+            background: linear-gradient(180deg, var(--cyan-accent), var(--gold-bright));
+            border-radius: 1px;
+            transition: height 0.07s linear;
+            opacity: 0.85;
+        }
+
+        .track-meta {
+            display: flex;
+            flex-direction: column;
+            line-height: 1;
+            padding-right: 4px;
+        }
+
+        .track-kicker {
+            font-size: 0.92rem;
+            color: var(--cyan-accent);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .track-name {
+            font-family: 'Cinzel', serif;
+            font-size: 0.88rem;
+            color: var(--gold-bright);
+            letter-spacing: 0.8px;
+        }
+
+        .hud-mini-btn {
+            background: #1a2335;
+            border: 1px solid var(--gold-border);
+            color: var(--gold-bright);
+            font-family: 'VT323', monospace;
+            font-size: 1.12rem;
+            padding: 3px 10px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .hud-mini-btn:hover {
+            background: #273450;
+            border-color: var(--gold-bright);
+            box-shadow: 0 0 10px rgba(245, 166, 35, 0.35);
+        }
+
+        .hud-mini-btn.needs-awaken {
+            border-color: var(--cyan-accent);
+            color: #e0f2fe;
+            animation: pulseAwakenBtn 1.8s ease-in-out infinite;
+        }
+
+        @keyframes pulseAwakenBtn {
+            0%, 100% { box-shadow: 0 0 6px rgba(56, 189, 248, 0.35); }
+            50% { box-shadow: 0 0 16px rgba(56, 189, 248, 0.85); }
+        }
+
+        .volume-wrap {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .music-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 68px;
+            height: 5px;
+            background: #1e293b;
+            border: 1px solid var(--gold-border);
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .music-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            background: var(--gold-bright);
+            border: 1px solid #422006;
+            border-radius: 50%;
+            box-shadow: 0 0 6px rgba(255, 207, 64, 0.7);
+        }
+
+        .start-centerpiece {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            width: 100%;
+            max-width: 860px;
+            margin: auto 0;
+        }
+
+        /* Heroic Logo Stage with aligned brazier & crystal backlights */
+        .title-logo-stage {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+            cursor: pointer;
+            animation: logoEntrance 1.05s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+
+        @keyframes logoEntrance {
+            0% { opacity: 0; transform: translateY(-18px) scale(0.93); filter: brightness(0.7); }
+            100% { opacity: 1; transform: translateY(0) scale(1); filter: brightness(1); }
+        }
+
+        .logo-aura-crystal {
+            position: absolute;
+            left: 50%;
+            top: 24%;
+            width: 22%;
+            height: 44%;
+            transform: translate(-50%, -50%);
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.58) 0%, rgba(14, 165, 233, 0.18) 45%, transparent 72%);
+            filter: blur(18px);
+            pointer-events: none;
+            animation: crystalBreath 3.6s ease-in-out infinite;
+        }
+
+        .logo-aura-brazier {
+            position: absolute;
+            top: 28%;
+            width: 14%;
+            height: 30%;
+            transform: translate(-50%, -50%);
+            background: radial-gradient(circle, rgba(255, 145, 36, 0.6) 0%, rgba(234, 88, 12, 0.2) 50%, transparent 75%);
+            filter: blur(14px);
+            pointer-events: none;
+            animation: brazierFlicker 1.9s ease-in-out infinite alternate;
+        }
+
+        .logo-aura-brazier.left { left: 34.5%; }
+        .logo-aura-brazier.right { left: 65.5%; animation-delay: -0.7s; }
+
+        @keyframes crystalBreath {
+            0%, 100% { opacity: 0.7; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.16); }
+        }
+
+        @keyframes brazierFlicker {
+            0% { opacity: 0.65; transform: translate(-50%, -50%) scale(0.96); }
+            50% { opacity: 0.95; transform: translate(-50%, -52%) scale(1.08); }
+            100% { opacity: 0.78; transform: translate(-50%, -49%) scale(1.02); }
+        }
+
+        .title-logo-img {
+            position: relative;
+            z-index: 2;
+            width: min(760px, 88vw);
+            max-height: 33vh;
+            height: auto;
+            object-fit: contain;
+            filter:
+                drop-shadow(0 16px 26px rgba(0, 0, 0, 0.92))
+                drop-shadow(0 0 18px rgba(56, 189, 248, 0.28))
+                drop-shadow(0 0 32px rgba(245, 166, 35, 0.16));
+            transition: transform 0.28s ease, filter 0.28s ease;
+            animation: logoFloat 6.5s ease-in-out infinite;
+        }
+
+        .title-logo-stage:hover .title-logo-img {
+            transform: scale(1.018);
+            filter:
+                drop-shadow(0 18px 30px rgba(0, 0, 0, 0.95))
+                drop-shadow(0 0 26px rgba(56, 189, 248, 0.5))
+                drop-shadow(0 0 38px rgba(255, 207, 64, 0.26));
+        }
+
+        .title-logo-stage.burst .logo-aura-crystal {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1.65);
+            transition: transform 0.35s ease;
+        }
+
+        @keyframes logoFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+        }
+
+        /* Ornate Fantasy Menu Plaque */
+        .title-menu-frame {
+            position: relative;
+            pointer-events: auto;
+            width: min(540px, 92vw);
+            padding: 20px 26px 22px;
+            background: linear-gradient(180deg, rgba(16, 22, 35, 0.88) 0%, rgba(9, 13, 21, 0.92) 100%);
+            border: 2px solid #9c6e26;
+            border-radius: 6px;
+            box-shadow:
+                0 18px 48px rgba(0, 0, 0, 0.85),
+                0 0 30px rgba(56, 189, 248, 0.14),
+                inset 0 0 24px rgba(0, 0, 0, 0.65),
+                inset 0 0 0 1px rgba(255, 207, 64, 0.22);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+            animation: menuSlideUp 0.95s 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+
+        @keyframes menuSlideUp {
+            0% { opacity: 0; transform: translateY(18px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .corner-gem {
+            position: absolute;
+            width: 11px;
+            height: 11px;
+            background: linear-gradient(135deg, #7dd3fc, #0284c7);
+            border: 1.5px solid var(--gold-bright);
+            transform: rotate(45deg);
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.7);
+        }
+        .corner-gem.tl { top: -6px; left: -6px; }
+        .corner-gem.tr { top: -6px; right: -6px; }
+        .corner-gem.bl { bottom: -6px; left: -6px; }
+        .corner-gem.br { bottom: -6px; right: -6px; }
+
+        .title-tagline {
+            text-align: center;
+            font-size: 1.24rem;
+            line-height: 1.28;
+            color: #cbd5e1;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+            max-width: 460px;
+        }
+
+        .title-tagline strong {
+            color: var(--gold-bright);
+            font-weight: normal;
+        }
+
+        .start-cta-primary {
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+            padding: 13px 22px;
+            background: linear-gradient(180deg, #e5a935 0%, #b77715 55%, #8f570a 100%);
+            border: 2px solid #ffe082;
+            border-radius: 4px;
+            color: #160c02;
+            font-family: 'Cinzel', serif;
+            font-size: 1.32rem;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-shadow: 0 1px 0 rgba(255, 245, 200, 0.55);
+            cursor: pointer;
+            box-shadow:
+                0 5px 0 #4d2c04,
+                0 10px 26px rgba(245, 166, 35, 0.4),
+                inset 0 1px 1px rgba(255, 255, 255, 0.45);
+            transition: all 0.16s ease;
+        }
+
+        .start-cta-primary::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -120%;
+            width: 60%;
+            height: 100%;
+            background: linear-gradient(110deg, transparent, rgba(255, 255, 255, 0.42), transparent);
+            transition: left 0.55s ease;
+        }
+
+        .start-cta-primary:hover {
+            background: linear-gradient(180deg, #ffd159 0%, #cf8b1b 55%, #a1640d 100%);
+            transform: translateY(-2px);
+            box-shadow:
+                0 7px 0 #4d2c04,
+                0 14px 32px rgba(255, 207, 64, 0.55),
+                inset 0 1px 2px rgba(255, 255, 255, 0.6);
+        }
+
+        .start-cta-primary:hover::after {
+            left: 145%;
+        }
+
+        .start-cta-primary:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #4d2c04, 0 4px 12px rgba(245, 166, 35, 0.35);
+        }
+
+        .title-secondary-row {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .start-cta-secondary {
+            background: rgba(24, 33, 51, 0.92);
+            border: 2px solid var(--gold-border);
+            border-radius: 4px;
+            color: var(--gold-bright);
+            font-family: 'VT323', monospace;
+            font-size: 1.32rem;
+            letter-spacing: 0.8px;
+            padding: 8px 12px;
+            cursor: pointer;
+            box-shadow: 0 3px 0 #0a0f19;
+            transition: all 0.15s ease;
+        }
+
+        .start-cta-secondary:hover {
+            background: #23304a;
+            border-color: var(--cyan-accent);
+            color: #ffffff;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 0 #0a0f19, 0 0 14px rgba(56, 189, 248, 0.25);
+        }
+
+        .start-cta-secondary:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 0 #0a0f19;
+        }
+
+        .start-footer {
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .audio-prompt-pill {
+            background: rgba(10, 15, 26, 0.86);
+            border: 1px solid rgba(56, 189, 248, 0.55);
+            border-radius: 20px;
+            padding: 5px 18px;
+            font-size: 1.15rem;
+            letter-spacing: 0.6px;
+            color: #bae6fd;
+            cursor: pointer;
+            box-shadow: 0 0 18px rgba(56, 189, 248, 0.24);
+            transition: all 0.25s ease;
+        }
+
+        .audio-prompt-pill.playing {
+            border-color: rgba(124, 88, 32, 0.75);
+            color: var(--text-muted);
+            box-shadow: none;
+        }
+
+        .audio-prompt-pill.needs-gesture {
+            animation: promptGlow 2s ease-in-out infinite;
+        }
+
+        @keyframes promptGlow {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 12px rgba(56, 189, 248, 0.3); }
+            50% { transform: scale(1.03); box-shadow: 0 0 24px rgba(56, 189, 248, 0.75); }
+        }
+
+        .start-credits {
+            font-size: 1.02rem;
+            color: #64748b;
+            letter-spacing: 0.8px;
+        }
+
+        /* Lore & Guide Modal */
+        .lore-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            font-size: 1.18rem;
+            line-height: 1.3;
+            color: var(--text-light);
+        }
+
+        .lore-block {
+            background: #0b0f19;
+            border: 1px solid var(--panel-border);
+            border-left: 3px solid var(--gold-primary);
+            padding: 9px 12px;
+        }
+
+        .lore-block strong {
+            color: var(--gold-bright);
+            font-family: 'Cinzel', serif;
+            font-size: 0.98rem;
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        @media (max-width: 640px) {
+            .start-ui { padding: 12px 14px 14px; }
+            .title-menu-frame { padding: 16px 16px 18px; }
+            .title-secondary-row { grid-template-columns: 1fr; }
+            .music-player-hud { width: 100%; justify-content: space-between; }
+            .realm-badge { display: none; }
+        }
     </style>
 </head>
 <body>
 
-    <!-- Header -->
-    <header>
-        <div class="game-title">
+    <!-- Header (Character Forge & Adventure Mode) -->
+    <header id="mainHeader">
+        <div class="game-title" id="headerTitleLogo" style="cursor:pointer;" title="Return to Title Screen">
             <img src="dungeon_delver_logo_small.png" alt="Dungeon Delver Logo" class="header-logo-img" />
             <h1>DUNGEON DELVER</h1>
-            <span>| The Lost Crypt of Janus</span>
+            <span>| Chronicles of Phusza</span>
         </div>
         <div class="top-actions">
-            <button id="btnSoundToggle" class="retro-btn">🔊 SOUND: ON</button>
+            <button id="btnReturnTitle" class="retro-btn">🏰 TITLE</button>
+            <button id="btnMusicToggle" class="retro-btn">🎵 MUSIC: ON</button>
+            <button id="btnSoundToggle" class="retro-btn">🔊 SFX: ON</button>
             <button id="btnSwitchMode" class="retro-btn" style="display:none;">🏕️ CHARACTER FORGE</button>
             <button id="btnRandomize" class="retro-btn">🎲 RANDOM HERO</button>
         </div>
@@ -631,7 +1125,84 @@
 
     <!-- Main Screens Container -->
     <main>
-        
+
+        <!-- SCREEN 0: TITLE / STARTING PAGE -->
+        <section id="screenStart" class="screen-view">
+            <div id="viewportStart" class="canvas-3d"></div>
+            <div class="start-vignette"></div>
+
+            <div class="start-ui">
+                <div class="start-topbar">
+                    <div class="realm-badge">
+                        <span>💠</span>
+                        <strong>REALM OF PHUSZA</strong>
+                        <span>• 3D D20 DUNGEON RPG</span>
+                    </div>
+
+                    <div class="music-player-hud">
+                        <div class="visualizer-bars" id="musicVisualizer" aria-hidden="true">
+                            <span class="vis-bar"></span>
+                            <span class="vis-bar"></span>
+                            <span class="vis-bar"></span>
+                            <span class="vis-bar"></span>
+                            <span class="vis-bar"></span>
+                            <span class="vis-bar"></span>
+                            <span class="vis-bar"></span>
+                            <span class="vis-bar"></span>
+                            <span class="vis-bar"></span>
+                            <span class="vis-bar"></span>
+                        </div>
+                        <div class="track-meta">
+                            <span class="track-kicker" id="musicStatusText">Intro Overture</span>
+                            <span class="track-name" id="musicTrackLabel">Gates of Phusza</span>
+                        </div>
+                        <button id="btnStartMusicToggle" class="hud-mini-btn">🎵 PLAY</button>
+                        <div class="volume-wrap" title="Music Volume">
+                            <input id="musicVolumeSlider" class="music-slider" type="range" min="0" max="100" value="65" aria-label="Music Volume" />
+                        </div>
+                        <button id="btnStartSfxToggle" class="hud-mini-btn">🔊 SFX</button>
+                    </div>
+                </div>
+
+                <div class="start-centerpiece">
+                    <div class="title-logo-stage" id="titleLogoStage" title="Click the Runic Arch">
+                        <div class="logo-aura-crystal"></div>
+                        <div class="logo-aura-brazier left"></div>
+                        <div class="logo-aura-brazier right"></div>
+                        <img src="dungeon_delver_chronicles-of-phusza.png" alt="Dungeon Delver: Chronicles of Phusza" class="title-logo-img" />
+                    </div>
+
+                    <div class="title-menu-frame">
+                        <span class="corner-gem tl"></span>
+                        <span class="corner-gem tr"></span>
+                        <span class="corner-gem bl"></span>
+                        <span class="corner-gem br"></span>
+
+                        <p class="title-tagline">
+                            Beyond the shattered seal lies <strong>Phusza's sunken sanctum</strong>.
+                            Forge an adventurer of steel or arcane fire, and test your fate against the D20.
+                        </p>
+
+                        <button id="btnStartForge" class="start-cta-primary">
+                            ⚔️ FORGE YOUR HERO
+                        </button>
+
+                        <div class="title-secondary-row">
+                            <button id="btnQuickDelve" class="start-cta-secondary">🎲 QUICK DELVE</button>
+                            <button id="btnShowLore" class="start-cta-secondary">📜 CHRONICLES &amp; GUIDE</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="start-footer">
+                    <button id="audioPromptPill" class="audio-prompt-pill needs-gesture">
+                        ✨ Click anywhere or press any key to awaken the "Gates of Phusza" theme
+                    </button>
+                    <div class="start-credits">6 Playable Ancestries • 3D Point-and-Click Crypt • Live Web Audio Orchestral Score</div>
+                </div>
+            </div>
+        </section>
+
         <!-- SCREEN 1: CHARACTER FORGE -->
         <section id="screenCreator" class="screen-view">
             <div id="viewportCreator" class="canvas-3d"></div>
@@ -859,16 +1430,61 @@
         </div>
     </div>
 
+    <!-- CHRONICLES & GUIDE MODAL -->
+    <div class="encounter-overlay" id="loreModal">
+        <div class="encounter-card">
+            <div class="encounter-header">
+                <span class="encounter-icon">📜</span>
+                <div>
+                    <h2 class="encounter-title">Chronicles of Phusza</h2>
+                    <span style="color:var(--text-muted); font-size:1.1rem;">Realm Lore &amp; Delver's Handbook</span>
+                </div>
+            </div>
+
+            <div class="lore-list">
+                <div class="lore-block">
+                    <strong>💠 The Shattered Seal of Phusza</strong>
+                    Beneath the moss-choked arches of the forsaken crypt pulses a living shard of Phusza crystal. Warlords, scholars, and treasure seekers descend its torchlit halls seeking ancient relics and the fabled Crown.
+                </div>
+                <div class="lore-block">
+                    <strong>⚒️ Forge &amp; D20 Fate</strong>
+                    Customize your hero across 6 ancestries (Human, Elf, Dwarf, Orc, Goblin, Catfolk) and wield Warrior steel or Mage flame. Every portcullis, sarcophagus, leyline monolith, and trap resolves with a live D20 + Stat Modifier check.
+                </div>
+                <div class="lore-block">
+                    <strong>🖱️ Controls &amp; Shortcuts</strong>
+                    • Click anywhere on the dungeon stone floor to walk<br>
+                    • Click glowing [⯁] encounter beacons to inspect &amp; roll D20 checks<br>
+                    • Drag in Character Forge to inspect your 3D hero on the rune pedestal<br>
+                    • Press <strong>M</strong> anytime to toggle the orchestral music
+                </div>
+            </div>
+
+            <button class="result-dismiss-btn" id="btnCloseLore" style="display:block;">RETURN TO GATE</button>
+        </div>
+    </div>
+
     <!-- Application Controller -->
     <script type="module">
+        import { TitleSceneApp } from './js/titleScene.js';
         import { CharacterCreatorApp } from './js/characterCreator.js';
         import { DungeonWorldApp } from './js/dungeonWorld.js';
         import { sound } from './js/audio.js';
+        import { music } from './js/music.js';
         import { ANCESTRY_DATA, calculateStats } from './js/stats.js';
         import { rollD20, getStatModifier, formatModifier, animateDiceRoll } from './js/dice.js';
 
+        // DOM Screen & Header References
+        const mainHeader = document.getElementById('mainHeader');
+        const screenStart = document.getElementById('screenStart');
+        const screenCreator = document.getElementById('screenCreator');
+        const screenAdventure = document.getElementById('screenAdventure');
+        const viewportStart = document.getElementById('viewportStart');
+        const viewportCreator = document.getElementById('viewportCreator');
+        const viewportAdventure = document.getElementById('viewportAdventure');
+
         // State & Mode
-        let currentMode = 'creator'; // 'creator' | 'adventure'
+        let currentMode = 'start'; // 'start' | 'creator' | 'adventure'
+        let titleScene = null;
         let creatorApp = null;
         let adventureApp = null;
 
@@ -883,16 +1499,181 @@
             inventory: []
         };
 
-        // Initialize Character Forge
-        const viewportCreator = document.getElementById('viewportCreator');
-        creatorApp = new CharacterCreatorApp(viewportCreator);
+        // Initialize Title 3D Backdrop & inactive Character Forge
+        titleScene = new TitleSceneApp(viewportStart);
+        creatorApp = new CharacterCreatorApp(viewportCreator, { active: false });
 
-        // Sound Toggle
+        // ==========================================
+        // MUSIC, SFX & VISUALIZER INTEGRATION
+        // ==========================================
+        const btnMusicToggle = document.getElementById('btnMusicToggle');
         const btnSoundToggle = document.getElementById('btnSoundToggle');
-        btnSoundToggle.addEventListener('click', () => {
+        const btnStartMusicToggle = document.getElementById('btnStartMusicToggle');
+        const btnStartSfxToggle = document.getElementById('btnStartSfxToggle');
+        const musicVolumeSlider = document.getElementById('musicVolumeSlider');
+        const musicStatusText = document.getElementById('musicStatusText');
+        const musicTrackLabel = document.getElementById('musicTrackLabel');
+        const audioPromptPill = document.getElementById('audioPromptPill');
+        const visBars = Array.from(document.querySelectorAll('#musicVisualizer .vis-bar'));
+
+        function syncAudioUI(state) {
+            // Header buttons
+            btnMusicToggle.textContent = state.enabled ? '🎵 MUSIC: ON' : '🔇 MUSIC: OFF';
+            btnSoundToggle.textContent = sound.enabled ? '🔊 SFX: ON' : '🔇 SFX: OFF';
+
+            // Title screen Music HUD
+            musicTrackLabel.textContent = state.trackTitle;
+            if (!state.enabled) {
+                btnStartMusicToggle.textContent = '🔇 MUTED';
+                btnStartMusicToggle.classList.remove('needs-awaken');
+                musicStatusText.textContent = 'Music Off';
+                audioPromptPill.textContent = '🔇 Music Muted • Press M or click PLAY to hear "Gates of Phusza"';
+                audioPromptPill.className = 'audio-prompt-pill playing';
+            } else if (state.awaitingGesture || !state.isPlaying) {
+                btnStartMusicToggle.textContent = '🎵 PLAY';
+                btnStartMusicToggle.classList.add('needs-awaken');
+                musicStatusText.textContent = 'Theme Ready';
+                audioPromptPill.textContent = '✨ Click anywhere or press any key to awaken the "Gates of Phusza" theme';
+                audioPromptPill.className = 'audio-prompt-pill needs-gesture';
+            } else {
+                btnStartMusicToggle.textContent = '⏸ PAUSE';
+                btnStartMusicToggle.classList.remove('needs-awaken');
+                musicStatusText.textContent = 'Now Playing';
+                audioPromptPill.textContent = '♪ Now Playing: "Gates of Phusza" • Click the Runic Arch logo for a chime';
+                audioPromptPill.className = 'audio-prompt-pill playing';
+            }
+
+            btnStartSfxToggle.textContent = sound.enabled ? '🔊 SFX' : '🔇 SFX';
+        }
+
+        music.onChange(syncAudioUI);
+
+        async function handleMusicButtonClick() {
+            if (music.awaitingGesture && music.enabled) {
+                await music.playTrack(music.currentTrack, { reset: false });
+                return;
+            }
+            await music.toggle();
+        }
+
+        function handleSfxToggle() {
             sound.enabled = !sound.enabled;
-            btnSoundToggle.textContent = sound.enabled ? '🔊 SOUND: ON' : '🔇 SOUND: OFF';
             if (sound.enabled) sound.playSelect();
+            syncAudioUI({
+                enabled: music.enabled,
+                isPlaying: music.isPlaying,
+                awaitingGesture: music.awaitingGesture,
+                trackTitle: music.currentTrack === 'title' ? 'Gates of Phusza' : 'Echoes of the Crypt'
+            });
+        }
+
+        btnMusicToggle.addEventListener('click', handleMusicButtonClick);
+        btnStartMusicToggle.addEventListener('click', handleMusicButtonClick);
+        btnSoundToggle.addEventListener('click', handleSfxToggle);
+        btnStartSfxToggle.addEventListener('click', handleSfxToggle);
+
+        musicVolumeSlider.addEventListener('input', (e) => {
+            music.setVolume(Number(e.target.value) / 100);
+        });
+
+        audioPromptPill.addEventListener('click', async () => {
+            if (!music.enabled) {
+                await music.toggle();
+            } else {
+                await music.playTrack(music.currentTrack, { reset: false });
+            }
+        });
+
+        // Attempt autoplay immediately on load; falls back cleanly to gesture prompt if suspended
+        music.tryStart('title');
+
+        // First gesture anywhere unlocks browser audio for the Intro Theme
+        const awakenAudioOnGesture = (e) => {
+            if (e.target && e.target.closest('#btnStartMusicToggle, #btnMusicToggle, #btnStartSfxToggle, #btnSoundToggle')) {
+                return;
+            }
+            if (music.enabled && (music.awaitingGesture || !music.isPlaying)) {
+                music.tryStart(music.currentTrack);
+            }
+        };
+        window.addEventListener('pointerdown', awakenAudioOnGesture, { passive: true });
+        window.addEventListener('keydown', awakenAudioOnGesture);
+
+        // Animate Start Screen Audio Visualizer Bars
+        function updateVisualizer() {
+            if (currentMode === 'start') {
+                const levels = music.getSpectrumBars(visBars.length);
+                visBars.forEach((bar, i) => {
+                    const heightPx = Math.max(3, Math.round(3 + levels[i] * 16));
+                    bar.style.height = `${heightPx}px`;
+                });
+            }
+            requestAnimationFrame(updateVisualizer);
+        }
+        requestAnimationFrame(updateVisualizer);
+
+        // ==========================================
+        // STARTING PAGE ACTIONS & LORE MODAL
+        // ==========================================
+        const titleLogoStage = document.getElementById('titleLogoStage');
+        const loreModal = document.getElementById('loreModal');
+
+        titleLogoStage.addEventListener('click', () => {
+            sound.playCrystalChime();
+            titleScene.pulseCrystal();
+            titleLogoStage.classList.remove('burst');
+            void titleLogoStage.offsetWidth;
+            titleLogoStage.classList.add('burst');
+            setTimeout(() => titleLogoStage.classList.remove('burst'), 450);
+        });
+
+        document.getElementById('btnStartForge').addEventListener('click', () => {
+            sound.playTitleEnter();
+            switchToCreator();
+        });
+
+        document.getElementById('btnQuickDelve').addEventListener('click', () => {
+            randomizeHero({ silent: true });
+            sound.playFanfare();
+            switchToAdventure();
+        });
+
+        document.getElementById('btnShowLore').addEventListener('click', () => {
+            sound.playSelect();
+            loreModal.style.display = 'flex';
+        });
+
+        document.getElementById('btnCloseLore').addEventListener('click', () => {
+            sound.playSelect();
+            loreModal.style.display = 'none';
+        });
+
+        loreModal.addEventListener('click', (e) => {
+            if (e.target === loreModal) {
+                sound.playSelect();
+                loreModal.style.display = 'none';
+            }
+        });
+
+        document.getElementById('btnReturnTitle').addEventListener('click', () => {
+            sound.playSelect();
+            switchToTitle();
+        });
+
+        document.getElementById('headerTitleLogo').addEventListener('click', () => {
+            sound.playSelect();
+            switchToTitle();
+        });
+
+        window.addEventListener('keydown', (e) => {
+            const tag = document.activeElement ? document.activeElement.tagName : '';
+            if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+            if (e.key === 'm' || e.key === 'M') {
+                handleMusicButtonClick();
+            } else if (e.key === 'Escape' && loreModal.style.display === 'flex') {
+                loreModal.style.display = 'none';
+            }
         });
 
         // Switch Mode Button (Return to Forge)
@@ -988,8 +1769,8 @@
             catfolk: ['Miko', 'Whisper', 'Shadowclaw', 'Kaelen', 'Nyx']
         };
 
-        document.getElementById('btnRandomize').addEventListener('click', () => {
-            sound.playRandomize();
+        function randomizeHero({ silent = false } = {}) {
+            if (!silent) sound.playRandomize();
             const ancestrys = ['human', 'elf', 'dwarf', 'orc', 'goblin', 'catfolk'];
             const classes = ['warrior', 'mage'];
             const randomancestry = ancestrys[Math.floor(Math.random() * ancestrys.length)];
@@ -1027,14 +1808,15 @@
                 clothColor: armor,
                 showHelm: helm
             }, 'random');
+        }
+
+        document.getElementById('btnRandomize').addEventListener('click', () => {
+            randomizeHero();
         });
 
         // ==========================================
-        // LAUNCH ADVENTURE WORLD MODE
+        // SCREEN NAVIGATION & ADVENTURE LAUNCH
         // ==========================================
-        const screenCreator = document.getElementById('screenCreator');
-        const screenAdventure = document.getElementById('screenAdventure');
-        const viewportAdventure = document.getElementById('viewportAdventure');
         const btnEnterDungeon = document.getElementById('btnEnterDungeon');
 
         btnEnterDungeon.addEventListener('click', () => {
@@ -1042,12 +1824,35 @@
             switchToAdventure();
         });
 
+        function switchToTitle() {
+            currentMode = 'start';
+            mainHeader.style.display = 'none';
+            screenCreator.style.display = 'none';
+            screenAdventure.style.display = 'none';
+            screenStart.style.display = 'flex';
+
+            creatorApp.setActive(false);
+            if (adventureApp) {
+                adventureApp.dispose();
+                adventureApp = null;
+                viewportAdventure.innerHTML = '';
+            }
+            titleScene.setActive(true);
+            music.playTrack('title', { reset: false });
+        }
+
         function switchToAdventure() {
             currentMode = 'adventure';
+            mainHeader.style.display = 'flex';
+            screenStart.style.display = 'none';
             screenCreator.style.display = 'none';
             screenAdventure.style.display = 'flex';
             btnSwitchMode.style.display = 'flex';
             document.getElementById('btnRandomize').style.display = 'none';
+
+            titleScene.setActive(false);
+            creatorApp.setActive(false);
+            music.playTrack('crypt', { reset: true });
 
             // Calculate Base Stats
             const conf = creatorApp.config;
@@ -1062,34 +1867,39 @@
             document.getElementById('advHeroClass').textContent = `${stats.ancestry.name} ${stats.charClass.name}`;
             updateAdventureHUD();
 
-            // Spawn or restart 3D Adventure World
-            if (!adventureApp) {
-                adventureApp = new DungeonWorldApp(
-                    viewportAdventure,
-                    conf,
-                    (encounter) => triggerEncounterModal(encounter),
-                    () => updateAdventureHUD()
-                );
-            } else {
-                // Remove previous canvas and rebuild for updated hero
+            // Dispose previous adventure instance & rebuild for updated hero
+            if (adventureApp) {
+                adventureApp.dispose();
                 viewportAdventure.innerHTML = '';
-                adventureApp = new DungeonWorldApp(
-                    viewportAdventure,
-                    conf,
-                    (encounter) => triggerEncounterModal(encounter),
-                    () => updateAdventureHUD()
-                );
             }
+            adventureApp = new DungeonWorldApp(
+                viewportAdventure,
+                conf,
+                (encounter) => triggerEncounterModal(encounter),
+                () => updateAdventureHUD()
+            );
 
             addLogMessage(`⚡ ${conf.name} entered the Crypt of Eldoria! High danger lies ahead...`, 'crit');
         }
 
         function switchToCreator() {
             currentMode = 'creator';
+            mainHeader.style.display = 'flex';
+            screenStart.style.display = 'none';
             screenAdventure.style.display = 'none';
             screenCreator.style.display = 'flex';
             btnSwitchMode.style.display = 'none';
             document.getElementById('btnRandomize').style.display = 'flex';
+
+            titleScene.setActive(false);
+            if (adventureApp) {
+                adventureApp.dispose();
+                adventureApp = null;
+                viewportAdventure.innerHTML = '';
+            }
+            creatorApp.setActive(true);
+            creatorApp.resize();
+            music.playTrack('title', { reset: false });
         }
 
         function updateAdventureHUD() {
