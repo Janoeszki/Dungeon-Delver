@@ -18,8 +18,8 @@ export class CharacterCreatorApp {
         this.prevMousePos = { x: 0, y: 0 };
         this.rotationY = 0.4;
         this.targetRotationY = 0.4;
-        this.cameraDistance = 4.0;
-        this.targetCameraDistance = 4.0;
+        this.cameraDistance = 4.8;
+        this.targetCameraDistance = 4.8;
 
         // Current hero configuration
         this.config = {
@@ -276,8 +276,8 @@ export class CharacterCreatorApp {
             e.preventDefault();
             this.targetCameraDistance = THREE.MathUtils.clamp(
                 this.targetCameraDistance + e.deltaY * 0.003,
-                2.2,
-                5.5
+                2.5,
+                6.5
             );
         }, { passive: false });
     }
