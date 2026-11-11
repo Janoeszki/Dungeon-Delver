@@ -261,7 +261,7 @@
         }
 
         .hero-name-badge { font-family: 'Cinzel', serif; font-size: 1.55rem; color: var(--gold-bright); letter-spacing: 2px; }
-        .hero-race-class-badge { font-size: 1.2rem; color: var(--cyan-accent); letter-spacing: 1px; }
+        .hero-ancestry-class-badge { font-size: 1.2rem; color: var(--cyan-accent); letter-spacing: 1px; }
 
         .turntable-controls {
             pointer-events: auto;
@@ -641,12 +641,12 @@
                     <div class="form-group">
                         <label class="form-label">Ancestry</label>
                         <div class="grid-select-3">
-                            <div class="select-card active" data-race="human"><span class="icon">🧑</span><span class="title">Human</span></div>
-                            <div class="select-card" data-race="elf"><span class="icon">🧝</span><span class="title">Elf</span></div>
-                            <div class="select-card" data-race="dwarf"><span class="icon">🧔</span><span class="title">Dwarf</span></div>
-                            <div class="select-card" data-race="orc"><span class="icon">👹</span><span class="title">Orc</span></div>
-                            <div class="select-card" data-race="goblin"><span class="icon">👺</span><span class="title">Goblin</span></div>
-                            <div class="select-card" data-race="catfolk"><span class="icon">🐱</span><span class="title">Catfolk</span></div>
+                            <div class="select-card active" data-ancestry="human"><span class="icon">🧑</span><span class="title">Human</span></div>
+                            <div class="select-card" data-ancestry="elf"><span class="icon">🧝</span><span class="title">Elf</span></div>
+                            <div class="select-card" data-ancestry="dwarf"><span class="icon">🧔</span><span class="title">Dwarf</span></div>
+                            <div class="select-card" data-ancestry="orc"><span class="icon">👹</span><span class="title">Orc</span></div>
+                            <div class="select-card" data-ancestry="goblin"><span class="icon">👺</span><span class="title">Goblin</span></div>
+                            <div class="select-card" data-ancestry="catfolk"><span class="icon">🐱</span><span class="title">Catfolk</span></div>
                         </div>
                     </div>
 
@@ -709,7 +709,7 @@
                 <div class="center-showcase">
                     <div class="nameplate-banner">
                         <div class="hero-name-badge" id="heroNameBadge">Valerius</div>
-                        <div class="hero-race-class-badge" id="heroRaceClassBadge">Human Warrior</div>
+                        <div class="hero-ancestry-class-badge" id="heroancestryClassBadge">Human Warrior</div>
                     </div>
 
                     <div class="turntable-controls">
@@ -854,7 +854,7 @@
         import { CharacterCreatorApp } from './js/characterCreator.js';
         import { DungeonWorldApp } from './js/dungeonWorld.js';
         import { sound } from './js/audio.js';
-        import { RACE_DATA, calculateStats } from './js/stats.js';
+        import { ancestry_DATA, calculateStats } from './js/stats.js';
         import { rollD20, getStatModifier, formatModifier, animateDiceRoll } from './js/dice.js';
 
         // State & Mode
@@ -908,21 +908,21 @@
         }
 
         // Ancestry Cards
-        document.querySelectorAll('[data-race]').forEach(card => {
+        document.querySelectorAll('[data-ancestry]').forEach(card => {
             card.addEventListener('click', () => {
-                const raceKey = card.dataset.race;
-                document.querySelectorAll('[data-race]').forEach(c => c.classList.remove('active'));
+                const ancestryKey = card.dataset.ancestry;
+                document.querySelectorAll('[data-ancestry]').forEach(c => c.classList.remove('active'));
                 card.classList.add('active');
 
-                const raceInfo = RACE_DATA[raceKey];
-                const configUpdate = { race: raceKey };
-                if (raceInfo && raceInfo.defaultSkin) {
-                    configUpdate.skinColor = raceInfo.defaultSkin;
-                    setActiveColorDot('skinPalette', raceInfo.defaultSkin);
+                const ancestryInfo = ancestry_DATA[ancestryKey];
+                const configUpdate = { ancestry: ancestryKey };
+                if (ancestryInfo && ancestryInfo.defaultSkin) {
+                    configUpdate.skinColor = ancestryInfo.defaultSkin;
+                    setActiveColorDot('skinPalette', ancestryInfo.defaultSkin);
                 }
-                if (raceInfo && raceInfo.defaultHair) {
-                    configUpdate.hairColor = raceInfo.defaultHair;
-                    setActiveColorDot('hairPalette', raceInfo.defaultHair);
+                if (ancestryInfo && ancestryInfo.defaultHair) {
+                    configUpdate.hairColor = ancestryInfo.defaultHair;
+                    setActiveColorDot('hairPalette', ancestryInfo.defaultHair);
                 }
                 creatorApp.updateConfig(configUpdate);
             });
@@ -980,11 +980,11 @@
 
         document.getElementById('btnRandomize').addEventListener('click', () => {
             sound.playRandomize();
-            const races = ['human', 'elf', 'dwarf', 'orc', 'goblin', 'catfolk'];
+            const ancestrys = ['human', 'elf', 'dwarf', 'orc', 'goblin', 'catfolk'];
             const classes = ['warrior', 'mage'];
-            const randomRace = races[Math.floor(Math.random() * races.length)];
+            const randomancestry = ancestrys[Math.floor(Math.random() * ancestrys.length)];
             const randomClass = classes[Math.floor(Math.random() * classes.length)];
-            const namePool = HERO_NAMES[randomRace] || HERO_NAMES.human;
+            const namePool = HERO_NAMES[randomancestry] || HERO_NAMES.human;
             const randomName = namePool[Math.floor(Math.random() * namePool.length)];
 
             const pickRandomDot = (id) => {
@@ -992,15 +992,15 @@
                 return dots[Math.floor(Math.random() * dots.length)].dataset.color;
             };
 
-            const defaultSkin = (RACE_DATA[randomRace] && RACE_DATA[randomRace].defaultSkin) || pickRandomDot('skinPalette');
-            const defaultHair = (RACE_DATA[randomRace] && RACE_DATA[randomRace].defaultHair) || pickRandomDot('hairPalette');
+            const defaultSkin = (ancestry_DATA[randomancestry] && ancestry_DATA[randomancestry].defaultSkin) || pickRandomDot('skinPalette');
+            const defaultHair = (ancestry_DATA[randomancestry] && ancestry_DATA[randomancestry].defaultHair) || pickRandomDot('hairPalette');
             const armor = pickRandomDot('armorPalette');
             const helm = Math.random() > 0.35;
 
             nameInput.value = randomName;
             document.getElementById('checkHelm').checked = helm;
 
-            document.querySelectorAll('[data-race]').forEach(c => c.classList.toggle('active', c.dataset.race === randomRace));
+            document.querySelectorAll('[data-ancestry]').forEach(c => c.classList.toggle('active', c.dataset.ancestry === randomancestry));
             document.querySelectorAll('[data-class]').forEach(c => c.classList.toggle('active', c.dataset.class === randomClass));
 
             setActiveColorDot('skinPalette', defaultSkin);
@@ -1009,7 +1009,7 @@
 
             creatorApp.updateConfig({
                 name: randomName,
-                race: randomRace,
+                ancestry: randomancestry,
                 charClass: randomClass,
                 skinColor: defaultSkin,
                 hairColor: defaultHair,
@@ -1041,7 +1041,7 @@
 
             // Calculate Base Stats
             const conf = creatorApp.config;
-            const stats = calculateStats(conf.race, conf.charClass);
+            const stats = calculateStats(conf.ancestry, conf.charClass);
             playerStats.maxHp = stats.maxHp;
             playerStats.currentHp = stats.maxHp;
             playerStats.maxMp = stats.maxMp;
@@ -1049,7 +1049,7 @@
 
             // Update Adventure HUD
             document.getElementById('advHeroName').textContent = conf.name;
-            document.getElementById('advHeroClass').textContent = `${stats.race.name} ${stats.charClass.name}`;
+            document.getElementById('advHeroClass').textContent = `${stats.ancestry.name} ${stats.charClass.name}`;
             updateAdventureHUD();
 
             // Spawn or restart 3D Adventure World
@@ -1139,7 +1139,7 @@
             encOptionsList.innerHTML = '';
 
             const conf = creatorApp.config;
-            const stats = calculateStats(conf.race, conf.charClass);
+            const stats = calculateStats(conf.ancestry, conf.charClass);
 
             enc.options.forEach(opt => {
                 const statVal = stats[opt.stat] || 10;
