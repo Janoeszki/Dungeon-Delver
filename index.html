@@ -178,6 +178,26 @@
             text-transform: uppercase;
         }
 
+        .panel-logo-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .panel-logo-img {
+            width: 84px;
+            height: auto;
+            max-width: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.7));
+            transition: transform 0.2s ease;
+        }
+
+        .panel-logo-img:hover {
+            transform: scale(1.05);
+        }
+
         .form-group { display: flex; flex-direction: column; gap: 5px; }
         .form-label { font-size: 1.15rem; color: var(--text-muted); letter-spacing: 0.5px; }
 
@@ -631,7 +651,10 @@
             <div class="overlay-layer">
                 <!-- Left Side Panel: Hero Customization -->
                 <aside class="side-panel">
-                    <h2 class="panel-heading">Character Forge</h2>
+                    <div class="panel-logo-header">
+                        <img src="dungeon_delver_logo_small.png" alt="Dungeon Delver Logo" class="panel-logo-img" />
+                        <h2 class="panel-heading" style="width: 100%;">Character Forge</h2>
+                    </div>
 
                     <div class="form-group">
                         <label class="form-label" for="heroNameInput">Hero Name</label>
