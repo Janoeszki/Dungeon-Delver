@@ -1029,6 +1029,54 @@
             box-shadow: 0 1px 0 #0a0f19;
         }
 
+        /* Start Screen Click-to-Play Full Overlay */
+        .start-click-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 5;
+            cursor: pointer;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 74px;
+            pointer-events: auto;
+            background: rgba(0, 0, 0, 0.15);
+            transition: opacity 0.35s ease, visibility 0.35s ease;
+        }
+
+        .start-click-overlay.dismissed {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .click-anywhere-banner {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: linear-gradient(180deg, rgba(20, 28, 45, 0.96) 0%, rgba(9, 13, 22, 0.98) 100%);
+            border: 2px solid var(--gold-bright);
+            box-shadow: 0 0 32px rgba(245, 166, 35, 0.65), 0 10px 30px rgba(0, 0, 0, 0.9);
+            border-radius: 30px;
+            padding: 12px 28px;
+            font-family: 'Cinzel', serif;
+            font-size: 1.25rem;
+            letter-spacing: 2px;
+            color: var(--gold-bright);
+            animation: bannerPulse 1.8s ease-in-out infinite;
+        }
+
+        .click-anywhere-banner span.rune {
+            font-size: 1.5rem;
+            color: var(--cyan-accent);
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
+        }
+
+        @keyframes bannerPulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(245, 166, 35, 0.45); }
+            50% { transform: scale(1.035); box-shadow: 0 0 36px rgba(245, 166, 35, 0.85); }
+        }
+
         .start-footer {
             pointer-events: auto;
             display: flex;
@@ -1196,9 +1244,18 @@
 
                 <div class="start-footer">
                     <button id="audioPromptPill" class="audio-prompt-pill needs-gesture">
-                        ✨ Click anywhere or press any key to awaken the "Gates of Phusza" theme
+                        ✨ Click anywhere or press any key to play the "Gates of Phusza" theme
                     </button>
                     <div class="start-credits">6 Playable Ancestries • 3D Point-and-Click Crypt • Live Web Audio Orchestral Score</div>
+                </div>
+            </div>
+
+            <!-- Click to awaken audio overlay -->
+            <div id="startClickOverlay" class="start-click-overlay">
+                <div class="click-anywhere-banner">
+                    <span class="rune">⚔️</span>
+                    <span>CLICK ANYWHERE TO PLAY INTRO THEME</span>
+                    <span class="rune">🎵</span>
                 </div>
             </div>
         </section>
@@ -1514,6 +1571,7 @@
         const musicStatusText = document.getElementById('musicStatusText');
         const musicTrackLabel = document.getElementById('musicTrackLabel');
         const audioPromptPill = document.getElementById('audioPromptPill');
+        const startClickOverlay = document.getElementById('startClickOverlay');
         const visBars = Array.from(document.querySelectorAll('#musicVisualizer .vis-bar'));
 
         function syncAudioUI(state) {
@@ -1521,7 +1579,7 @@
             btnMusicToggle.textContent = state.enabled ? '🎵 MUSIC: ON' : '🔇 MUSIC: OFF';
             btnSoundToggle.textContent = sound.enabled ? '🔊 SFX: ON' : '🔇 SFX: OFF';
 
-            // Title screen Music HUD
+            // Title screen Music HUD & Overlay
             musicTrackLabel.textContent = state.trackTitle;
             if (!state.enabled) {
                 btnStartMusicToggle.textContent = '🔇 MUTED';
@@ -1529,18 +1587,21 @@
                 musicStatusText.textContent = 'Music Off';
                 audioPromptPill.textContent = '🔇 Music Muted • Press M or click PLAY to hear "Gates of Phusza"';
                 audioPromptPill.className = 'audio-prompt-pill playing';
+                if (startClickOverlay) startClickOverlay.classList.add('dismissed');
             } else if (state.awaitingGesture || !state.isPlaying) {
                 btnStartMusicToggle.textContent = '🎵 PLAY';
                 btnStartMusicToggle.classList.add('needs-awaken');
                 musicStatusText.textContent = 'Theme Ready';
-                audioPromptPill.textContent = '✨ Click anywhere or press any key to awaken the "Gates of Phusza" theme';
+                audioPromptPill.textContent = '✨ Click anywhere to play the "Gates of Phusza" theme';
                 audioPromptPill.className = 'audio-prompt-pill needs-gesture';
+                if (startClickOverlay) startClickOverlay.classList.remove('dismissed');
             } else {
                 btnStartMusicToggle.textContent = '⏸ PAUSE';
                 btnStartMusicToggle.classList.remove('needs-awaken');
                 musicStatusText.textContent = 'Now Playing';
                 audioPromptPill.textContent = '♪ Now Playing: "Gates of Phusza" • Click the Runic Arch logo for a chime';
                 audioPromptPill.className = 'audio-prompt-pill playing';
+                if (startClickOverlay) startClickOverlay.classList.add('dismissed');
             }
 
             btnStartSfxToggle.textContent = sound.enabled ? '🔊 SFX' : '🔇 SFX';
@@ -1551,6 +1612,7 @@
         async function handleMusicButtonClick() {
             if (music.awaitingGesture && music.enabled) {
                 await music.playTrack(music.currentTrack, { reset: false });
+                if (startClickOverlay) startClickOverlay.classList.add('dismissed');
                 return;
             }
             await music.toggle();
@@ -1582,7 +1644,15 @@
             } else {
                 await music.playTrack(music.currentTrack, { reset: false });
             }
+            if (startClickOverlay) startClickOverlay.classList.add('dismissed');
         });
+
+        if (startClickOverlay) {
+            startClickOverlay.addEventListener('click', async () => {
+                await music.playTrack(music.currentTrack, { reset: false });
+                startClickOverlay.classList.add('dismissed');
+            });
+        }
 
         // Attempt autoplay immediately on load
         music.tryStart('title');
