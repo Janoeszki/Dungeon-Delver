@@ -1,6 +1,6 @@
-// Character Stats & Racial/Class Traits
+// Character Stats & Ancestry/Class Traits
 
-export const RACE_DATA = {
+export const ANCESTRY_DATA = {
     human: {
         name: 'Human',
         icon: '🧑',
@@ -57,6 +57,9 @@ export const RACE_DATA = {
     }
 };
 
+// Backwards compatibility alias
+export const RACE_DATA = ANCESTRY_DATA;
+
 export const CLASS_DATA = {
     warrior: {
         name: 'Warrior',
@@ -78,22 +81,22 @@ export const CLASS_DATA = {
     }
 };
 
-export function calculateStats(raceKey, classKey) {
-    const race = RACE_DATA[raceKey] || RACE_DATA.human;
+export function calculateStats(ancestryKey, classKey) {
+    const ancestry = ANCESTRY_DATA[ancestryKey] || ANCESTRY_DATA.human;
     const charClass = CLASS_DATA[classKey] || CLASS_DATA.warrior;
 
-    const str = charClass.baseStats.str + race.bonuses.str;
-    const agi = charClass.baseStats.agi + race.bonuses.agi;
-    const int = charClass.baseStats.int + race.bonuses.int;
-    const vit = charClass.baseStats.vit + race.bonuses.vit;
+    const str = charClass.baseStats.str + ancestry.bonuses.str;
+    const agi = charClass.baseStats.agi + ancestry.bonuses.agi;
+    const int = charClass.baseStats.int + ancestry.bonuses.int;
+    const vit = charClass.baseStats.vit + ancestry.bonuses.vit;
 
     let maxHp = vit * charClass.hpPerVit;
     let maxMp = int * charClass.mpPerInt;
 
-    if (raceKey === 'dwarf') maxHp += 35;
-    if (raceKey === 'orc') maxHp += 30;
-    if (raceKey === 'elf') maxMp += 25;
-    if (raceKey === 'goblin') maxMp += 15;
+    if (ancestryKey === 'dwarf') maxHp += 35;
+    if (ancestryKey === 'orc') maxHp += 30;
+    if (ancestryKey === 'elf') maxMp += 25;
+    if (ancestryKey === 'goblin') maxMp += 15;
 
     return {
         str,
@@ -102,7 +105,8 @@ export function calculateStats(raceKey, classKey) {
         vit,
         maxHp,
         maxMp,
-        race,
+        ancestry,
+        race: ancestry, // alias for backwards compatibility
         charClass
     };
 }

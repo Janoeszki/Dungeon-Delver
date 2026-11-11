@@ -60,7 +60,8 @@ export class CharacterBuilder {
 
     createCharacter(config = {}) {
         const {
-            race = 'human',        // 'human', 'elf', 'dwarf', 'orc', 'goblin', 'catfolk'
+            ancestry = config.race || 'human',
+            race = ancestry,        // 'human', 'elf', 'dwarf', 'orc', 'goblin', 'catfolk'
             charClass = 'warrior', // 'warrior', 'mage'
             showHelm = true,
             skinColor = '#ffd2b2',
@@ -68,6 +69,8 @@ export class CharacterBuilder {
             clothColor = '#2b4c7e',
             armorColor = '#95a5a6'
         } = config;
+
+        const effectiveAncestry = ancestry || race || 'human';
 
         this.setColors({ skinColor, hairColor, clothColor, armorColor });
 
@@ -85,16 +88,16 @@ export class CharacterBuilder {
         modelRoot.add(bodyGroup);
 
         // 1. Torso
-        const torsoGroup = this.buildTorso(charClass, race);
+        const torsoGroup = this.buildTorso(charClass, effectiveAncestry);
         bodyGroup.add(torsoGroup);
 
         // 2. Head & Face
-        const headGroup = this.buildHead(race, hairColor);
+        const headGroup = this.buildHead(effectiveAncestry, hairColor);
         headGroup.position.y = 1.05;
         bodyGroup.add(headGroup);
 
         // 3. Helm / Hat
-        const headgear = this.buildHeadgear(charClass, race);
+        const headgear = this.buildHeadgear(charClass, effectiveAncestry);
         if (headgear) {
             headgear.name = 'Headgear';
             headgear.visible = showHelm;
@@ -102,25 +105,25 @@ export class CharacterBuilder {
         }
 
         // 4. Race-specific facial attachments
-        if (race === 'dwarf') {
+        if (effectiveAncestry === 'dwarf') {
             const beard = this.buildDwarfBeard();
             beard.position.set(0, -0.2, 0.28);
             headGroup.add(beard);
-        } else if (race === 'orc') {
+        } else if (effectiveAncestry === 'orc') {
             const orcFeatures = this.buildOrcFeatures();
             headGroup.add(orcFeatures);
-        } else if (race === 'catfolk') {
+        } else if (effectiveAncestry === 'catfolk') {
             const catMuzzle = this.buildCatMuzzle();
             catMuzzle.position.set(0, 0.08, 0.28);
             headGroup.add(catMuzzle);
         }
 
         // 5. Ears (Elf, Dwarf, Orc, Goblin, Catfolk, Human)
-        const ears = this.buildEars(race);
+        const ears = this.buildEars(effectiveAncestry);
         headGroup.add(ears);
 
         // 6. Limbs
-        const limbs = this.buildLimbs(charClass, race);
+        const limbs = this.buildLimbs(charClass, effectiveAncestry);
         bodyGroup.add(limbs.leftArm);
         bodyGroup.add(limbs.rightArm);
         bodyGroup.add(limbs.leftLeg);
@@ -128,7 +131,7 @@ export class CharacterBuilder {
 
         // 7. Catfolk Tail
         let tail = null;
-        if (race === 'catfolk') {
+        if (effectiveAncestry === 'catfolk') {
             tail = this.buildCatTail();
             tail.position.set(0, 0.25, -0.22);
             bodyGroup.add(tail);
@@ -140,7 +143,7 @@ export class CharacterBuilder {
         limbs.leftHand.add(weapons.offHand);
 
         // Apply Race Scale & Proportions
-        this.applyRaceScaling(modelRoot, race);
+        this.applyRaceScaling(modelRoot, effectiveAncestry);
 
         // Enable shadow casting for all character meshes
         characterGroup.traverse((child) => {
@@ -152,7 +155,8 @@ export class CharacterBuilder {
         // Create animation controller helper
         const animState = {
             time: 0,
-            race,
+            race: effectiveAncestry,
+            ancestry: effectiveAncestry,
             torso: torsoGroup,
             head: headGroup,
             tail,
