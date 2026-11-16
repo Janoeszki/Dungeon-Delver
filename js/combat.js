@@ -110,8 +110,8 @@ export class CombatStage3D {
         this.active = false;
         this.clock = new THREE.Clock();
 
-        this.heroPos = new THREE.Vector3(-1.35, -0.32, 1.45);
-        this.enemyPos = new THREE.Vector3(1.55, 0.45, -1.15);
+        this.heroPos = new THREE.Vector3(-1.25, -0.10, 1.05);
+        this.enemyPos = new THREE.Vector3(1.35, 0.15, -0.95);
 
         this.heroScale = 1.22;
         this.enemyScale = 1.32;
@@ -265,7 +265,7 @@ export class CombatStage3D {
 
         // Hero Platform (Bottom-Left cyan rune) & Enemy Dais (Top-Right raised crimson rune)
         this.heroPedestal = makePedestal(this.heroPos, 0x1f2b3d, 0x38bdf8, 1.15, 0.24);
-        this.enemyPedestal = makePedestal(this.enemyPos, 0x231b24, 0xef4444, 1.2, 0.95);
+        this.enemyPedestal = makePedestal(this.enemyPos, 0x231b24, 0xef4444, 1.2, 0.50);
 
         // Guard Aura Mesh around Hero
         const auraGroup = new THREE.Group();
@@ -557,17 +557,14 @@ export class CombatStage3D {
         this.scene.updateMatrixWorld(true);
 
         const heroBox = new THREE.Box3().setFromObject(this.heroAnchor);
-        if (this.heroPedestal) heroBox.union(new THREE.Box3().setFromObject(this.heroPedestal));
-
         const enemyBox = new THREE.Box3().setFromObject(this.enemyAnchor);
-        if (this.enemyPedestal) enemyBox.union(new THREE.Box3().setFromObject(this.enemyPedestal));
 
         if (heroBox.isEmpty() || enemyBox.isEmpty()) return;
 
         const totalBox = heroBox.clone().union(enemyBox);
         const center = totalBox.getCenter(new THREE.Vector3());
 
-        const lookAtPoint = new THREE.Vector3(center.x * 0.35, center.y + 0.1, center.z * 0.35);
+        const lookAtPoint = new THREE.Vector3(center.x * 0.4, center.y + 0.04, center.z * 0.4);
 
         const F = new THREE.Vector3(0, -0.34, -0.94).normalize();
         const R = new THREE.Vector3(1, 0, 0);
@@ -577,8 +574,8 @@ export class CombatStage3D {
         const tanHalfV = Math.tan(vFovRad / 2);
         const tanHalfH = tanHalfV * (this.camera.aspect || 1);
 
-        const maxNdcY = 0.70;
-        const maxNdcX = 0.58;
+        const maxNdcY = 0.85;
+        const maxNdcX = 0.70;
 
         const getCorners = (box) => [
             new THREE.Vector3(box.min.x, box.min.y, box.min.z),
@@ -592,7 +589,7 @@ export class CombatStage3D {
         ];
 
         const allCorners = [...getCorners(heroBox), ...getCorners(enemyBox)];
-        let requiredDist = 8.2;
+        let requiredDist = 5.75;
 
         for (const corner of allCorners) {
             const rel = corner.clone().sub(lookAtPoint);
