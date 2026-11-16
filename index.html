@@ -1286,6 +1286,14 @@
                         </div>
                     </div>
 
+                    <div class="form-group">
+                        <label class="form-label">Body Type</label>
+                        <div class="grid-select">
+                            <div class="select-card active" data-body-type="a"><span class="icon">🛡️</span><span class="title">Type A</span></div>
+                            <div class="select-card" data-body-type="b"><span class="icon">✨</span><span class="title">Type B</span></div>
+                        </div>
+                    </div>
+
                     <label class="checkbox-row">
                         <span class="form-label" style="margin: 0;">Equip Helmet / Headgear</span>
                         <input type="checkbox" id="checkHelm" checked />
@@ -1797,6 +1805,15 @@
             });
         });
 
+        // Body Type Cards
+        document.querySelectorAll('[data-body-type]').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('[data-body-type]').forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+                creatorApp.updateConfig({ bodyType: card.dataset.bodyType });
+            });
+        });
+
         // Helm Checkbox
         document.getElementById('checkHelm').addEventListener('change', (e) => {
             sound.playSelect();
@@ -1842,8 +1859,10 @@
             if (!silent) sound.playRandomize();
             const ancestrys = ['human', 'elf', 'dwarf', 'orc', 'goblin', 'catfolk'];
             const classes = ['warrior', 'mage'];
+            const bodyTypes = ['a', 'b'];
             const randomancestry = ancestrys[Math.floor(Math.random() * ancestrys.length)];
             const randomClass = classes[Math.floor(Math.random() * classes.length)];
+            const randomBodyType = bodyTypes[Math.floor(Math.random() * bodyTypes.length)];
             const namePool = HERO_NAMES[randomancestry] || HERO_NAMES.human;
             const randomName = namePool[Math.floor(Math.random() * namePool.length)];
 
@@ -1862,6 +1881,7 @@
 
             document.querySelectorAll('[data-ancestry]').forEach(c => c.classList.toggle('active', c.dataset.ancestry === randomancestry));
             document.querySelectorAll('[data-class]').forEach(c => c.classList.toggle('active', c.dataset.class === randomClass));
+            document.querySelectorAll('[data-body-type]').forEach(c => c.classList.toggle('active', c.dataset.bodyType === randomBodyType));
 
             setActiveColorDot('skinPalette', defaultSkin);
             setActiveColorDot('hairPalette', defaultHair);
@@ -1871,6 +1891,7 @@
                 name: randomName,
                 ancestry: randomancestry,
                 charClass: randomClass,
+                bodyType: randomBodyType,
                 skinColor: defaultSkin,
                 hairColor: defaultHair,
                 armorColor: armor,

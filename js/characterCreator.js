@@ -30,6 +30,7 @@ export class CharacterCreatorApp {
             ancestry: 'human',
             race: 'human',
             charClass: 'warrior',
+            bodyType: 'a',
             showHelm: true,
             skinColor: '#ffd2b2',
             hairColor: '#4a2e1b',

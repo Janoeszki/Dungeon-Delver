@@ -192,6 +192,7 @@ export class CharacterBuilder {
             ancestry = config.race || 'human',
             race = ancestry, // 'human', 'elf', 'dwarf', 'orc', 'goblin', 'catfolk'
             charClass = 'warrior', // 'warrior', 'mage'
+            bodyType = 'a', // 'a' | 'b'
             showHelm = true,
             skinColor = '#ffd2b2',
             hairColor = '#4a2e1b',
@@ -200,6 +201,7 @@ export class CharacterBuilder {
         } = config;
 
         const effectiveAncestry = ancestry || race || 'human';
+        const effectiveBodyType = String(bodyType).toLowerCase() === 'b' ? 'b' : 'a';
 
         this.setColors({ skinColor, hairColor, clothColor, armorColor });
 
@@ -217,12 +219,12 @@ export class CharacterBuilder {
         modelRoot.add(bodyGroup);
 
         // 1. Torso & Cape
-        const torsoGroup = this.buildTorso(charClass, effectiveAncestry);
+        const torsoGroup = this.buildTorso(charClass, effectiveAncestry, effectiveBodyType);
         bodyGroup.add(torsoGroup);
         const cape = torsoGroup.getObjectByName('Cape') || null;
 
         // 2. Head & Face
-        const headGroup = this.buildHead(effectiveAncestry, hairColor);
+        const headGroup = this.buildHead(effectiveAncestry, hairColor, effectiveBodyType);
         headGroup.position.y = 1.05;
         bodyGroup.add(headGroup);
 
@@ -236,11 +238,13 @@ export class CharacterBuilder {
 
         // 4. Ancestry-specific facial attachments
         if (effectiveAncestry === 'dwarf') {
-            const beard = this.buildDwarfBeard();
-            beard.position.set(0, -0.05, 0.21);
-            headGroup.add(beard);
+            if (effectiveBodyType === 'a') {
+                const beard = this.buildDwarfBeard();
+                beard.position.set(0, -0.05, 0.21);
+                headGroup.add(beard);
+            }
         } else if (effectiveAncestry === 'orc') {
-            const orcFeatures = this.buildOrcFeatures();
+            const orcFeatures = this.buildOrcFeatures(effectiveBodyType);
             headGroup.add(orcFeatures);
         } else if (effectiveAncestry === 'catfolk') {
             const catMuzzle = this.buildCatMuzzle();
@@ -253,7 +257,7 @@ export class CharacterBuilder {
         headGroup.add(ears);
 
         // 6. Limbs
-        const limbs = this.buildLimbs(charClass, effectiveAncestry);
+        const limbs = this.buildLimbs(charClass, effectiveAncestry, effectiveBodyType);
         bodyGroup.add(limbs.leftArm);
         bodyGroup.add(limbs.rightArm);
         bodyGroup.add(limbs.leftLeg);
@@ -274,7 +278,7 @@ export class CharacterBuilder {
         const offHandOrb = weapons.offHand.getObjectByName('MagicOrbGroup') || null;
 
         // Apply Race Scale & Proportions
-        this.applyRaceScaling(modelRoot, effectiveAncestry);
+        this.applyRaceScaling(modelRoot, effectiveAncestry, effectiveBodyType);
 
         // Enable shadow casting for all character meshes
         characterGroup.traverse((child) => {
@@ -309,68 +313,104 @@ export class CharacterBuilder {
         };
     }
 
-    buildTorso(charClass, race) {
+    buildTorso(charClass, race, bodyType = 'a') {
         const torso = new THREE.Group();
         torso.name = 'Torso';
+        const isTypeB = bodyType === 'b';
         const w = this.getTorsoWidthMultiplier(race);
         const octTwist = Math.PI / 8;
 
-        // V-Tapered OSRS Polygonal Chest
-        const chestGeo = this.createLoftedPrism([
-            { y: 0.15, rx: 0.24 * w, rz: 0.16, twist: octTwist },
-            { y: 0.34, rx: 0.21 * w, rz: 0.15, twist: octTwist },
-            { y: 0.66, rx: 0.35 * w, rz: 0.23, offsetZ: 0.02, twist: octTwist },
-            { y: 0.86, rx: 0.37 * w, rz: 0.20, twist: octTwist },
-            { y: 0.93, rx: 0.15, rz: 0.14, twist: octTwist }
-        ], 8);
+        // Polygonal Chest: V-tapered for Type A, contoured hourglass for Type B
+        const chestRings = isTypeB
+            ? [
+                { y: 0.15, rx: 0.265 * w, rz: 0.175, twist: octTwist },
+                { y: 0.36, rx: 0.175 * w, rz: 0.14, twist: octTwist },
+                { y: 0.62, rx: 0.31 * w, rz: 0.24, offsetZ: 0.03, twist: octTwist },
+                { y: 0.86, rx: 0.315 * w, rz: 0.185, twist: octTwist },
+                { y: 0.93, rx: 0.14, rz: 0.13, twist: octTwist }
+            ]
+            : [
+                { y: 0.15, rx: 0.24 * w, rz: 0.16, twist: octTwist },
+                { y: 0.34, rx: 0.21 * w, rz: 0.15, twist: octTwist },
+                { y: 0.66, rx: 0.35 * w, rz: 0.23, offsetZ: 0.02, twist: octTwist },
+                { y: 0.86, rx: 0.37 * w, rz: 0.20, twist: octTwist },
+                { y: 0.93, rx: 0.15, rz: 0.14, twist: octTwist }
+            ];
+        const chestGeo = this.createLoftedPrism(chestRings, 8);
         const chestMat = (charClass === 'warrior') ? this.materials.armorMetal : this.materials.cloth;
         torso.add(new THREE.Mesh(chestGeo, chestMat));
 
+        if (isTypeB) {
+            // Sculpted low-poly contoured cuirass / bust facets
+            const bustGeo = this.createLoftedPrism([
+                { y: -0.075, rx: 0.092 * w, rz: 0.08, twist: Math.PI / 6 },
+                { y: 0.0, rx: 0.112 * w, rz: 0.10, twist: Math.PI / 6 },
+                { y: 0.075, rx: 0.072 * w, rz: 0.06, twist: Math.PI / 6 }
+            ], 6);
+            [-1, 1].forEach((side) => {
+                const bust = new THREE.Mesh(bustGeo, chestMat);
+                bust.position.set(side * (0.105 * w), 0.62, 0.16);
+                bust.rotation.set(-0.18, side * 0.16, 0);
+                torso.add(bust);
+            });
+        }
+
         // 6-sided Skin Neck
-        const neckGeo = this.makeFaceted(new THREE.CylinderGeometry(0.11, 0.135, 0.16, 6));
+        const neckRadiusTop = isTypeB ? 0.095 : 0.11;
+        const neckRadiusBot = isTypeB ? 0.12 : 0.135;
+        const neckGeo = this.makeFaceted(new THREE.CylinderGeometry(neckRadiusTop, neckRadiusBot, 0.16, 6));
         const neck = new THREE.Mesh(neckGeo, this.materials.skin);
         neck.position.set(0, 0.99, 0);
         torso.add(neck);
 
         // Polygonal Belt
-        const beltGeo = this.createLoftedPrism([
-            { y: 0.24, rx: 0.245 * w, rz: 0.175, twist: octTwist },
-            { y: 0.34, rx: 0.235 * w, rz: 0.17, twist: octTwist }
-        ], 8);
+        const beltGeo = this.createLoftedPrism(
+            isTypeB
+                ? [
+                    { y: 0.25, rx: 0.23 * w, rz: 0.165, twist: octTwist },
+                    { y: 0.35, rx: 0.195 * w, rz: 0.155, twist: octTwist }
+                ]
+                : [
+                    { y: 0.24, rx: 0.245 * w, rz: 0.175, twist: octTwist },
+                    { y: 0.34, rx: 0.235 * w, rz: 0.17, twist: octTwist }
+                ],
+            8
+        );
         torso.add(new THREE.Mesh(beltGeo, this.materials.belt));
 
         // Faceted Diamond Gold Buckle
         const buckle = new THREE.Mesh(new THREE.OctahedronGeometry(0.085, 0), this.materials.buckle);
-        buckle.scale.set(1.15, 0.85, 0.45);
-        buckle.position.set(0, 0.29, 0.17);
+        buckle.scale.set(isTypeB ? 1.0 : 1.15, 0.85, 0.45);
+        buckle.position.set(0, isTypeB ? 0.30 : 0.29, isTypeB ? 0.16 : 0.17);
         torso.add(buckle);
 
         if (charClass === 'warrior') {
             // Angled Chest Plastron Ridge
+            const zBump = isTypeB ? 0.025 : 0;
             const plastronGeo = this.createLoftedPrism([
-                { y: 0.44, rx: 0.06, rz: 0.03, offsetZ: 0.18 },
-                { y: 0.68, rx: 0.18 * w, rz: 0.05, offsetZ: 0.22 },
-                { y: 0.83, rx: 0.14 * w, rz: 0.04, offsetZ: 0.18 }
+                { y: 0.44, rx: 0.055, rz: 0.03, offsetZ: 0.18 + zBump },
+                { y: 0.65, rx: (isTypeB ? 0.15 : 0.18) * w, rz: 0.05, offsetZ: 0.22 + zBump },
+                { y: 0.83, rx: (isTypeB ? 0.12 : 0.14) * w, rz: 0.04, offsetZ: 0.18 }
             ], 4);
             torso.add(new THREE.Mesh(plastronGeo, this.materials.armorMetal));
 
             // Gold Sternum Crest
-            const crest = new THREE.Mesh(new THREE.OctahedronGeometry(0.09, 0), this.materials.armorGold);
+            const crest = new THREE.Mesh(new THREE.OctahedronGeometry(0.085, 0), this.materials.armorGold);
             crest.scale.set(0.9, 1.35, 0.38);
-            crest.position.set(0, 0.66, 0.245);
+            crest.position.set(0, 0.65, 0.245 + zBump);
             torso.add(crest);
 
             // Armored Gold Gorget Collar
             const collarGeo = this.createLoftedPrism([
-                { y: 0.87, rx: 0.22 * w, rz: 0.175, twist: octTwist },
-                { y: 0.95, rx: 0.17, rz: 0.16, twist: octTwist }
+                { y: 0.87, rx: (isTypeB ? 0.195 : 0.22) * w, rz: isTypeB ? 0.165 : 0.175, twist: octTwist },
+                { y: 0.95, rx: isTypeB ? 0.155 : 0.17, rz: isTypeB ? 0.15 : 0.16, twist: octTwist }
             ], 8);
             torso.add(new THREE.Mesh(collarGeo, this.materials.armorGold));
 
             // Chainmail Under-skirt Ring
             const chainGeo = this.createLoftedPrism([
-                { y: 0.16, rx: 0.255 * w, rz: 0.18, twist: octTwist },
-                { y: 0.25, rx: 0.245 * w, rz: 0.175, twist: octTwist }
+                { y: 0.16, rx: (isTypeB ? 0.27 : 0.255) * w, rz: isTypeB ? 0.19 : 0.18, twist: octTwist },
+                { y: 0.25, rx: (isTypeB ? 0.235 : 0.245) * w, rz: isTypeB ? 0.17 : 0.175, twist: octTwist }
             ], 8);
             torso.add(new THREE.Mesh(chainGeo, this.materials.chainmail));
 
@@ -379,14 +419,16 @@ export class CharacterBuilder {
                 { y: -0.22, rx: 0.035, rz: 0.16, twist: Math.PI / 4 },
                 { y: 0.0, rx: 0.03, rz: 0.12, twist: Math.PI / 4 }
             ], 4);
+            const hipX = (isTypeB ? 0.26 : 0.24) * w;
+            const rimX = (isTypeB ? 0.295 : 0.275) * w;
             [-1, 1].forEach((side) => {
                 const tasset = new THREE.Mesh(sideTassetGeo, this.materials.armorMetal);
-                tasset.position.set(side * (0.24 * w), 0.24, 0);
+                tasset.position.set(side * hipX, 0.24, 0);
                 tasset.rotation.z = side * 0.28;
                 torso.add(tasset);
 
                 const rim = new THREE.Mesh(new THREE.OctahedronGeometry(0.035, 0), this.materials.armorGold);
-                rim.position.set(side * (0.275 * w), 0.14, 0);
+                rim.position.set(side * rimX, 0.14, 0);
                 torso.add(rim);
             });
 
@@ -394,60 +436,64 @@ export class CharacterBuilder {
                 { y: -0.20, rx: 0.16 * w, rz: 0.03, twist: Math.PI / 4 },
                 { y: 0.0, rx: 0.11 * w, rz: 0.025, twist: Math.PI / 4 }
             ], 4);
+            const hipZ = isTypeB ? 0.175 : 0.165;
             [-1, 1].forEach((dir) => {
                 const plate = new THREE.Mesh(frontBackTassetGeo, this.materials.armorMetal);
-                plate.position.set(0, 0.24, dir * 0.165);
+                plate.position.set(0, 0.24, dir * hipZ);
                 plate.rotation.x = -dir * 0.22;
                 torso.add(plate);
             });
 
             // Faceted OSRS Adventurer Cape
-            const cape = this.buildCape(w, 0.34 * w, race === 'catfolk');
+            const capeTop = isTypeB ? w * 0.86 : w;
+            const cape = this.buildCape(capeTop, 0.34 * w, race === 'catfolk');
             torso.add(cape);
         } else {
             // Mage Shoulder Mantle & Raised Back Arcane Collar
+            const mantleScale = isTypeB ? 0.88 : 1.0;
             const mantleGeo = this.createLoftedPrism([
-                { y: 0.78, rx: 0.40 * w, rz: 0.24, twist: octTwist },
-                { y: 0.90, rx: 0.24 * w, rz: 0.19, twist: octTwist }
+                { y: 0.78, rx: 0.40 * w * mantleScale, rz: 0.23, twist: octTwist },
+                { y: 0.90, rx: 0.24 * w * mantleScale, rz: 0.18, twist: octTwist }
             ], 8);
             torso.add(new THREE.Mesh(mantleGeo, this.materials.clothAccent));
 
             const highCollarGeo = this.createLoftedPrism([
-                { y: 0.88, rx: 0.24 * w, rz: 0.08, offsetZ: -0.14, twist: Math.PI / 4 },
-                { y: 1.04, rx: 0.29 * w, rz: 0.07, offsetZ: -0.19, twist: Math.PI / 4 }
+                { y: 0.88, rx: 0.24 * w * mantleScale, rz: 0.08, offsetZ: -0.14, twist: Math.PI / 4 },
+                { y: 1.04, rx: 0.29 * w * mantleScale, rz: 0.07, offsetZ: -0.19, twist: Math.PI / 4 }
             ], 4);
             torso.add(new THREE.Mesh(highCollarGeo, this.materials.clothAccent));
 
             // Flared Polygonal Robe Skirt
             const skirtGeo = this.createLoftedPrism([
-                { y: -0.24, rx: 0.36 * w, rz: 0.28, twist: octTwist },
-                { y: 0.02, rx: 0.30 * w, rz: 0.23, twist: octTwist },
-                { y: 0.25, rx: 0.23 * w, rz: 0.17, twist: octTwist }
+                { y: -0.24, rx: (isTypeB ? 0.38 : 0.36) * w, rz: isTypeB ? 0.29 : 0.28, twist: octTwist },
+                { y: 0.02, rx: (isTypeB ? 0.31 : 0.30) * w, rz: isTypeB ? 0.24 : 0.23, twist: octTwist },
+                { y: 0.25, rx: (isTypeB ? 0.21 : 0.23) * w, rz: isTypeB ? 0.16 : 0.17, twist: octTwist }
             ], 8);
             torso.add(new THREE.Mesh(skirtGeo, this.materials.cloth));
 
             const hemTrimGeo = this.createLoftedPrism([
-                { y: -0.25, rx: 0.37 * w, rz: 0.29, twist: octTwist },
-                { y: -0.18, rx: 0.35 * w, rz: 0.275, twist: octTwist }
+                { y: -0.25, rx: (isTypeB ? 0.39 : 0.37) * w, rz: isTypeB ? 0.30 : 0.29, twist: octTwist },
+                { y: -0.18, rx: (isTypeB ? 0.37 : 0.35) * w, rz: isTypeB ? 0.285 : 0.275, twist: octTwist }
             ], 8);
             torso.add(new THREE.Mesh(hemTrimGeo, this.materials.clothAccent));
 
             // Front Runic Tabard / Sash Strip
+            const zBump = isTypeB ? 0.025 : 0;
             const tabardGeo = this.createLoftedPrism([
-                { y: -0.23, rx: 0.13, rz: 0.035, offsetZ: 0.27 },
-                { y: 0.25, rx: 0.09, rz: 0.03, offsetZ: 0.175 },
-                { y: 0.66, rx: 0.12, rz: 0.035, offsetZ: 0.235 },
-                { y: 0.87, rx: 0.085, rz: 0.025, offsetZ: 0.195 }
+                { y: -0.23, rx: 0.13, rz: 0.035, offsetZ: isTypeB ? 0.28 : 0.27 },
+                { y: 0.25, rx: 0.085, rz: 0.03, offsetZ: isTypeB ? 0.165 : 0.175 },
+                { y: 0.63, rx: 0.115, rz: 0.035, offsetZ: 0.235 + zBump },
+                { y: 0.87, rx: 0.08, rz: 0.025, offsetZ: 0.19 }
             ], 4);
             torso.add(new THREE.Mesh(tabardGeo, this.materials.clothAccent));
 
             const runeClasp = new THREE.Mesh(new THREE.OctahedronGeometry(0.065, 0), this.materials.armorGold);
             runeClasp.scale.set(0.9, 1.2, 0.45);
-            runeClasp.position.set(0, 0.66, 0.26);
+            runeClasp.position.set(0, 0.64, 0.26 + zBump);
             torso.add(runeClasp);
 
             // Flowing Mage Back Cape / Stole
-            const cape = this.buildCape(w * 0.85, 0.26 * w, race === 'catfolk');
+            const cape = this.buildCape(w * (isTypeB ? 0.78 : 0.85), 0.26 * w, race === 'catfolk');
             torso.add(cape);
         }
 
@@ -492,18 +538,19 @@ export class CharacterBuilder {
         return capeGroup;
     }
 
-    buildHead(race, hairColor) {
+    buildHead(race, hairColor, bodyType = 'a') {
         const headGroup = new THREE.Group();
         headGroup.name = 'HeadGroup';
+        const isTypeB = bodyType === 'b';
         const hw = this.getHeadWidthMultiplier(race);
         const octTwist = Math.PI / 8;
 
         // Faceted 8-sided OSRS Cranium & Jaw
         const craniumGeo = this.createLoftedPrism([
-            { y: -0.08, rx: 0.18 * hw, rz: 0.17, offsetZ: 0.03, twist: octTwist },
-            { y: 0.04, rx: 0.27 * hw, rz: 0.24, offsetZ: 0.02, twist: octTwist },
-            { y: 0.18, rx: 0.31 * hw, rz: 0.27, offsetZ: 0.01, twist: octTwist },
-            { y: 0.32, rx: 0.29 * hw, rz: 0.27, offsetZ: 0.0, twist: octTwist },
+            { y: -0.08, rx: (isTypeB ? 0.135 : 0.18) * hw, rz: isTypeB ? 0.155 : 0.17, offsetZ: 0.03, twist: octTwist },
+            { y: 0.04, rx: (isTypeB ? 0.235 : 0.27) * hw, rz: isTypeB ? 0.225 : 0.24, offsetZ: 0.02, twist: octTwist },
+            { y: 0.18, rx: (isTypeB ? 0.295 : 0.31) * hw, rz: 0.27, offsetZ: 0.01, twist: octTwist },
+            { y: 0.32, rx: (isTypeB ? 0.28 : 0.29) * hw, rz: 0.27, offsetZ: 0.0, twist: octTwist },
             { y: 0.43, rx: 0.22 * hw, rz: 0.23, offsetZ: -0.01, twist: octTwist }
         ], 8);
         headGroup.add(new THREE.Mesh(craniumGeo, this.materials.skin));
@@ -524,7 +571,8 @@ export class CharacterBuilder {
             headGroup.add(hook);
         } else if (race !== 'catfolk') {
             // Chiseled 4-sided pyramid nose wedge
-            const noseGeo = this.makeFaceted(new THREE.ConeGeometry(0.062, 0.15, 4));
+            const noseRadius = isTypeB ? 0.052 : 0.062;
+            const noseGeo = this.makeFaceted(new THREE.ConeGeometry(noseRadius, 0.15, 4));
             const nose = new THREE.Mesh(noseGeo, this.materials.skin);
             nose.position.set(0, 0.14, 0.27);
             nose.rotation.x = 1.38;
@@ -535,15 +583,17 @@ export class CharacterBuilder {
         const eyeGeo = this.makeFaceted(new THREE.CylinderGeometry(0.048, 0.048, 0.04, 6));
         eyeGeo.rotateX(Math.PI / 2);
 
-        const browTilt = (race === 'orc' || race === 'dwarf' || race === 'goblin') ? -0.20 : 0.10;
+        const baseBrowTilt = (race === 'orc' || race === 'dwarf' || race === 'goblin') ? -0.20 : 0.10;
+        const browTilt = isTypeB ? baseBrowTilt + 0.08 : baseBrowTilt;
         const browGeo = this.createLoftedPrism([
-            { y: -0.018, rx: 0.075, rz: 0.022, twist: Math.PI / 4 },
-            { y: 0.018, rx: 0.068, rz: 0.022, twist: Math.PI / 4 }
+            { y: isTypeB ? -0.012 : -0.018, rx: 0.075, rz: 0.022, twist: Math.PI / 4 },
+            { y: isTypeB ? 0.012 : 0.018, rx: 0.068, rz: 0.022, twist: Math.PI / 4 }
         ], 4);
+        const lashGeo = this.makeFaceted(new THREE.ConeGeometry(0.018, 0.06, 4));
 
         [-1, 1].forEach((side) => {
             const eye = new THREE.Mesh(eyeGeo, this.materials.eyes);
-            eye.scale.set(1.08, 0.85, 1.0);
+            eye.scale.set(1.08, isTypeB ? 0.94 : 0.85, 1.0);
             eye.position.set(side * (0.115 * hw), 0.20, 0.245);
             eye.rotation.y = side * 0.20;
             headGroup.add(eye);
@@ -552,33 +602,43 @@ export class CharacterBuilder {
             glint.position.set(side * (0.115 * hw) + 0.012, 0.212, 0.266);
             headGroup.add(glint);
 
+            if (isTypeB) {
+                const lash = new THREE.Mesh(lashGeo, this.materials.eyes);
+                lash.position.set(side * (0.155 * hw), 0.218, 0.242);
+                lash.rotation.set(0, side * 0.22, -side * 0.65);
+                headGroup.add(lash);
+            }
+
             const brow = new THREE.Mesh(browGeo, this.materials.hair);
-            brow.position.set(side * (0.115 * hw), 0.27, 0.248);
+            brow.position.set(side * (0.115 * hw), isTypeB ? 0.282 : 0.27, 0.248);
             brow.rotation.set(0, side * 0.18, -side * browTilt);
             headGroup.add(brow);
         });
 
-        // Faceted Mouth (hidden if catfolk, orc, or dwarf with full mustache)
-        if (race !== 'catfolk' && race !== 'orc' && race !== 'dwarf') {
+        // Faceted Mouth (also visible on Orc and Dwarf in Type B)
+        const showMouth = (race !== 'catfolk' && race !== 'orc' && race !== 'dwarf') ||
+            (isTypeB && (race === 'orc' || race === 'dwarf'));
+        if (showMouth) {
             const mouthGeo = this.createLoftedPrism([
-                { y: -0.014, rx: 0.068, rz: 0.018, twist: Math.PI / 4 },
-                { y: 0.014, rx: 0.076, rz: 0.018, twist: Math.PI / 4 }
+                { y: isTypeB ? -0.018 : -0.014, rx: isTypeB ? 0.072 : 0.068, rz: 0.02, twist: Math.PI / 4 },
+                { y: isTypeB ? 0.018 : 0.014, rx: isTypeB ? 0.082 : 0.076, rz: 0.02, twist: Math.PI / 4 }
             ], 4);
             const mouth = new THREE.Mesh(mouthGeo, this.materials.mouth);
-            mouth.position.set(0, 0.04, 0.245);
+            mouth.position.set(0, 0.04, 0.242);
             headGroup.add(mouth);
         }
 
         // Faceted Hair Styles
-        const hair = this.buildHair(race);
+        const hair = this.buildHair(race, bodyType);
         headGroup.add(hair);
 
         return headGroup;
     }
 
-    buildHair(race) {
+    buildHair(race, bodyType = 'a') {
         const hairGroup = new THREE.Group();
         hairGroup.name = 'Hair';
+        const isTypeB = bodyType === 'b';
         const hw = this.getHeadWidthMultiplier(race);
         const octTwist = Math.PI / 8;
 
@@ -594,23 +654,52 @@ export class CharacterBuilder {
         if (race === 'elf') {
             addCrownCap(0.47, 1.02);
 
-            // Long flowing tapered polygonal hair plume down the back
-            const plumeGeo = this.createLoftedPrism([
-                { y: -0.34, rx: 0.13, rz: 0.07, offsetZ: -0.23 },
-                { y: 0.05, rx: 0.24, rz: 0.12, offsetZ: -0.22 },
-                { y: 0.38, rx: 0.26, rz: 0.14, offsetZ: -0.14 }
-            ], 6);
-            hairGroup.add(new THREE.Mesh(plumeGeo, this.materials.hair));
+            if (isTypeB) {
+                // High crown braid + back plume + longer layered front chest tresses
+                const crownBraidGeo = this.makeFaceted(new THREE.TorusGeometry(0.215 * hw, 0.045, 5, 8));
+                const crownBraid = new THREE.Mesh(crownBraidGeo, this.materials.hair);
+                crownBraid.rotation.set(Math.PI / 2.2, 0, octTwist);
+                crownBraid.position.set(0, 0.44, -0.02);
+                hairGroup.add(crownBraid);
 
-            // Tapered temple locks
-            const lockGeo = this.makeFaceted(new THREE.ConeGeometry(0.055, 0.42, 4));
-            [-1, 1].forEach((side) => {
-                const lock = new THREE.Mesh(lockGeo, this.materials.hair);
-                lock.position.set(side * 0.24, 0.08, 0.12);
-                lock.rotation.set(0.08, 0, side * -0.08);
-                lock.rotation.x += Math.PI;
-                hairGroup.add(lock);
-            });
+                const plumeGeo = this.createLoftedPrism([
+                    { y: -0.44, rx: 0.15, rz: 0.08, offsetZ: -0.24 },
+                    { y: 0.02, rx: 0.26, rz: 0.13, offsetZ: -0.22 },
+                    { y: 0.38, rx: 0.27, rz: 0.14, offsetZ: -0.14 }
+                ], 6);
+                hairGroup.add(new THREE.Mesh(plumeGeo, this.materials.hair));
+
+                const tressGeo = this.makeFaceted(new THREE.ConeGeometry(0.058, 0.56, 4));
+                const cuffGeo = this.makeFaceted(new THREE.CylinderGeometry(0.05, 0.05, 0.04, 6));
+                [-1, 1].forEach((side) => {
+                    const tress = new THREE.Mesh(tressGeo, this.materials.hair);
+                    tress.position.set(side * 0.205, 0.0, 0.155);
+                    tress.rotation.set(0.14 + Math.PI, 0, side * -0.07);
+                    hairGroup.add(tress);
+
+                    const cuff = new THREE.Mesh(cuffGeo, this.materials.armorGold);
+                    cuff.position.set(side * 0.20, -0.12, 0.175);
+                    hairGroup.add(cuff);
+                });
+            } else {
+                // Long flowing tapered polygonal hair plume down the back
+                const plumeGeo = this.createLoftedPrism([
+                    { y: -0.34, rx: 0.13, rz: 0.07, offsetZ: -0.23 },
+                    { y: 0.05, rx: 0.24, rz: 0.12, offsetZ: -0.22 },
+                    { y: 0.38, rx: 0.26, rz: 0.14, offsetZ: -0.14 }
+                ], 6);
+                hairGroup.add(new THREE.Mesh(plumeGeo, this.materials.hair));
+
+                // Tapered temple locks
+                const lockGeo = this.makeFaceted(new THREE.ConeGeometry(0.055, 0.42, 4));
+                [-1, 1].forEach((side) => {
+                    const lock = new THREE.Mesh(lockGeo, this.materials.hair);
+                    lock.position.set(side * 0.24, 0.08, 0.12);
+                    lock.rotation.set(0.08, 0, side * -0.08);
+                    lock.rotation.x += Math.PI;
+                    hairGroup.add(lock);
+                });
+            }
 
             // Thin 8-sided Golden Elven Circlet
             const circletGeo = this.makeFaceted(new THREE.TorusGeometry(0.268 * hw, 0.016, 4, 8));
@@ -623,83 +712,214 @@ export class CharacterBuilder {
             gem.position.set(0, 0.345, 0.262);
             hairGroup.add(gem);
         } else if (race === 'dwarf') {
-            addCrownCap(0.49, 1.08);
+            addCrownCap(0.49, 1.06);
 
-            // Thick faceted side & back wedges
+            // Thick faceted back wedge
             const backWedgeGeo = this.createLoftedPrism([
                 { y: 0.06, rx: 0.28 * hw, rz: 0.11, offsetZ: -0.21, twist: octTwist },
                 { y: 0.36, rx: 0.31 * hw, rz: 0.13, offsetZ: -0.17, twist: octTwist }
             ], 6);
             hairGroup.add(new THREE.Mesh(backWedgeGeo, this.materials.hair));
-        } else if (race === 'orc') {
-            // Multi-blade jagged polygonal mohawk crest
-            const bladeGeo = this.makeFaceted(new THREE.ConeGeometry(0.095, 0.26, 4));
-            [
-                { y: 0.46, z: 0.13, rx: 0.35, s: 0.9 },
-                { y: 0.50, z: 0.01, rx: -0.05, s: 1.1 },
-                { y: 0.46, z: -0.11, rx: -0.45, s: 1.0 },
-                { y: 0.37, z: -0.21, rx: -0.95, s: 0.85 }
-            ].forEach((b) => {
-                const spike = new THREE.Mesh(bladeGeo, this.materials.hair);
-                spike.position.set(0, b.y, b.z);
-                spike.rotation.x = b.rx;
-                spike.scale.setScalar(b.s);
-                hairGroup.add(spike);
-            });
 
-            // Bound war-tail cone at the back
-            const knotGeo = this.makeFaceted(new THREE.ConeGeometry(0.09, 0.32, 5));
-            const knot = new THREE.Mesh(knotGeo, this.materials.hair);
-            knot.position.set(0, 0.44, -0.27);
-            knot.rotation.x = -2.15;
-            hairGroup.add(knot);
+            if (isTypeB) {
+                // Braided crown + twin thick front shoulder braids with gold clasps
+                const crownBraidGeo = this.makeFaceted(new THREE.TorusGeometry(0.24 * hw, 0.05, 5, 8));
+                const crownBraid = new THREE.Mesh(crownBraidGeo, this.materials.hair);
+                crownBraid.rotation.set(Math.PI / 2.1, 0, octTwist);
+                crownBraid.position.set(0, 0.45, -0.01);
+                hairGroup.add(crownBraid);
+
+                const shoulderBraidGeo = this.createLoftedPrism([
+                    { y: -0.44, rx: 0.045, rz: 0.045 },
+                    { y: -0.22, rx: 0.075, rz: 0.075 },
+                    { y: 0.08, rx: 0.085, rz: 0.085 }
+                ], 6);
+                const claspGeo = this.makeFaceted(new THREE.CylinderGeometry(0.068, 0.068, 0.055, 8));
+                [-1, 1].forEach((side) => {
+                    const braid = new THREE.Mesh(shoulderBraidGeo, this.materials.hair);
+                    braid.position.set(side * 0.215, 0.04, 0.155);
+                    braid.rotation.set(0.12, 0, side * -0.06);
+                    hairGroup.add(braid);
+
+                    const clasp = new THREE.Mesh(claspGeo, this.materials.armorGold);
+                    clasp.position.set(side * 0.22, -0.18, 0.185);
+                    hairGroup.add(clasp);
+                });
+            }
+        } else if (race === 'orc') {
+            if (isTypeB) {
+                // High swept war-mane + long braided ponytail + twin banded side-locks
+                addCrownCap(0.47, 1.0);
+
+                const ponytailGeo = this.createLoftedPrism([
+                    { y: -0.42, rx: 0.05, rz: 0.05, offsetZ: -0.28 },
+                    { y: -0.06, rx: 0.11, rz: 0.10, offsetZ: -0.26 },
+                    { y: 0.34, rx: 0.08, rz: 0.08, offsetZ: -0.22 }
+                ], 6);
+                hairGroup.add(new THREE.Mesh(ponytailGeo, this.materials.hair));
+
+                const tailTieGeo = this.makeFaceted(new THREE.CylinderGeometry(0.095, 0.095, 0.06, 6));
+                const tailTie = new THREE.Mesh(tailTieGeo, this.materials.armorGold);
+                tailTie.position.set(0, 0.34, -0.22);
+                tailTie.rotation.x = 0.2;
+                hairGroup.add(tailTie);
+
+                const sideLockGeo = this.makeFaceted(new THREE.ConeGeometry(0.052, 0.36, 5));
+                const bandGeo = this.makeFaceted(new THREE.CylinderGeometry(0.048, 0.048, 0.04, 6));
+                [-1, 1].forEach((side) => {
+                    const lock = new THREE.Mesh(sideLockGeo, this.materials.hair);
+                    lock.position.set(side * 0.24, 0.10, 0.13);
+                    lock.rotation.set(0.12 + Math.PI, 0, side * -0.06);
+                    hairGroup.add(lock);
+
+                    const band = new THREE.Mesh(bandGeo, this.materials.armorGold);
+                    band.position.set(side * 0.24, 0.02, 0.145);
+                    hairGroup.add(band);
+                });
+            } else {
+                // Multi-blade jagged polygonal mohawk crest
+                const bladeGeo = this.makeFaceted(new THREE.ConeGeometry(0.095, 0.26, 4));
+                [
+                    { y: 0.46, z: 0.13, rx: 0.35, s: 0.9 },
+                    { y: 0.50, z: 0.01, rx: -0.05, s: 1.1 },
+                    { y: 0.46, z: -0.11, rx: -0.45, s: 1.0 },
+                    { y: 0.37, z: -0.21, rx: -0.95, s: 0.85 }
+                ].forEach((b) => {
+                    const spike = new THREE.Mesh(bladeGeo, this.materials.hair);
+                    spike.position.set(0, b.y, b.z);
+                    spike.rotation.x = b.rx;
+                    spike.scale.setScalar(b.s);
+                    hairGroup.add(spike);
+                });
+
+                // Bound war-tail cone at the back
+                const knotGeo = this.makeFaceted(new THREE.ConeGeometry(0.09, 0.32, 5));
+                const knot = new THREE.Mesh(knotGeo, this.materials.hair);
+                knot.position.set(0, 0.44, -0.27);
+                knot.rotation.x = -2.15;
+                hairGroup.add(knot);
+            }
         } else if (race === 'goblin') {
-            // 3 jagged angled tuft cones atop cranium
-            const tuftGeo = this.makeFaceted(new THREE.ConeGeometry(0.085, 0.22, 4));
-            [
-                { x: 0, y: 0.49, z: 0.02, rx: 0.1, rz: 0 },
-                { x: -0.11, y: 0.45, z: -0.04, rx: -0.2, rz: 0.45 },
-                { x: 0.11, y: 0.45, z: -0.04, rx: -0.2, rz: -0.45 }
-            ].forEach((t) => {
-                const tuft = new THREE.Mesh(tuftGeo, this.materials.hair);
-                tuft.position.set(t.x, t.y, t.z);
-                tuft.rotation.set(t.rx, 0, t.rz);
-                hairGroup.add(tuft);
-            });
+            if (isTypeB) {
+                // Swept front tuft + twin high angled side-tails with gold rings
+                const frontTuft = new THREE.Mesh(
+                    this.makeFaceted(new THREE.ConeGeometry(0.075, 0.22, 4)),
+                    this.materials.hair
+                );
+                frontTuft.position.set(0.03, 0.45, 0.14);
+                frontTuft.rotation.set(0.85, 0, -0.25);
+                hairGroup.add(frontTuft);
+
+                const pigtailGeo = this.makeFaceted(new THREE.ConeGeometry(0.085, 0.30, 5));
+                const ringGeo = this.makeFaceted(new THREE.CylinderGeometry(0.068, 0.068, 0.045, 6));
+                [-1, 1].forEach((side) => {
+                    const tail = new THREE.Mesh(pigtailGeo, this.materials.hair);
+                    tail.position.set(side * 0.26, 0.44, -0.06);
+                    tail.rotation.set(-0.35, 0, -side * 0.85);
+                    hairGroup.add(tail);
+
+                    const ring = new THREE.Mesh(ringGeo, this.materials.armorGold);
+                    ring.position.set(side * 0.20, 0.40, -0.04);
+                    ring.rotation.z = -side * 0.85;
+                    hairGroup.add(ring);
+                });
+            } else {
+                // 3 jagged angled tuft cones atop cranium
+                const tuftGeo = this.makeFaceted(new THREE.ConeGeometry(0.085, 0.22, 4));
+                [
+                    { x: 0, y: 0.49, z: 0.02, rx: 0.1, rz: 0 },
+                    { x: -0.11, y: 0.45, z: -0.04, rx: -0.2, rz: 0.45 },
+                    { x: 0.11, y: 0.45, z: -0.04, rx: -0.2, rz: -0.45 }
+                ].forEach((t) => {
+                    const tuft = new THREE.Mesh(tuftGeo, this.materials.hair);
+                    tuft.position.set(t.x, t.y, t.z);
+                    tuft.rotation.set(t.rx, 0, t.rz);
+                    hairGroup.add(tuft);
+                });
+            }
         } else if (race === 'catfolk') {
             addCrownCap(0.45, 0.98);
 
-            // Angled cheek-ruff cones
-            const ruffGeo = this.makeFaceted(new THREE.ConeGeometry(0.085, 0.20, 4));
+            // Angled cheek-ruff cones (longer lynx-style tufts for Type B)
+            const ruffGeo = this.makeFaceted(
+                new THREE.ConeGeometry(isTypeB ? 0.09 : 0.085, isTypeB ? 0.28 : 0.20, 4)
+            );
             [-1, 1].forEach((side) => {
                 const ruff = new THREE.Mesh(ruffGeo, this.materials.hair);
-                ruff.position.set(side * 0.29, 0.08, 0.05);
-                ruff.rotation.set(0.15, 0, -side * 1.15);
+                ruff.position.set(side * (isTypeB ? 0.27 : 0.29), isTypeB ? 0.03 : 0.08, 0.06);
+                ruff.rotation.set(0.18, 0, -side * (isTypeB ? 1.48 : 1.15));
                 hairGroup.add(ruff);
             });
+
+            if (isTypeB) {
+                const maneLockGeo = this.createLoftedPrism([
+                    { y: -0.18, rx: 0.06, rz: 0.05, offsetZ: -0.22 },
+                    { y: 0.14, rx: 0.12, rz: 0.09, offsetZ: -0.21 },
+                    { y: 0.36, rx: 0.16, rz: 0.10, offsetZ: -0.16 }
+                ], 6);
+                hairGroup.add(new THREE.Mesh(maneLockGeo, this.materials.hair));
+            }
         } else {
-            // Human: Classic OSRS spiky adventurer hairstyle
+            // Human
             addCrownCap(0.47, 1.03);
 
-            const spikeGeo = this.makeFaceted(new THREE.ConeGeometry(0.085, 0.22, 4));
-            [
-                { x: -0.12, y: 0.40, z: 0.21, rx: 0.95, rz: 0.35 },
-                { x: 0.0, y: 0.42, z: 0.23, rx: 1.05, rz: -0.1 },
-                { x: 0.13, y: 0.40, z: 0.20, rx: 0.95, rz: -0.4 },
-                { x: 0.0, y: 0.50, z: 0.04, rx: 0.35, rz: 0.0 }
-            ].forEach((s) => {
-                const spike = new THREE.Mesh(spikeGeo, this.materials.hair);
-                spike.position.set(s.x, s.y, s.z);
-                spike.rotation.set(s.rx, 0, s.rz);
-                hairGroup.add(spike);
-            });
+            if (isTypeB) {
+                // Swept side bangs + shoulder-length side locks + flowing high ponytail
+                const bangGeo = this.makeFaceted(new THREE.ConeGeometry(0.085, 0.26, 4));
+                [
+                    { x: -0.11, y: 0.37, z: 0.22, rx: 1.05, rz: 0.55 },
+                    { x: 0.11, y: 0.37, z: 0.22, rx: 1.05, rz: -0.55 }
+                ].forEach((s) => {
+                    const bang = new THREE.Mesh(bangGeo, this.materials.hair);
+                    bang.position.set(s.x, s.y, s.z);
+                    bang.rotation.set(s.rx, 0, s.rz);
+                    hairGroup.add(bang);
+                });
 
-            // Faceted back hair wedge
-            const backGeo = this.createLoftedPrism([
-                { y: 0.08, rx: 0.24 * hw, rz: 0.09, offsetZ: -0.20, twist: octTwist },
-                { y: 0.36, rx: 0.29 * hw, rz: 0.12, offsetZ: -0.17, twist: octTwist }
-            ], 6);
-            hairGroup.add(new THREE.Mesh(backGeo, this.materials.hair));
+                const sideLockGeo = this.makeFaceted(new THREE.ConeGeometry(0.06, 0.44, 5));
+                [-1, 1].forEach((side) => {
+                    const lock = new THREE.Mesh(sideLockGeo, this.materials.hair);
+                    lock.position.set(side * 0.23, 0.08, 0.12);
+                    lock.rotation.set(0.1 + Math.PI, 0, side * -0.08);
+                    hairGroup.add(lock);
+                });
+
+                const ponytailGeo = this.createLoftedPrism([
+                    { y: -0.30, rx: 0.05, rz: 0.05, offsetZ: -0.29 },
+                    { y: 0.06, rx: 0.13, rz: 0.11, offsetZ: -0.27 },
+                    { y: 0.38, rx: 0.09, rz: 0.09, offsetZ: -0.22 }
+                ], 6);
+                hairGroup.add(new THREE.Mesh(ponytailGeo, this.materials.hair));
+
+                const hairTie = new THREE.Mesh(
+                    this.makeFaceted(new THREE.CylinderGeometry(0.095, 0.095, 0.05, 6)),
+                    this.materials.armorGold
+                );
+                hairTie.position.set(0, 0.38, -0.22);
+                hairTie.rotation.x = 0.25;
+                hairGroup.add(hairTie);
+            } else {
+                // Classic OSRS spiky adventurer hairstyle
+                const spikeGeo = this.makeFaceted(new THREE.ConeGeometry(0.085, 0.22, 4));
+                [
+                    { x: -0.12, y: 0.40, z: 0.21, rx: 0.95, rz: 0.35 },
+                    { x: 0.0, y: 0.42, z: 0.23, rx: 1.05, rz: -0.1 },
+                    { x: 0.13, y: 0.40, z: 0.20, rx: 0.95, rz: -0.4 },
+                    { x: 0.0, y: 0.50, z: 0.04, rx: 0.35, rz: 0.0 }
+                ].forEach((s) => {
+                    const spike = new THREE.Mesh(spikeGeo, this.materials.hair);
+                    spike.position.set(s.x, s.y, s.z);
+                    spike.rotation.set(s.rx, 0, s.rz);
+                    hairGroup.add(spike);
+                });
+
+                // Faceted back hair wedge
+                const backGeo = this.createLoftedPrism([
+                    { y: 0.08, rx: 0.24 * hw, rz: 0.09, offsetZ: -0.20, twist: octTwist },
+                    { y: 0.36, rx: 0.29 * hw, rz: 0.12, offsetZ: -0.17, twist: octTwist }
+                ], 6);
+                hairGroup.add(new THREE.Mesh(backGeo, this.materials.hair));
+            }
         }
 
         return hairGroup;
@@ -784,24 +1004,27 @@ export class CharacterBuilder {
         return earsGroup;
     }
 
-    buildOrcFeatures() {
+    buildOrcFeatures(bodyType = 'a') {
         const group = new THREE.Group();
         group.name = 'OrcFeatures';
+        const isTypeB = bodyType === 'b';
 
         // Heavy jutting polygonal lower jaw prism
         const jawGeo = this.createLoftedPrism([
-            { y: -0.11, rx: 0.23, rz: 0.13, offsetZ: 0.15, twist: Math.PI / 6 },
-            { y: 0.06, rx: 0.27, rz: 0.15, offsetZ: 0.16, twist: Math.PI / 6 }
+            { y: -0.11, rx: isTypeB ? 0.18 : 0.23, rz: isTypeB ? 0.11 : 0.13, offsetZ: 0.15, twist: Math.PI / 6 },
+            { y: 0.06, rx: isTypeB ? 0.22 : 0.27, rz: isTypeB ? 0.13 : 0.15, offsetZ: 0.16, twist: Math.PI / 6 }
         ], 6);
         group.add(new THREE.Mesh(jawGeo, this.materials.skin));
 
         // Twin curved 2-segment 4-sided ivory tusks
         const lowerTuskGeo = this.makeFaceted(new THREE.CylinderGeometry(0.036, 0.055, 0.12, 4));
         const upperTuskGeo = this.makeFaceted(new THREE.ConeGeometry(0.038, 0.13, 4));
+        const tuskScale = isTypeB ? 0.78 : 1.0;
         [-1, 1].forEach((side) => {
             const tusk = new THREE.Group();
-            tusk.position.set(side * 0.145, 0.05, 0.285);
+            tusk.position.set(side * (isTypeB ? 0.125 : 0.145), isTypeB ? 0.04 : 0.05, isTypeB ? 0.265 : 0.285);
             tusk.rotation.set(0.28, 0, -side * 0.14);
+            tusk.scale.setScalar(tuskScale);
 
             const base = new THREE.Mesh(lowerTuskGeo, this.materials.tusks);
             base.position.y = 0.04;
@@ -815,11 +1038,11 @@ export class CharacterBuilder {
 
         // Pronounced V-shaped brow ridge prism
         const browGeo = this.createLoftedPrism([
-            { y: -0.04, rx: 0.30, rz: 0.07, twist: Math.PI / 4 },
-            { y: 0.04, rx: 0.32, rz: 0.09, twist: Math.PI / 4 }
+            { y: -0.04, rx: isTypeB ? 0.27 : 0.30, rz: isTypeB ? 0.055 : 0.07, twist: Math.PI / 4 },
+            { y: 0.04, rx: isTypeB ? 0.29 : 0.32, rz: isTypeB ? 0.07 : 0.09, twist: Math.PI / 4 }
         ], 4);
         const browRidge = new THREE.Mesh(browGeo, this.materials.skin);
-        browRidge.position.set(0, 0.29, 0.245);
+        browRidge.position.set(0, isTypeB ? 0.30 : 0.29, 0.245);
         group.add(browRidge);
 
         return group;
@@ -1068,19 +1291,23 @@ export class CharacterBuilder {
         return gear;
     }
 
-    buildLimbs(charClass, race) {
-        const armOffset = (race === 'orc') ? 0.54 : (race === 'goblin') ? 0.38 : (race === 'dwarf') ? 0.48 : 0.44;
+    buildLimbs(charClass, race, bodyType = 'a') {
+        const isTypeB = bodyType === 'b';
+        const baseArmOffset = (race === 'orc') ? 0.54 : (race === 'goblin') ? 0.38 : (race === 'dwarf') ? 0.48 : 0.44;
+        const armOffset = isTypeB ? baseArmOffset * 0.90 : baseArmOffset;
         const legOffset = (race === 'orc') ? 0.24 : (race === 'goblin') ? 0.15 : (race === 'dwarf') ? 0.20 : 0.18;
+        const armScale = isTypeB ? 0.88 : 1.0;
+        const legScale = isTypeB ? 0.94 : 1.0;
 
-        const upperArmGeo = this.makeFaceted(new THREE.CylinderGeometry(0.105, 0.085, 0.25, 6));
-        const elbowGeo = new THREE.OctahedronGeometry(0.085, 0);
+        const upperArmGeo = this.makeFaceted(new THREE.CylinderGeometry(0.105 * armScale, 0.085 * armScale, 0.25, 6));
+        const elbowGeo = new THREE.OctahedronGeometry(0.085 * armScale, 0);
         const forearmGeo = (charClass === 'warrior')
-            ? this.makeFaceted(new THREE.CylinderGeometry(0.085, 0.105, 0.23, 6))
-            : this.makeFaceted(new THREE.CylinderGeometry(0.08, 0.145, 0.24, 6));
+            ? this.makeFaceted(new THREE.CylinderGeometry(0.085 * armScale, 0.105 * armScale, 0.23, 6))
+            : this.makeFaceted(new THREE.CylinderGeometry(0.08 * armScale, 0.145 * armScale, 0.24, 6));
         const cuffGeo = (charClass === 'warrior')
-            ? this.makeFaceted(new THREE.CylinderGeometry(0.112, 0.112, 0.045, 6))
-            : this.makeFaceted(new THREE.CylinderGeometry(0.15, 0.155, 0.045, 6));
-        const handGeo = new THREE.DodecahedronGeometry(0.092, 0);
+            ? this.makeFaceted(new THREE.CylinderGeometry(0.112 * armScale, 0.112 * armScale, 0.045, 6))
+            : this.makeFaceted(new THREE.CylinderGeometry(0.15 * armScale, 0.155 * armScale, 0.045, 6));
+        const handGeo = new THREE.DodecahedronGeometry(0.092 * (isTypeB ? 0.92 : 1.0), 0);
 
         // Arms
         const makeArm = (isLeft) => {
@@ -1092,30 +1319,30 @@ export class CharacterBuilder {
             if (charClass === 'warrior') {
                 // Faceted plate pauldron + gold rim + spike
                 const pauldronGeo = this.createLoftedPrism([
-                    { y: -0.05, rx: 0.17, rz: 0.19, offsetX: sign * 0.03 },
-                    { y: 0.06, rx: 0.16, rz: 0.18, offsetX: sign * 0.03 },
-                    { y: 0.16, rx: 0.11, rz: 0.13, offsetX: sign * 0.02 }
+                    { y: -0.05, rx: 0.17 * armScale, rz: 0.19 * armScale, offsetX: sign * 0.03 * armScale },
+                    { y: 0.06, rx: 0.16 * armScale, rz: 0.18 * armScale, offsetX: sign * 0.03 * armScale },
+                    { y: 0.16, rx: 0.11 * armScale, rz: 0.13 * armScale, offsetX: sign * 0.02 * armScale }
                 ], 6);
                 arm.add(new THREE.Mesh(pauldronGeo, this.materials.armorMetal));
 
                 const rimGeo = this.createLoftedPrism([
-                    { y: -0.055, rx: 0.178, rz: 0.198, offsetX: sign * 0.03 },
-                    { y: -0.015, rx: 0.175, rz: 0.195, offsetX: sign * 0.03 }
+                    { y: -0.055, rx: 0.178 * armScale, rz: 0.198 * armScale, offsetX: sign * 0.03 * armScale },
+                    { y: -0.015, rx: 0.175 * armScale, rz: 0.195 * armScale, offsetX: sign * 0.03 * armScale }
                 ], 6);
                 arm.add(new THREE.Mesh(rimGeo, this.materials.armorGold));
 
                 const spike = new THREE.Mesh(
-                    this.makeFaceted(new THREE.ConeGeometry(0.045, 0.14, 4)),
+                    this.makeFaceted(new THREE.ConeGeometry(0.045 * armScale, 0.14 * armScale, 4)),
                     this.materials.armorGold
                 );
-                spike.position.set(sign * 0.15, 0.09, 0);
+                spike.position.set(sign * 0.15 * armScale, 0.09, 0);
                 spike.rotation.z = -sign * 0.85;
                 arm.add(spike);
             } else {
                 // Angled 6-sided mage cloth epaulette
                 const epauletteGeo = this.createLoftedPrism([
-                    { y: -0.04, rx: 0.15, rz: 0.17, offsetX: sign * 0.02 },
-                    { y: 0.10, rx: 0.105, rz: 0.12, offsetX: sign * 0.01 }
+                    { y: -0.04, rx: 0.15 * armScale, rz: 0.17 * armScale, offsetX: sign * 0.02 * armScale },
+                    { y: 0.10, rx: 0.105 * armScale, rz: 0.12 * armScale, offsetX: sign * 0.01 * armScale }
                 ], 6);
                 arm.add(new THREE.Mesh(epauletteGeo, this.materials.clothAccent));
             }
@@ -1152,16 +1379,16 @@ export class CharacterBuilder {
         const rightArmData = makeArm(false);
 
         // Legs
-        const thighGeo = this.makeFaceted(new THREE.CylinderGeometry(0.13, 0.10, 0.24, 6));
-        const kneeGeo = new THREE.OctahedronGeometry(0.086, 0);
-        const shinGeo = this.makeFaceted(new THREE.CylinderGeometry(0.105, 0.085, 0.20, 6));
-        const ankleCuffGeo = this.makeFaceted(new THREE.CylinderGeometry(0.115, 0.11, 0.05, 6));
+        const thighGeo = this.makeFaceted(new THREE.CylinderGeometry(0.13 * legScale, 0.10 * legScale, 0.24, 6));
+        const kneeGeo = new THREE.OctahedronGeometry(0.086 * legScale, 0);
+        const shinGeo = this.makeFaceted(new THREE.CylinderGeometry(0.105 * legScale, 0.085 * legScale, 0.20, 6));
+        const ankleCuffGeo = this.makeFaceted(new THREE.CylinderGeometry(0.115 * legScale, 0.11 * legScale, 0.05, 6));
         // Boot sole sits strictly at y = -0.575 in leg-local space (-0.425 in bodyGroup space)
         const bootGeo = this.createLoftedPrism([
-            { y: -0.575, rx: 0.12, rz: 0.21, offsetZ: 0.07 },
-            { y: -0.52, rx: 0.125, rz: 0.215, offsetZ: 0.08 },
-            { y: -0.46, rx: 0.105, rz: 0.15, offsetZ: 0.03 },
-            { y: -0.40, rx: 0.10, rz: 0.105, offsetZ: 0.0 }
+            { y: -0.575, rx: 0.12 * legScale, rz: 0.21, offsetZ: 0.07 },
+            { y: -0.52, rx: 0.125 * legScale, rz: 0.215, offsetZ: 0.08 },
+            { y: -0.46, rx: 0.105 * legScale, rz: 0.15, offsetZ: 0.03 },
+            { y: -0.40, rx: 0.10 * legScale, rz: 0.105, offsetZ: 0.0 }
         ], 6);
 
         const makeLeg = (isLeft) => {
@@ -1435,7 +1662,7 @@ export class CharacterBuilder {
         return { mainHand, offHand, magicLight };
     }
 
-    applyRaceScaling(modelRoot, race) {
+    applyRaceScaling(modelRoot, race, bodyType = 'a') {
         if (race === 'dwarf') {
             // Short, broad shoulders, sturdy stance
             modelRoot.scale.set(1.25, 0.78, 1.2);
@@ -1454,6 +1681,11 @@ export class CharacterBuilder {
         } else {
             // Human: balanced standard
             modelRoot.scale.set(1.0, 1.0, 1.0);
+        }
+
+        if (bodyType === 'b') {
+            modelRoot.scale.x *= 0.95;
+            modelRoot.scale.z *= 0.96;
         }
 
         // Align the bottom of character's boots cleanly at y = 0
