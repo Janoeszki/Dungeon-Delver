@@ -286,38 +286,8 @@ export class DungeonWorldApp {
                 propGroup.add(hole, rim);
 
             } else if (enc.id === 'skeleton') {
-                // Skeletal Vanguard
-                const skelGroup = new THREE.Group();
-                skelGroup.name = 'SkeletonMesh';
-
-                const boneMat = new THREE.MeshLambertMaterial({ color: 0xdde2ea, flatShading: true });
-                const skull = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.45, 0.45), boneMat);
-                skull.position.y = 1.5;
-
-                const eyeGlow = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.08, 0.08, 0.04),
-                    new THREE.MeshBasicMaterial({ color: 0xef4444 })
-                );
-                const eye1 = eyeGlow.clone(); eye1.position.set(-0.12, 1.52, 0.24);
-                const eye2 = eyeGlow.clone(); eye2.position.set(0.12, 1.52, 0.24);
-
-                const ribcage = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.6, 0.35), boneMat);
-                ribcage.position.y = 0.95;
-
-                const halberd = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.03, 0.03, 2.2, 6),
-                    new THREE.MeshLambertMaterial({ color: 0x5a422d })
-                );
-                halberd.position.set(0.45, 1.1, 0.2);
-
-                const blade = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.25, 0.5, 0.04),
-                    new THREE.MeshLambertMaterial({ color: 0x94a3b8 })
-                );
-                blade.position.set(0.45, 2.0, 0.2);
-
-                skelGroup.add(skull, eye1, eye2, ribcage, halberd, blade);
-                propGroup.add(skelGroup);
+                // Low-Poly RuneScape Skeletal Vanguard
+                propGroup.add(this.buildSkeletonVanguard());
 
             } else if (enc.id === 'moonwell') {
                 // Sacred Moonwell
@@ -378,6 +348,209 @@ export class DungeonWorldApp {
             this.scene.add(propGroup);
             this.interactables.push({ enc, group: propGroup });
         });
+    }
+
+    /**
+     * Builds the low-poly RuneScape-style Skeletal Vanguard encounter mesh.
+     */
+    buildSkeletonVanguard() {
+        const skelGroup = new THREE.Group();
+        skelGroup.name = 'SkeletonMesh';
+
+        const boneMat = new THREE.MeshLambertMaterial({ color: 0xdde2ea, flatShading: true });
+        const darkBoneMat = new THREE.MeshLambertMaterial({ color: 0x94a3b8, flatShading: true });
+        const socketMat = new THREE.MeshBasicMaterial({ color: 0x0b0e14 });
+        const eyeGlowMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+        const steelMat = new THREE.MeshPhongMaterial({ color: 0x94a3b8, shininess: 25, flatShading: true });
+        const rustTrimMat = new THREE.MeshLambertMaterial({ color: 0x7c2d12, flatShading: true });
+        const woodMat = new THREE.MeshLambertMaterial({ color: 0x5a422d, flatShading: true });
+
+        // Feet, Shins, Knees & Thighs
+        const footGeo = this.builder.createLoftedPrism([
+            { y: 0.0, rx: 0.075, rz: 0.14, offsetZ: 0.04 },
+            { y: 0.08, rx: 0.055, rz: 0.075, offsetZ: 0.0 }
+        ], 6);
+        const shinGeo = this.builder.makeFaceted(new THREE.CylinderGeometry(0.042, 0.036, 0.34, 6));
+        const kneeGeo = new THREE.OctahedronGeometry(0.052, 0);
+        const thighGeo = this.builder.makeFaceted(new THREE.CylinderGeometry(0.05, 0.04, 0.30, 6));
+
+        [-1, 1].forEach((side) => {
+            const x = side * 0.14;
+            const foot = new THREE.Mesh(footGeo, boneMat);
+            foot.position.x = x;
+            skelGroup.add(foot);
+
+            const shin = new THREE.Mesh(shinGeo, boneMat);
+            shin.position.set(x, 0.24, 0);
+            skelGroup.add(shin);
+
+            const knee = new THREE.Mesh(kneeGeo, darkBoneMat);
+            knee.position.set(x, 0.42, 0.02);
+            skelGroup.add(knee);
+
+            const thigh = new THREE.Mesh(thighGeo, boneMat);
+            thigh.position.set(x, 0.56, 0);
+            skelGroup.add(thigh);
+        });
+
+        // Pelvis & Spine
+        const pelvisGeo = this.builder.createLoftedPrism([
+            { y: 0.67, rx: 0.20, rz: 0.12 },
+            { y: 0.81, rx: 0.17, rz: 0.11 }
+        ], 6);
+        skelGroup.add(new THREE.Mesh(pelvisGeo, boneMat));
+
+        const spine = new THREE.Mesh(
+            this.builder.makeFaceted(new THREE.CylinderGeometry(0.05, 0.055, 0.54, 6)),
+            darkBoneMat
+        );
+        spine.position.set(0, 1.07, -0.05);
+        skelGroup.add(spine);
+
+        // Faceted Tapered Ribcage & Horizontal Rib Rings
+        const ribCore = new THREE.Mesh(
+            this.builder.makeFaceted(new THREE.CylinderGeometry(0.25, 0.18, 0.44, 6)),
+            darkBoneMat
+        );
+        ribCore.scale.set(1.0, 1.0, 0.68);
+        ribCore.position.set(0, 1.12, 0);
+        skelGroup.add(ribCore);
+
+        const ribRingGeo = this.builder.makeFaceted(new THREE.TorusGeometry(0.22, 0.028, 4, 6));
+        [0.99, 1.12, 1.25].forEach((ry, idx) => {
+            const ring = new THREE.Mesh(ribRingGeo, boneMat);
+            const wScale = 0.92 + idx * 0.1;
+            ring.scale.set(wScale, 0.72, 1.0);
+            ring.rotation.x = Math.PI / 2;
+            ring.position.set(0, ry, 0);
+            skelGroup.add(ring);
+        });
+
+        const sternumGeo = this.builder.createLoftedPrism([
+            { y: 0.95, rx: 0.045, rz: 0.028, offsetZ: 0.155 },
+            { y: 1.30, rx: 0.06, rz: 0.032, offsetZ: 0.165 }
+        ], 4);
+        skelGroup.add(new THREE.Mesh(sternumGeo, boneMat));
+
+        // Faceted Skull, Jawbone, Dark Eye Sockets, Glowing Eyes & Nasal Cavity
+        const cranium = new THREE.Mesh(new THREE.IcosahedronGeometry(0.23, 0), boneMat);
+        cranium.scale.set(0.95, 1.04, 1.0);
+        cranium.position.set(0, 1.62, 0.01);
+        skelGroup.add(cranium);
+
+        const jawGeo = this.builder.createLoftedPrism([
+            { y: 1.41, rx: 0.12, rz: 0.12, offsetZ: 0.04, twist: Math.PI / 6 },
+            { y: 1.52, rx: 0.16, rz: 0.15, offsetZ: 0.04, twist: Math.PI / 6 }
+        ], 6);
+        skelGroup.add(new THREE.Mesh(jawGeo, boneMat));
+
+        const socketGeo = new THREE.OctahedronGeometry(0.052, 0);
+        const eyeGeo = new THREE.OctahedronGeometry(0.032, 0);
+        [-1, 1].forEach((side) => {
+            const socket = new THREE.Mesh(socketGeo, socketMat);
+            socket.scale.set(1.0, 0.85, 0.5);
+            socket.position.set(side * 0.085, 1.63, 0.19);
+            skelGroup.add(socket);
+
+            const eye = new THREE.Mesh(eyeGeo, eyeGlowMat);
+            eye.position.set(side * 0.085, 1.63, 0.215);
+            skelGroup.add(eye);
+        });
+
+        const nasal = new THREE.Mesh(
+            this.builder.makeFaceted(new THREE.ConeGeometry(0.036, 0.06, 3)),
+            socketMat
+        );
+        nasal.position.set(0, 1.55, 0.215);
+        skelGroup.add(nasal);
+
+        // Articulated Bone Arms
+        const shoulderGeo = new THREE.OctahedronGeometry(0.065, 0);
+        const armBoneGeo = this.builder.makeFaceted(new THREE.CylinderGeometry(0.04, 0.032, 0.30, 6));
+        [-1, 1].forEach((side) => {
+            const shoulder = new THREE.Mesh(shoulderGeo, boneMat);
+            shoulder.position.set(side * 0.31, 1.32, 0);
+            skelGroup.add(shoulder);
+
+            const upper = new THREE.Mesh(armBoneGeo, boneMat);
+            upper.position.set(side * 0.34, 1.18, 0.04);
+            upper.rotation.set(-0.25, 0, side * 0.16);
+            skelGroup.add(upper);
+
+            const elbow = new THREE.Mesh(kneeGeo, darkBoneMat);
+            elbow.scale.setScalar(0.8);
+            elbow.position.set(side * 0.36, 1.03, 0.08);
+            skelGroup.add(elbow);
+
+            const forearm = new THREE.Mesh(armBoneGeo, boneMat);
+            forearm.position.set(side * 0.40, 0.96, 0.18);
+            forearm.rotation.set(0.95, 0, side * -0.15);
+            skelGroup.add(forearm);
+        });
+
+        // Left Arm: Battered Polygonal Shield
+        const shieldGroup = new THREE.Group();
+        shieldGroup.position.set(-0.44, 0.98, 0.24);
+        shieldGroup.rotation.set(-0.15, -0.35, 0);
+
+        const shieldPlate = new THREE.Mesh(
+            this.builder.makeFaceted(new THREE.CylinderGeometry(0.32, 0.30, 0.05, 8)),
+            steelMat
+        );
+        shieldPlate.rotation.x = Math.PI / 2;
+        shieldGroup.add(shieldPlate);
+
+        const shieldRim = new THREE.Mesh(
+            this.builder.makeFaceted(new THREE.TorusGeometry(0.31, 0.024, 4, 8)),
+            rustTrimMat
+        );
+        shieldRim.position.z = 0.015;
+        shieldGroup.add(shieldRim);
+
+        const shieldBoss = new THREE.Mesh(new THREE.OctahedronGeometry(0.075, 0), rustTrimMat);
+        shieldBoss.scale.set(1.0, 1.0, 0.5);
+        shieldBoss.position.z = 0.035;
+        shieldGroup.add(shieldBoss);
+
+        skelGroup.add(shieldGroup);
+
+        // Right Arm: Faceted Halberd
+        const pole = new THREE.Mesh(
+            this.builder.makeFaceted(new THREE.CylinderGeometry(0.032, 0.036, 2.25, 6)),
+            woodMat
+        );
+        pole.position.set(0.44, 1.13, 0.24);
+        skelGroup.add(pole);
+
+        const spearTip = new THREE.Mesh(
+            this.builder.makeFaceted(new THREE.ConeGeometry(0.065, 0.34, 4)),
+            steelMat
+        );
+        spearTip.position.set(0.44, 2.38, 0.24);
+        skelGroup.add(spearTip);
+
+        const axeBladeGeo = this.builder.createLoftedPrism([
+            { y: 1.82, rx: 0.025, rz: 0.14, offsetZ: 0.07, twist: Math.PI / 4 },
+            { y: 2.02, rx: 0.02, rz: 0.20, offsetZ: 0.13, twist: Math.PI / 4 },
+            { y: 2.20, rx: 0.025, rz: 0.12, offsetZ: 0.06, twist: Math.PI / 4 }
+        ], 4);
+        const axeBlade = new THREE.Mesh(axeBladeGeo, steelMat);
+        axeBlade.position.set(0.44, 0, 0.24);
+        skelGroup.add(axeBlade);
+
+        const backSpike = new THREE.Mesh(
+            this.builder.makeFaceted(new THREE.ConeGeometry(0.036, 0.18, 4)),
+            steelMat
+        );
+        backSpike.position.set(0.44, 2.04, 0.12);
+        backSpike.rotation.x = -Math.PI / 2;
+        skelGroup.add(backSpike);
+
+        skelGroup.traverse((child) => {
+            if (child.isMesh) child.castShadow = true;
+        });
+
+        return skelGroup;
     }
 
     createBeaconMarker(iconText) {
@@ -516,11 +689,21 @@ export class DungeonWorldApp {
                 if (anim.leftArm) anim.leftArm.rotation.x = -swing * 0.45;
                 if (anim.rightArm) anim.rightArm.rotation.x = swing * 0.45;
                 if (anim.torso) anim.torso.position.y = Math.abs(swing) * 0.06;
+                if (anim.cape) anim.cape.rotation.x = 0.28 + Math.abs(swing) * 0.12;
 
-                // Feline tail run-bob
+                // Feline tail run-bob & traveling wave
                 if (anim.tail) {
-                    anim.tail.rotation.x = -0.4 + Math.abs(swing) * 0.15;
-                    anim.tail.rotation.y = Math.sin(this.walkCycle * 0.5) * 0.35;
+                    anim.tail.rotation.x = -0.18 + Math.abs(swing) * 0.12;
+                    anim.tail.rotation.y = Math.sin(this.walkCycle * 0.5) * 0.25;
+                    const segs = anim.tail.userData.segments;
+                    if (segs) {
+                        for (let i = 0; i < segs.length; i++) {
+                            const seg = segs[i];
+                            const base = seg.userData.baseRot;
+                            seg.rotation.z = base.z + Math.sin(this.walkCycle * 0.8 - i * 0.65) * 0.12;
+                            seg.rotation.x = base.x + Math.cos(this.walkCycle - i * 0.5) * 0.08;
+                        }
+                    }
                 }
             }
 
