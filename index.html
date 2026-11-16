@@ -633,17 +633,18 @@
             background: #0d121c;
             border: 3px solid var(--gold-bright);
             border-radius: 8px;
-            width: 820px;
+            width: 1040px;
             max-width: 96vw;
-            padding: 18px 22px;
+            max-height: 95vh;
+            padding: 18px 24px;
             box-shadow: 0 0 50px rgba(245, 166, 35, 0.4), inset 0 0 30px rgba(0,0,0,0.8);
             display: flex;
             flex-direction: column;
-            gap: 14px;
+            gap: 12px;
         }
 
         .combat-stage {
-            height: 280px;
+            height: clamp(340px, 46vh, 430px);
             padding: 0;
             position: relative;
             display: block;
@@ -664,32 +665,58 @@
         .combatant-card {
             display: flex;
             flex-direction: column;
-            gap: 4px;
-            backdrop-filter: blur(4px);
+            gap: 5px;
+            backdrop-filter: blur(6px);
             border-radius: 6px;
-            padding: 8px 12px;
+            padding: 12px 16px;
         }
 
         #combatEnemyCard {
             position: absolute;
-            top: 12px;
-            left: 14px;
-            width: 270px;
+            top: 16px;
+            left: 18px;
+            width: 320px;
             z-index: 2;
-            background: rgba(11, 15, 25, 0.88);
+            background: rgba(11, 15, 25, 0.9);
             border: 2px solid #ef4444;
-            border-left: 5px solid #ef4444;
+            border-left: 6px solid #ef4444;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.75);
+        }
+
+        #combatEnemyCard::after {
+            content: '▸';
+            position: absolute;
+            right: -14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #ef4444;
+            font-size: 1.8rem;
+            text-shadow: 0 0 8px rgba(239, 68, 68, 0.8);
+            pointer-events: none;
         }
 
         #combatHeroCard {
             position: absolute;
-            bottom: 12px;
-            right: 14px;
-            width: 280px;
+            bottom: 16px;
+            right: 18px;
+            width: 330px;
             z-index: 2;
-            background: rgba(11, 15, 25, 0.88);
+            background: rgba(11, 15, 25, 0.9);
             border: 2px solid var(--gold-bright);
-            border-right: 5px solid var(--gold-bright);
+            border-right: 6px solid var(--gold-bright);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.75);
+        }
+
+        #combatHeroCard::before {
+            content: '◂';
+            position: absolute;
+            left: -14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gold-bright);
+            font-size: 1.8rem;
+            text-shadow: 0 0 8px rgba(245, 166, 35, 0.8);
+            pointer-events: none;
         }
 
         .combatant-name {
@@ -710,7 +737,7 @@
 
         .combat-bar {
             width: 100%;
-            height: 18px;
+            height: 20px;
             background: #060911;
             border: 2px solid #2e384d;
             border-radius: 3px;
@@ -741,12 +768,13 @@
         .combat-vs-divider {
             position: absolute;
             top: 12px;
-            right: 14px;
+            left: 50%;
+            transform: translateX(-50%);
             z-index: 2;
-            background: rgba(11, 15, 25, 0.82);
+            background: rgba(11, 15, 25, 0.84);
             border: 1px solid var(--gold-border);
             border-radius: 6px;
-            padding: 6px 12px;
+            padding: 6px 14px;
             display: flex;
             align-items: center;
             gap: 10px;
@@ -1778,7 +1806,7 @@
                         <span>MP</span>
                         <span id="combatHeroMpVal">40 / 40</span>
                     </div>
-                    <div class="combat-bar" style="height:12px;">
+                    <div class="combat-bar" style="height:14px;">
                         <div class="combat-bar-fill combat-mp-player" id="combatHeroMpBar"></div>
                     </div>
                     <div style="font-size:1.05rem; color:var(--cyan-accent); margin-top:2px;" id="combatHeroBuffs">
@@ -1786,7 +1814,7 @@
                     </div>
                 </div>
 
-                <!-- Top-Right Dice & Round Tray -->
+                <!-- Top-Center Dice & Round Tray -->
                 <div class="combat-vs-divider">
                     <div style="display:flex; flex-direction:column; align-items:flex-end;">
                         <span style="font-family:'Cinzel', serif; font-size:1.15rem; color:var(--gold-bright);">D20 ROLL</span>

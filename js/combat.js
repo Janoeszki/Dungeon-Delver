@@ -110,8 +110,11 @@ export class CombatStage3D {
         this.active = false;
         this.clock = new THREE.Clock();
 
-        this.heroPos = new THREE.Vector3(-1.55, 0, 1.35);
-        this.enemyPos = new THREE.Vector3(1.55, 0, -1.25);
+        this.heroPos = new THREE.Vector3(-2.2, -0.35, 1.65);
+        this.enemyPos = new THREE.Vector3(2.45, 0.55, -1.35);
+
+        this.heroScale = 1.22;
+        this.enemyScale = 1.32;
 
         this.heroAnchor = null;
         this.enemyAnchor = null;
@@ -133,16 +136,16 @@ export class CombatStage3D {
     }
 
     initScene() {
-        const width = this.container.clientWidth || 780;
-        const height = this.container.clientHeight || 280;
+        const width = this.container.clientWidth || 980;
+        const height = this.container.clientHeight || 380;
 
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x090d16);
         this.scene.fog = new THREE.FogExp2(0x090d16, 0.085);
 
-        this.camera = new THREE.PerspectiveCamera(38, width / height, 0.1, 50);
-        this.camera.position.set(-2.1, 2.25, 4.9);
-        this.camera.lookAt(0.15, 0.95, -0.25);
+        this.camera = new THREE.PerspectiveCamera(36, width / height, 0.1, 50);
+        this.camera.position.set(0, 3.1, 6.2);
+        this.camera.lookAt(0, 0.85, 0);
 
         this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
         this.renderer.setSize(width, height);
@@ -234,20 +237,20 @@ export class CombatStage3D {
     }
 
     buildPlatforms() {
-        const makePedestal = (pos, baseColor, ringColor) => {
+        const makePedestal = (pos, baseColor, ringColor, radius = 1.08, height = 0.22) => {
             const group = new THREE.Group();
             group.position.copy(pos);
 
             const base = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.95, 1.12, 0.18, 16),
+                new THREE.CylinderGeometry(radius, radius + 0.18, height, 18),
                 new THREE.MeshLambertMaterial({ color: baseColor, flatShading: true })
             );
-            base.position.y = -0.09;
+            base.position.y = -height / 2;
             base.receiveShadow = true;
             group.add(base);
 
             const ring = new THREE.Mesh(
-                new THREE.TorusGeometry(0.88, 0.028, 6, 28),
+                new THREE.TorusGeometry(radius - 0.06, 0.032, 6, 30),
                 new THREE.MeshBasicMaterial({ color: ringColor })
             );
             ring.rotation.x = Math.PI / 2;
@@ -257,16 +260,16 @@ export class CombatStage3D {
             this.scene.add(group);
         };
 
-        // Hero Platform (cyan rune) & Enemy Platform (crimson rune)
-        makePedestal(this.heroPos, 0x1f2b3d, 0x38bdf8);
-        makePedestal(this.enemyPos, 0x231b24, 0xef4444);
+        // Hero Platform (Bottom-Left cyan rune) & Enemy Dais (Top-Right raised crimson rune)
+        makePedestal(this.heroPos, 0x1f2b3d, 0x38bdf8, 1.15, 0.24);
+        makePedestal(this.enemyPos, 0x231b24, 0xef4444, 1.2, 0.95);
 
         // Guard Aura Mesh around Hero
         const auraGroup = new THREE.Group();
         auraGroup.position.copy(this.heroPos);
 
         const shieldDome = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.92, 0.92, 1.55, 16, 1, true),
+            new THREE.CylinderGeometry(1.08, 1.08, 1.85, 16, 1, true),
             new THREE.MeshBasicMaterial({
                 color: 0x38bdf8,
                 transparent: true,
@@ -275,15 +278,15 @@ export class CombatStage3D {
                 depthWrite: false
             })
         );
-        shieldDome.position.y = 0.85;
+        shieldDome.position.y = 1.02;
         auraGroup.add(shieldDome);
 
         const shieldRing = new THREE.Mesh(
-            new THREE.TorusGeometry(0.94, 0.03, 6, 28),
+            new THREE.TorusGeometry(1.1, 0.035, 6, 28),
             new THREE.MeshBasicMaterial({ color: 0x7dd3fc })
         );
         shieldRing.rotation.x = Math.PI / 2;
-        shieldRing.position.y = 0.9;
+        shieldRing.position.y = 1.08;
         auraGroup.add(shieldRing);
 
         auraGroup.visible = false;
@@ -513,17 +516,18 @@ export class CombatStage3D {
         this.enemyDefeated = false;
         if (this.guardAura) this.guardAura.visible = false;
 
-        // 1. Build Player Hero Model
+        // 1. Build Player Hero Model (Bottom-Left)
         this.heroModel = this.builder.createCharacter(heroConfig);
         this.heroAnchor.position.copy(this.heroPos);
         this.heroAnchor.rotation.set(0, Math.atan2(this.enemyPos.x - this.heroPos.x, this.enemyPos.z - this.heroPos.z), 0);
+        this.heroAnchor.scale.setScalar(this.heroScale);
         this.heroAnchor.add(this.heroModel.group);
 
-        // 2. Build Enemy Monster Model
+        // 2. Build Enemy Monster Model (Top-Right)
         this.enemyModel = this.buildMonsterModel(monsterId);
         this.enemyAnchor.position.copy(this.enemyPos);
         this.enemyAnchor.rotation.set(0, Math.atan2(this.heroPos.x - this.enemyPos.x, this.heroPos.z - this.enemyPos.z), 0);
-        this.enemyAnchor.scale.set(1, 1, 1);
+        this.enemyAnchor.scale.setScalar(this.enemyScale);
         this.enemyAnchor.add(this.enemyModel.group);
 
         this.active = true;
@@ -685,7 +689,7 @@ export class CombatStage3D {
                     if (anim.rightArm) anim.rightArm.rotation.x = -swing * 1.4;
                 } else if (this.heroAnim.kind === 'hit') {
                     const shake = Math.sin(p * Math.PI * 6) * (1 - p) * 0.14;
-                    this.heroAnchor.position.set(this.heroPos.x + shake, 0, this.heroPos.z + (1 - p) * 0.15);
+                    this.heroAnchor.position.set(this.heroPos.x + shake, this.heroPos.y, this.heroPos.z + (1 - p) * 0.15);
                 }
 
                 if (p >= 1) {
@@ -722,15 +726,15 @@ export class CombatStage3D {
                     }
                 } else if (this.enemyAnim.kind === 'hit') {
                     const shake = Math.sin(p * Math.PI * 6) * (1 - p) * 0.16;
-                    this.enemyAnchor.position.set(this.enemyPos.x + shake, 0, this.enemyPos.z - (1 - p) * 0.18);
+                    this.enemyAnchor.position.set(this.enemyPos.x + shake, this.enemyPos.y, this.enemyPos.z - (1 - p) * 0.18);
                     if (p >= 1) {
                         this.enemyAnim = null;
                         this.enemyAnchor.position.copy(this.enemyPos);
                     }
                 } else if (this.enemyAnim.kind === 'defeat') {
                     this.enemyAnchor.rotation.x = -p * (Math.PI / 2);
-                    this.enemyAnchor.position.y = -p * 0.25;
-                    this.enemyAnchor.scale.setScalar(Math.max(0.05, 1 - p * 0.35));
+                    this.enemyAnchor.position.y = this.enemyPos.y - p * 0.25;
+                    this.enemyAnchor.scale.setScalar(this.enemyScale * Math.max(0.05, 1 - p * 0.35));
                     if (p >= 1) {
                         this.enemyAnim = null;
                     }
