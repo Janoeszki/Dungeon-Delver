@@ -118,6 +118,8 @@ export class CombatStage3D {
 
         this.heroAnchor = null;
         this.enemyAnchor = null;
+        this.heroPedestal = null;
+        this.enemyPedestal = null;
         this.heroModel = null;
         this.enemyModel = null;
         this.guardAura = null;
@@ -141,9 +143,9 @@ export class CombatStage3D {
 
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x090d16);
-        this.scene.fog = new THREE.FogExp2(0x090d16, 0.085);
+        this.scene.fog = new THREE.FogExp2(0x090d16, 0.05);
 
-        this.camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 50);
+        this.camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 80);
         this.camera.position.set(0, 2.85, 6.4);
         this.camera.lookAt(0, 0.85, 0);
 
@@ -191,7 +193,7 @@ export class CombatStage3D {
 
     buildEnvironment() {
         // Dungeon Floor
-        const floorGeo = new THREE.PlaneGeometry(24, 24);
+        const floorGeo = new THREE.PlaneGeometry(40, 40);
         const floorMat = new THREE.MeshLambertMaterial({ color: 0x131824, flatShading: true });
         const floor = new THREE.Mesh(floorGeo, floorMat);
         floor.rotation.x = -Math.PI / 2;
@@ -199,7 +201,7 @@ export class CombatStage3D {
         floor.receiveShadow = true;
         this.scene.add(floor);
 
-        const grid = new THREE.GridHelper(18, 18, 0x2a364d, 0x182030);
+        const grid = new THREE.GridHelper(32, 32, 0x2a364d, 0x182030);
         grid.position.y = -0.17;
         this.scene.add(grid);
 
@@ -210,8 +212,8 @@ export class CombatStage3D {
         const flameMat = new THREE.MeshBasicMaterial({ color: 0xffa726 });
 
         [
-            { x: -3.6, z: -2.8 },
-            { x: 3.8, z: -3.8 }
+            { x: -4.2, z: -3.6 },
+            { x: 4.5, z: -4.6 }
         ].forEach((pos) => {
             const pillar = new THREE.Mesh(pillarGeo, pillarMat);
             pillar.position.set(pos.x, 1.9, pos.z);
@@ -258,11 +260,12 @@ export class CombatStage3D {
             group.add(ring);
 
             this.scene.add(group);
+            return group;
         };
 
         // Hero Platform (Bottom-Left cyan rune) & Enemy Dais (Top-Right raised crimson rune)
-        makePedestal(this.heroPos, 0x1f2b3d, 0x38bdf8, 1.15, 0.24);
-        makePedestal(this.enemyPos, 0x231b24, 0xef4444, 1.2, 0.95);
+        this.heroPedestal = makePedestal(this.heroPos, 0x1f2b3d, 0x38bdf8, 1.15, 0.24);
+        this.enemyPedestal = makePedestal(this.enemyPos, 0x231b24, 0xef4444, 1.2, 0.95);
 
         // Guard Aura Mesh around Hero
         const auraGroup = new THREE.Group();
@@ -505,7 +508,7 @@ export class CombatStage3D {
     /**
      * Load/rebuild Hero and Monster models and start the animation loop
      */
-    start(heroConfig, monsterId) {
+    start(heroConfig, monsterId, monsterScale = 1.0) {
         this.heroAnchor.clear();
         this.enemyAnchor.clear();
         this.projectiles = [];
@@ -525,17 +528,86 @@ export class CombatStage3D {
 
         // 2. Build Enemy Monster Model (Top-Right)
         this.enemyModel = this.buildMonsterModel(monsterId);
+        const appliedEnemyScale = this.enemyScale * (monsterScale || 1.0);
+        if (this.enemyPedestal) {
+            const pedScale = Math.max(1, monsterScale || 1.0);
+            this.enemyPedestal.scale.set(pedScale, 1, pedScale);
+        }
         this.enemyAnchor.position.copy(this.enemyPos);
         this.enemyAnchor.rotation.set(0, Math.atan2(this.heroPos.x - this.enemyPos.x, this.heroPos.z - this.enemyPos.z), 0);
-        this.enemyAnchor.scale.setScalar(this.enemyScale);
+        this.enemyAnchor.scale.setScalar(appliedEnemyScale);
         this.enemyAnchor.add(this.enemyModel.group);
 
         this.active = true;
         this.clock.getDelta();
         this.resize();
+        this.updateCameraFraming();
         if (this.rafId === null) {
             this.animate();
         }
+    }
+
+    /**
+     * Dynamically frames camera based on actual 3D bounding boxes of both Hero and Enemy
+     * so normal adversaries and huge bosses fit completely inside the battle view.
+     */
+    updateCameraFraming() {
+        if (!this.camera || !this.heroAnchor || !this.enemyAnchor) return;
+
+        this.scene.updateMatrixWorld(true);
+
+        const heroBox = new THREE.Box3().setFromObject(this.heroAnchor);
+        if (this.heroPedestal) heroBox.union(new THREE.Box3().setFromObject(this.heroPedestal));
+
+        const enemyBox = new THREE.Box3().setFromObject(this.enemyAnchor);
+        if (this.enemyPedestal) enemyBox.union(new THREE.Box3().setFromObject(this.enemyPedestal));
+
+        if (heroBox.isEmpty() || enemyBox.isEmpty()) return;
+
+        const totalBox = heroBox.clone().union(enemyBox);
+        const center = totalBox.getCenter(new THREE.Vector3());
+
+        const lookAtPoint = new THREE.Vector3(center.x * 0.35, center.y + 0.1, center.z * 0.35);
+
+        const F = new THREE.Vector3(0, -0.34, -0.94).normalize();
+        const R = new THREE.Vector3(1, 0, 0);
+        const U = new THREE.Vector3().crossVectors(R, F).normalize();
+
+        const vFovRad = THREE.MathUtils.degToRad(this.camera.fov);
+        const tanHalfV = Math.tan(vFovRad / 2);
+        const tanHalfH = tanHalfV * (this.camera.aspect || 1);
+
+        const maxNdcY = 0.70;
+        const maxNdcX = 0.58;
+
+        const getCorners = (box) => [
+            new THREE.Vector3(box.min.x, box.min.y, box.min.z),
+            new THREE.Vector3(box.min.x, box.min.y, box.max.z),
+            new THREE.Vector3(box.min.x, box.max.y, box.min.z),
+            new THREE.Vector3(box.min.x, box.max.y, box.max.z),
+            new THREE.Vector3(box.max.x, box.min.y, box.min.z),
+            new THREE.Vector3(box.max.x, box.min.y, box.max.z),
+            new THREE.Vector3(box.max.x, box.max.y, box.min.z),
+            new THREE.Vector3(box.max.x, box.max.y, box.max.z)
+        ];
+
+        const allCorners = [...getCorners(heroBox), ...getCorners(enemyBox)];
+        let requiredDist = 8.2;
+
+        for (const corner of allCorners) {
+            const rel = corner.clone().sub(lookAtPoint);
+            const depthAlongF = rel.dot(F);
+            const xProj = Math.abs(rel.dot(R));
+            const yProj = Math.abs(rel.dot(U));
+
+            const distForX = xProj / (maxNdcX * tanHalfH) - depthAlongF;
+            const distForY = yProj / (maxNdcY * tanHalfV) - depthAlongF;
+            requiredDist = Math.max(requiredDist, distForX, distForY);
+        }
+
+        this.camera.position.copy(lookAtPoint).addScaledVector(F, -requiredDist);
+        this.camera.lookAt(lookAtPoint);
+        this.camera.updateMatrixWorld(true);
     }
 
     stop() {
@@ -554,6 +626,7 @@ export class CombatStage3D {
         this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(width, height);
+        this.updateCameraFraming();
     }
 
     spawnParticles(origin, color, count = 16, mode = 'burst') {

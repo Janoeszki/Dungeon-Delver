@@ -2666,7 +2666,7 @@
             if (!combatStage3D) {
                 combatStage3D = new CombatStage3D(combatViewport3D);
             }
-            combatStage3D.start(conf, combatState.monster.id);
+            combatStage3D.start(conf, combatState.monster.id, combatState.monster.scale || 1.0);
             music.playTrack('crypt', { reset: false });
         }
 
