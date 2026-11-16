@@ -453,6 +453,72 @@
         .log-msg.success { color: #4ade80; font-weight: bold; }
         .log-msg.fail { color: #f87171; }
         .log-msg.crit { color: #facc15; font-weight: bold; text-shadow: 0 0 6px rgba(250, 204, 21, 0.6); }
+        .log-msg.dread {
+            color: #e9d5ff;
+            font-style: italic;
+            border-left: 2px solid #9333ea;
+            padding-left: 6px;
+            text-shadow: 0 0 8px rgba(147, 51, 234, 0.55);
+        }
+
+        /* Adventure Room Banner (#hudRoom) */
+        .adventure-room-banner {
+            pointer-events: auto;
+            background: linear-gradient(180deg, rgba(16, 12, 24, 0.94) 0%, rgba(9, 11, 18, 0.96) 100%);
+            border: 2px solid var(--gold-border);
+            border-bottom: 3px solid var(--gold-bright);
+            padding: 8px 20px;
+            font-family: 'Cinzel', serif;
+            font-size: 1.18rem;
+            color: var(--gold-bright);
+            letter-spacing: 1.5px;
+            text-align: center;
+            border-radius: 4px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85), 0 0 18px rgba(245, 166, 35, 0.22);
+            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.95);
+        }
+
+        /* Dark Horror Vignette & Low-HP Crimson Pulse Overlay */
+        .adventure-vignette {
+            position: absolute;
+            inset: 0;
+            z-index: 4;
+            pointer-events: none;
+            background: radial-gradient(ellipse at 50% 50%, transparent 42%, rgba(3, 4, 8, 0.62) 78%, rgba(1, 2, 5, 0.92) 100%);
+            box-shadow: inset 0 0 70px rgba(0, 0, 0, 0.85);
+            transition: box-shadow 0.3s ease, border-color 0.3s ease;
+            border: 3px solid transparent;
+        }
+
+        .adventure-vignette.low-hp-crimson,
+        #screenAdventure.low-hp-crimson .adventure-vignette {
+            border-color: rgba(239, 68, 68, 0.88);
+            background: radial-gradient(ellipse at 50% 50%, transparent 36%, rgba(127, 29, 29, 0.42) 75%, rgba(69, 10, 10, 0.88) 100%);
+            box-shadow: inset 0 0 95px rgba(220, 38, 38, 0.78), 0 0 24px rgba(239, 68, 68, 0.65);
+            animation: crimsonPulse 1.35s ease-in-out infinite;
+        }
+
+        #screenAdventure.low-hp-crimson {
+            border: 2px solid #ef4444;
+            box-shadow: inset 0 0 65px rgba(220, 38, 38, 0.65);
+        }
+
+        @keyframes crimsonPulse {
+            0%, 100% { opacity: 0.85; box-shadow: inset 0 0 80px rgba(220, 38, 38, 0.65); }
+            50% { opacity: 1; box-shadow: inset 0 0 120px rgba(239, 68, 68, 0.95); }
+        }
+
+        #screenAdventure.damage-flash {
+            animation: advDamageShake 0.32s ease-out;
+        }
+
+        @keyframes advDamageShake {
+            0% { transform: translate(0, 0); filter: brightness(1.75) sepia(0.4) saturate(2.2); }
+            25% { transform: translate(-6px, 3px); }
+            50% { transform: translate(6px, -3px); }
+            75% { transform: translate(-4px, -2px); }
+            100% { transform: translate(0, 0); filter: brightness(1); }
+        }
 
         .click-hint-banner {
             pointer-events: none;
@@ -1743,6 +1809,7 @@
         <!-- SCREEN 2: 3D ADVENTURE WORLD -->
         <section id="screenAdventure" class="screen-view">
             <div id="viewportAdventure" class="canvas-3d"></div>
+            <div id="adventureVignette" class="adventure-vignette"></div>
 
             <!-- Adventure Top HUD -->
             <div class="adventure-hud-top">
@@ -1763,6 +1830,8 @@
                     </div>
                 </div>
 
+                <div id="hudRoom" class="adventure-room-banner">Floor 1 — Entrance: Cracked Threshold</div>
+
                 <div class="adventure-inventory-card">
                     <span>🪙 <strong id="advGold">0</strong> Gold</span>
                     <span>⭐ <strong id="advXp">0</strong> XP</span>
@@ -1775,16 +1844,44 @@
                 <div class="event-log-panel">
                     <div class="log-title">📜 Crypt Chronicle & Skill Checks</div>
                     <div class="log-messages" id="advLog">
-                        <div class="log-msg">You step through the archway into the Crypt of Eldoria. Click anywhere on the ground to move!</div>
+                        <div class="log-msg">You step through the archway into the Crypt of Eldoria. Click anywhere on the ground or press WASD / Arrows to move!</div>
                     </div>
                 </div>
 
                 <div class="click-hint-banner">
-                    🖱️ Click ground to walk | Click glowing beacons [⯁] to trigger Skill Checks
+                    ⌨️ WASD / Arrows or 🖱️ Click ground to walk | Click glowing beacons [⯁] to inspect
                 </div>
             </div>
         </section>
     </main>
+
+    <!-- FLOOR 1 EXIT VICTORY MODAL -->
+    <div class="encounter-overlay" id="victoryModal">
+        <div class="encounter-card">
+            <div class="encounter-header">
+                <span class="encounter-icon">👑</span>
+                <div>
+                    <h2 class="encounter-title" id="victoryTitle">FLOOR 1 COMPLETE: THE CHARNEL THRESHOLD</h2>
+                    <span style="color:var(--gold-bright); font-size:1.1rem;">Exit Seal Unbound • Crown of Eldoria Claimed</span>
+                </div>
+            </div>
+
+            <p class="encounter-story" id="victoryStory">
+                You have conquered the traps and monsters of Floor 1, unsealed the Phusza Descent, and claimed the Crown of Eldoria!
+            </p>
+
+            <div class="trait-box" id="victorySummaryBox" style="gap:6px; font-size:1.2rem;">
+                <div style="color:var(--gold-bright); font-family:'Cinzel', serif;">EXPEDITION SUMMARY</div>
+                <div id="victoryStatsLine">XP Earned: 0 | Gold Plundered: 0</div>
+                <div id="victoryRoomsLine" style="color:var(--cyan-accent); font-size:1.1rem;">Rooms Explored: 7 / 7</div>
+            </div>
+
+            <div class="title-secondary-row" style="margin-top:4px;">
+                <button class="result-dismiss-btn" id="btnPlayAgain" style="display:block;">⚔️ PLAY AGAIN (NEW DELVE)</button>
+                <button class="start-cta-secondary" id="btnVictoryTitle" style="font-size:1.35rem; padding:10px;">🏰 RETURN TO TITLE</button>
+            </div>
+        </div>
+    </div>
 
     <!-- D20 ACTION ENCOUNTER MODAL -->
     <div class="encounter-overlay" id="encounterModal">
@@ -1957,7 +2054,7 @@
         import { music } from './js/music.js';
         import { ANCESTRY_DATA, calculateStats } from './js/stats.js';
         import { rollD20, getStatModifier, formatModifier, animateDiceRoll } from './js/dice.js';
-        import { MONSTERS, CONSUMABLE_ITEMS, rollDiceFormula, CombatStage3D } from './js/combat.js';
+        import { MONSTERS, CONSUMABLE_ITEMS, rollDiceFormula, chooseMonsterAction, CombatStage3D } from './js/combat.js';
 
         // DOM Screen & Header References
         const mainHeader = document.getElementById('mainHeader');
@@ -1967,12 +2064,22 @@
         const viewportStart = document.getElementById('viewportStart');
         const viewportCreator = document.getElementById('viewportCreator');
         const viewportAdventure = document.getElementById('viewportAdventure');
+        const hudRoom = document.getElementById('hudRoom');
+        const adventureVignette = document.getElementById('adventureVignette');
+        const victoryModal = document.getElementById('victoryModal');
+        const victoryStatsLine = document.getElementById('victoryStatsLine');
+        const victoryRoomsLine = document.getElementById('victoryRoomsLine');
+        const btnPlayAgain = document.getElementById('btnPlayAgain');
+        const btnVictoryTitle = document.getElementById('btnVictoryTitle');
 
         // State & Mode
         let currentMode = 'start'; // 'start' | 'creator' | 'adventure'
         let titleScene = null;
         let creatorApp = null;
         let adventureApp = null;
+        let pendingVictoryModal = false;
+        let pendingLethalRespawn = false;
+        let damageFlashTimer = null;
 
         // Player Live Adventure Stats
         let playerStats = {
@@ -1989,6 +2096,78 @@
         // Initialize Title 3D Backdrop & inactive Character Forge
         titleScene = new TitleSceneApp(viewportStart);
         creatorApp = new CharacterCreatorApp(viewportCreator, { active: false });
+
+        function formatRoomBanner(room) {
+            if (!room || !room.name) return 'Floor 1 — Entrance: Cracked Threshold';
+            if (/^floor\s*1/i.test(room.name)) return room.name;
+            return `Floor 1 — ${room.name}`;
+        }
+
+        function updateRoomBanner(room) {
+            if (hudRoom) {
+                hudRoom.textContent = formatRoomBanner(room);
+            }
+        }
+
+        function triggerDamageFeedback() {
+            if (!screenAdventure) return;
+            screenAdventure.classList.remove('damage-flash');
+            void screenAdventure.offsetWidth;
+            screenAdventure.classList.add('damage-flash');
+            if (damageFlashTimer) clearTimeout(damageFlashTimer);
+            damageFlashTimer = setTimeout(() => {
+                screenAdventure.classList.remove('damage-flash');
+            }, 360);
+        }
+
+        function respawnPlayerAtEntrance(reasonMsg) {
+            const revivedHp = Math.max(2, Math.floor(playerStats.maxHp / 2));
+            playerStats.currentHp = revivedHp;
+            playerStats.currentMp = Math.max(playerStats.currentMp, Math.floor(playerStats.maxMp / 2));
+            if (adventureApp) {
+                adventureApp.respawnAtEntrance();
+                updateRoomBanner(adventureApp.getCurrentRoom());
+            } else {
+                updateRoomBanner(null);
+            }
+            updateAdventureHUD();
+            if (reasonMsg) {
+                addLogMessage(reasonMsg, 'fail');
+            }
+        }
+
+        function openVictoryModal() {
+            sound.playFanfare();
+            if (victoryStatsLine) {
+                victoryStatsLine.textContent = `XP Earned: ${playerStats.xp} | Gold Plundered: ${playerStats.gold}`;
+            }
+            if (victoryRoomsLine) {
+                const summary = adventureApp && typeof adventureApp.getRunSummary === 'function'
+                    ? adventureApp.getRunSummary()
+                    : { discoveredRooms: [] };
+                const totalRooms = adventureApp && Array.isArray(adventureApp.rooms) ? adventureApp.rooms.length : 8;
+                victoryRoomsLine.textContent = `Rooms Explored: ${summary.discoveredRooms.length} / ${totalRooms}`;
+            }
+            if (victoryModal) {
+                victoryModal.style.display = 'flex';
+            }
+        }
+
+        if (btnPlayAgain) {
+            btnPlayAgain.addEventListener('click', () => {
+                sound.playFanfare();
+                if (victoryModal) victoryModal.style.display = 'none';
+                switchToAdventure();
+            });
+        }
+
+        if (btnVictoryTitle) {
+            btnVictoryTitle.addEventListener('click', () => {
+                sound.playSelect();
+                if (victoryModal) victoryModal.style.display = 'none';
+                switchToTitle();
+            });
+        }
 
         // ==========================================
         // MUSIC, SFX & VISUALIZER INTEGRATION
@@ -2378,8 +2557,21 @@
             switchToAdventure();
         });
 
+        function hideAllModals() {
+            if (encounterModal) encounterModal.style.display = 'none';
+            if (combatModal) combatModal.style.display = 'none';
+            if (victoryModal) victoryModal.style.display = 'none';
+            if (loreModal) loreModal.style.display = 'none';
+            if (combatStage3D) combatStage3D.stop();
+            combatState = null;
+            currentEncounter = null;
+            pendingVictoryModal = false;
+            pendingLethalRespawn = false;
+        }
+
         function switchToTitle() {
             currentMode = 'start';
+            hideAllModals();
             mainHeader.style.display = 'none';
             screenCreator.style.display = 'none';
             screenAdventure.style.display = 'none';
@@ -2397,6 +2589,7 @@
 
         function switchToAdventure() {
             currentMode = 'adventure';
+            hideAllModals();
             mainHeader.style.display = 'flex';
             screenStart.style.display = 'none';
             screenCreator.style.display = 'none';
@@ -2408,16 +2601,21 @@
             creatorApp.setActive(false);
             music.playTrack('crypt', { reset: true });
 
-            // Calculate Base Stats
+            // Full Run Reset
             const conf = creatorApp.config;
             const stats = calculateStats(conf.ancestry, conf.charClass);
             playerStats.maxHp = stats.maxHp;
             playerStats.currentHp = stats.maxHp;
             playerStats.maxMp = stats.maxMp;
             playerStats.currentMp = stats.maxMp;
-            if (!playerStats.consumables || playerStats.consumables.length === 0) {
-                playerStats.consumables = ['Lesser Healing Potion', 'Mana Draught'];
-            }
+            playerStats.gold = 0;
+            playerStats.xp = 0;
+            playerStats.inventory = [];
+            playerStats.consumables = ['Lesser Healing Potion', 'Mana Draught'];
+
+            // Clear Adventure Log
+            const advLog = document.getElementById('advLog');
+            if (advLog) advLog.innerHTML = '';
 
             // Update Adventure HUD
             document.getElementById('advHeroName').textContent = conf.name;
@@ -2433,14 +2631,43 @@
                 viewportAdventure,
                 conf,
                 (encounter) => triggerEncounterModal(encounter),
-                () => updateAdventureHUD()
+                () => updateAdventureHUD(),
+                {
+                    onRoomEnter: (room, meta = {}) => {
+                        updateRoomBanner(room);
+                        if (meta.firstDiscovery && room && room.whisper) {
+                            addLogMessage(room.whisper, 'dread');
+                        }
+                    },
+                    onTrapStep: (enc, dmg) => {
+                        sound.playTrapTrigger();
+                        triggerDamageFeedback();
+                        playerStats.currentHp = Math.max(0, playerStats.currentHp - dmg);
+                        addLogMessage(`💥 Stepped on ${enc.name}! Took ${dmg} damage! Current HP: ${playerStats.currentHp}`, 'fail');
+                        if (playerStats.currentHp <= 0) {
+                            const revivedHp = Math.max(2, Math.floor(playerStats.maxHp / 2));
+                            respawnPlayerAtEntrance(`💀 Slain by ${enc.name}! Revived at the entrance with ${revivedHp} HP.`);
+                        } else {
+                            updateAdventureHUD();
+                        }
+                    },
+                    onFloorVictory: () => {
+                        if (!encounterModal || encounterModal.style.display === 'none') {
+                            openVictoryModal();
+                        } else {
+                            pendingVictoryModal = true;
+                        }
+                    }
+                }
             );
 
+            updateRoomBanner(adventureApp.getCurrentRoom());
             addLogMessage(`⚡ ${conf.name} entered the Crypt of Eldoria! High danger lies ahead...`, 'crit');
         }
 
         function switchToCreator() {
             currentMode = 'creator';
+            hideAllModals();
             mainHeader.style.display = 'flex';
             screenStart.style.display = 'none';
             screenAdventure.style.display = 'none';
@@ -2460,8 +2687,8 @@
         }
 
         function updateAdventureHUD() {
-            const hpPct = Math.max(0, Math.min(100, (playerStats.currentHp / playerStats.maxHp) * 100));
-            const mpPct = Math.max(0, Math.min(100, (playerStats.currentMp / playerStats.maxMp) * 100));
+            const hpPct = Math.max(0, Math.min(100, (playerStats.currentHp / Math.max(1, playerStats.maxHp)) * 100));
+            const mpPct = Math.max(0, Math.min(100, (playerStats.currentMp / Math.max(1, playerStats.maxMp)) * 100));
 
             document.getElementById('advHpFill').style.width = `${hpPct}%`;
             document.getElementById('advHpText').textContent = `${playerStats.currentHp} / ${playerStats.maxHp}`;
@@ -2474,7 +2701,13 @@
                 document.getElementById('advItemSlot').textContent = `🎒 ${playerStats.inventory[playerStats.inventory.length - 1]}`;
             } else if (playerStats.consumables && playerStats.consumables.length > 0) {
                 document.getElementById('advItemSlot').textContent = `🧪 ${playerStats.consumables[0]} (x${playerStats.consumables.length})`;
+            } else {
+                document.getElementById('advItemSlot').textContent = '🎒 Gear: Basic';
             }
+
+            const isLowHp = playerStats.currentHp > 0 && (playerStats.currentHp / Math.max(1, playerStats.maxHp)) <= 0.35;
+            if (screenAdventure) screenAdventure.classList.toggle('low-hp-crimson', isLowHp);
+            if (adventureVignette) adventureVignette.classList.toggle('low-hp-crimson', isLowHp);
         }
 
         function addLogMessage(msg, type = 'normal') {
@@ -2505,6 +2738,7 @@
 
         function triggerEncounterModal(enc) {
             currentEncounter = enc;
+            pendingLethalRespawn = false;
             sound.playSelect();
 
             if (enc.isCombat) {
@@ -2547,7 +2781,21 @@
             encounterModal.style.display = 'flex';
         }
 
+        function applyPassiveItemBonuses(itemName) {
+            if (!itemName || typeof itemName !== 'string') return;
+            if (/\+15\s*HP/i.test(itemName)) {
+                playerStats.maxHp += 15;
+                playerStats.currentHp = Math.min(playerStats.maxHp, playerStats.currentHp + 15);
+            }
+            if (/\+10\s*MP/i.test(itemName)) {
+                playerStats.maxMp += 10;
+                playerStats.currentMp = Math.min(playerStats.maxMp, playerStats.currentMp + 10);
+            }
+        }
+
         function executeD20Check(opt, statVal) {
+            if (diceRollStage.style.display === 'flex') return;
+
             // Hide choice buttons, reveal dice roll stage
             encOptionsList.style.display = 'none';
             diceRollStage.style.display = 'flex';
@@ -2601,39 +2849,62 @@
 
                     // Process results (rewards or damage)
                     if (outcome.success) {
-                        sound.playSuccess();
+                        if (currentEncounter && currentEncounter.kind === 'trap') {
+                            sound.playTrapDisarm();
+                        } else {
+                            sound.playSuccess();
+                        }
                         rollResultText.textContent = opt.successMsg;
                         addLogMessage(`${outcomeText}: ${opt.successMsg}`, logClass);
 
                         if (opt.reward) {
                             if (opt.reward.gold) playerStats.gold += opt.reward.gold;
                             if (opt.reward.xp) playerStats.xp += opt.reward.xp;
-                            if (opt.reward.item) playerStats.inventory.push(opt.reward.item);
+                            if (opt.reward.item) {
+                                playerStats.inventory.push(opt.reward.item);
+                                applyPassiveItemBonuses(opt.reward.item);
+                            }
                             if (opt.reward.consumable) playerStats.consumables.push(opt.reward.consumable);
                             if (opt.reward.mpRestore) playerStats.currentMp = Math.min(playerStats.maxMp, playerStats.currentMp + opt.reward.mpRestore);
                             if (opt.reward.fullHeal) {
                                 playerStats.currentHp = playerStats.maxHp;
                                 playerStats.currentMp = playerStats.maxMp;
                             }
+                            if (opt.reward.victory) {
+                                pendingVictoryModal = true;
+                            }
                         }
-                        if (adventureApp) {
+                        if (adventureApp && currentEncounter) {
                             adventureApp.resolveEncounterVisual(currentEncounter.id, true);
                         }
                     } else {
-                        sound.playFailure();
+                        if (currentEncounter && currentEncounter.kind === 'trap') {
+                            sound.playTrapTrigger();
+                        } else {
+                            sound.playFailure();
+                        }
                         rollResultText.textContent = opt.failMsg;
                         addLogMessage(`${outcomeText}: ${opt.failMsg}`, logClass);
 
                         if (opt.penalty && opt.penalty.hpDamage) {
                             sound.playHit();
-                            playerStats.currentHp = Math.max(1, playerStats.currentHp - opt.penalty.hpDamage);
+                            triggerDamageFeedback();
+                            playerStats.currentHp = Math.max(0, playerStats.currentHp - opt.penalty.hpDamage);
                             addLogMessage(`💥 Took ${opt.penalty.hpDamage} damage! Current HP: ${playerStats.currentHp}`, 'fail');
                         }
                         if (opt.penalty && opt.penalty.partialHeal) {
                             playerStats.currentHp = Math.min(playerStats.maxHp, playerStats.currentHp + opt.penalty.partialHeal);
                         }
-                        if (adventureApp) {
+                        if (adventureApp && currentEncounter) {
                             adventureApp.resolveEncounterVisual(currentEncounter.id, false);
+                        }
+                        if (playerStats.currentHp <= 0) {
+                            pendingLethalRespawn = true;
+                            if (adventureApp) {
+                                adventureApp.respawnAtEntrance();
+                                updateRoomBanner(adventureApp.getCurrentRoom());
+                            }
+                            addLogMessage(`💀 Lethal blow! The crypt drags your spirit back to the entrance...`, 'fail');
                         }
                     }
 
@@ -2646,6 +2917,15 @@
         btnDismissEncounter.addEventListener('click', () => {
             sound.playSelect();
             encounterModal.style.display = 'none';
+            if (pendingLethalRespawn) {
+                pendingLethalRespawn = false;
+                const revivedHp = Math.max(2, Math.floor(playerStats.maxHp / 2));
+                respawnPlayerAtEntrance(`⚠️ Revived at the entrance with ${revivedHp} HP. Tread carefully!`);
+            }
+            if (pendingVictoryModal) {
+                pendingVictoryModal = false;
+                openVictoryModal();
+            }
         });
 
         // ==========================================
@@ -2690,13 +2970,14 @@
             const conf = creatorApp.config;
             const stats = calculateStats(conf.ancestry, conf.charClass);
 
-            // Compute player AC: base 10 + AGI mod + (Warrior shield/armor bonus = +3, Mage ward = +1)
+            // Compute player AC: base 10 + AGI mod + (Warrior shield/armor bonus = +4, Mage ward = +2)
             const agiMod = getStatModifier(stats.agi);
             const classAcBonus = conf.charClass === 'warrior' ? 4 : 2;
             const basePlayerAc = 10 + agiMod + classAcBonus;
 
             combatState = {
                 encounterId: enc.id,
+                outcome: null,
                 monster: {
                     ...monsterTemplate,
                     currentHp: monsterTemplate.maxHp,
@@ -2717,6 +2998,8 @@
                 busy: false
             };
 
+            sound.playMonsterGrowl();
+
             // Setup UI
             combatMonsterIcon.textContent = combatState.monster.icon;
             combatArenaTitle.textContent = `BATTLE: ${combatState.monster.name}`;
@@ -2726,6 +3009,7 @@
             combatMonsterBuffs.textContent = `AC: ${combatState.monster.ac} | ${combatState.monster.description}`;
 
             btnDismissCombat.style.display = 'none';
+            btnDismissCombat.onclick = null;
             combatActionsPanel.style.display = 'flex';
             combatLogBox.innerHTML = '';
 
@@ -2757,8 +3041,8 @@
             if (!combatState) return;
 
             // Player HP & MP
-            const heroHpPct = Math.max(0, Math.min(100, (playerStats.currentHp / playerStats.maxHp) * 100));
-            const heroMpPct = Math.max(0, Math.min(100, (playerStats.currentMp / playerStats.maxMp) * 100));
+            const heroHpPct = Math.max(0, Math.min(100, (playerStats.currentHp / Math.max(1, playerStats.maxHp)) * 100));
+            const heroMpPct = Math.max(0, Math.min(100, (playerStats.currentMp / Math.max(1, playerStats.maxMp)) * 100));
             combatHeroHpBar.style.width = `${heroHpPct}%`;
             combatHeroHpVal.textContent = `${playerStats.currentHp} / ${playerStats.maxHp}`;
             combatHeroMpBar.style.width = `${heroMpPct}%`;
@@ -2768,7 +3052,7 @@
             combatHeroBuffs.textContent = `AC: ${combatState.player.effectiveAc} | Stance: ${stanceText}`;
 
             // Monster HP
-            const monHpPct = Math.max(0, Math.min(100, (combatState.monster.currentHp / combatState.monster.maxHp) * 100));
+            const monHpPct = Math.max(0, Math.min(100, (combatState.monster.currentHp / Math.max(1, combatState.monster.maxHp)) * 100));
             combatMonsterHpBar.style.width = `${monHpPct}%`;
             combatMonsterHpVal.textContent = `${combatState.monster.currentHp} / ${combatState.monster.maxHp}`;
 
@@ -2780,6 +3064,9 @@
             } else if (combatState.turn === 'enemy') {
                 combatTurnBadge.className = 'combat-turn-badge turn-enemy';
                 combatTurnBadge.textContent = 'ENEMY TURN';
+            } else if (combatState.outcome === 'defeat') {
+                combatTurnBadge.className = 'combat-turn-badge turn-enemy';
+                combatTurnBadge.textContent = 'DEFEATED';
             } else {
                 combatTurnBadge.className = 'combat-turn-badge turn-player';
                 combatTurnBadge.textContent = 'VICTORY!';
@@ -2909,7 +3196,7 @@
         }
 
         function executePlayerAttack(type, mpCost = 0) {
-            if (combatState.busy) return;
+            if (!combatState || combatState.busy) return;
             combatState.busy = true;
             renderCombatSubmenu();
 
@@ -2925,6 +3212,7 @@
             if (combatStage3D) combatStage3D.playHeroAttack(type);
 
             rollCombatD20(statBonus, (d20) => {
+                if (!combatState) return;
                 const isHit = (!d20.isNat1 && (d20.isNat20 || d20.total >= targetAc));
 
                 if (isHit) {
@@ -2984,7 +3272,7 @@
         }
 
         function executePlayerDefend() {
-            if (combatState.busy) return;
+            if (!combatState || combatState.busy) return;
             combatState.busy = true;
             sound.playShieldBlock();
 
@@ -3003,7 +3291,7 @@
         }
 
         function executePlayerItem(itemName) {
-            if (combatState.busy) return;
+            if (!combatState || combatState.busy) return;
             const itemIdx = playerStats.consumables.indexOf(itemName);
             if (itemIdx === -1) return;
 
@@ -3044,16 +3332,19 @@
         }
 
         function executePlayerFlee() {
-            if (combatState.busy) return;
+            if (!combatState || combatState.busy) return;
             combatState.busy = true;
             const agiMod = getStatModifier(combatState.player.stats.agi);
 
             rollCombatD20(agiMod, (d20) => {
+                if (!combatState) return;
                 if (d20.total >= 11 || d20.isNat20) {
                     sound.playFlee();
                     addCombatLog(`🏃 Escape Succeeded! D20 (${d20.rawRoll}) + ${agiMod} = ${d20.total} vs DC 11. You slipped away into the shadows!`, 'heal');
+                    addLogMessage(`🏃 Retreated from ${combatState.monster.name} into the shadows.`, 'normal');
                     setTimeout(() => {
                         if (combatStage3D) combatStage3D.stop();
+                        if (adventureApp) adventureApp.clearActiveEncounter();
                         combatModal.style.display = 'none';
                         combatState = null;
                     }, 1100);
@@ -3097,19 +3388,27 @@
             if (!combatState || combatState.turn !== 'enemy') return;
 
             const mon = combatState.monster;
-            const atkBonus = mon.attackBonus;
+            const action = chooseMonsterAction(mon, combatState.round);
+            const atkBonus = action.attackBonus;
             const playerAc = combatState.player.effectiveAc;
 
-            addCombatLog(`💀 ${mon.name} prepares to strike with ${mon.attackName}...`, 'info');
-            if (combatStage3D) combatStage3D.playEnemyAttack();
+            if (action.isSpecial) {
+                sound.playMonsterGrowl();
+                addCombatLog(`💀 ${mon.name} unleashes ${action.name}! (${action.description || 'Deadly technique!'})`, 'crit');
+            } else {
+                addCombatLog(`💀 ${mon.name} prepares to strike with ${action.name}...`, 'info');
+            }
+            if (combatStage3D) combatStage3D.playEnemyAttack(action.isSpecial);
 
             rollCombatD20(atkBonus, (d20) => {
+                if (!combatState) return;
                 const isHit = (!d20.isNat1 && (d20.isNat20 || d20.total >= playerAc));
 
                 if (isHit) {
                     sound.playHit();
+                    triggerDamageFeedback();
                     if (combatStage3D) combatStage3D.playHeroHit(combatState.player.isDefending);
-                    const dice = mon.damageDice;
+                    const dice = action.damageDice || mon.damageDice;
                     let dmgResult = rollDiceFormula(d20.isNat20 ? dice.count * 2 : dice.count, dice.sides, dice.mod);
                     let finalDmg = dmgResult.total;
 
@@ -3127,14 +3426,14 @@
                     heroCard.classList.add('combat-anim-shake', 'combat-anim-flash');
 
                     if (d20.isNat20) {
-                        addCombatLog(`💀 ENEMY CRIT! ${mon.name} struck for ${finalDmg} DAMAGE!`, 'dmg');
+                        addCombatLog(`💀 ENEMY CRIT! ${mon.name}'s ${action.name} struck for ${finalDmg} DAMAGE!`, 'dmg');
                     } else {
-                        addCombatLog(`💥 ${mon.name} hits! (${d20.rawRoll} + ${atkBonus} = ${d20.total} vs AC ${playerAc}) dealing ${finalDmg} damage!`, 'dmg');
+                        addCombatLog(`💥 ${mon.name}'s ${action.name} hits! (${d20.rawRoll} + ${atkBonus} = ${d20.total} vs AC ${playerAc}) dealing ${finalDmg} damage!`, 'dmg');
                     }
 
                 } else {
                     sound.playShieldBlock();
-                    addCombatLog(`✨ You evaded ${mon.name}'s strike! (${d20.rawRoll} + ${atkBonus} = ${d20.total} vs AC ${playerAc})`, 'heal');
+                    addCombatLog(`✨ You evaded ${mon.name}'s ${action.name}! (${d20.rawRoll} + ${atkBonus} = ${d20.total} vs AC ${playerAc})`, 'heal');
                 }
 
                 // Reset player defending stance at the end of enemy turn
@@ -3158,6 +3457,7 @@
         function handleCombatVictory() {
             sound.playFanfare();
             combatState.turn = 'ended';
+            combatState.outcome = 'victory';
             if (combatStage3D) combatStage3D.playMonsterDefeat();
             updateCombatHUD();
 
@@ -3180,6 +3480,7 @@
             if (lootAwarded.length > 0) {
                 addCombatLog(`🎁 Loot Acquired: ${lootAwarded.join(', ')}!`, 'crit');
             }
+            addLogMessage(`🏆 Defeated ${mon.name}! (+${mon.xpReward} XP, +${mon.goldReward} Gold)`, 'crit');
 
             if (adventureApp) {
                 adventureApp.resolveEncounterVisual(combatState.encounterId, true);
@@ -3194,6 +3495,7 @@
         function handleCombatDefeat() {
             sound.playFailure();
             combatState.turn = 'ended';
+            combatState.outcome = 'defeat';
             updateCombatHUD();
 
             addCombatLog(`💀 DEFEATED! Your vision fades as the crypt claims your bones...`, 'dmg');
@@ -3201,27 +3503,22 @@
             combatActionsPanel.style.display = 'none';
             btnDismissCombat.style.display = 'block';
             btnDismissCombat.textContent = 'RESTORE & RETREAT TO ENTRANCE';
-
-            btnDismissCombat.onclick = () => {
-                sound.playSelect();
-                if (combatStage3D) combatStage3D.stop();
-                combatModal.style.display = 'none';
-                // Revive player with half health
-                playerStats.currentHp = Math.floor(playerStats.maxHp / 2);
-                updateAdventureHUD();
-                addLogMessage(`⚠️ Revived at the entrance with ${playerStats.currentHp} HP. Be prepared next time!`, 'fail');
-                if (adventureApp && adventureApp.player) {
-                    adventureApp.player.position.set(0, 0, 10);
-                    adventureApp.targetPos.copy(adventureApp.player.position);
-                }
-            };
+            btnDismissCombat.onclick = null;
         }
 
         btnDismissCombat.addEventListener('click', () => {
             sound.playSelect();
+            const wasDefeat = combatState && combatState.outcome === 'defeat';
             if (combatStage3D) combatStage3D.stop();
             combatModal.style.display = 'none';
             combatState = null;
+
+            if (wasDefeat) {
+                const revivedHp = Math.max(2, Math.floor(playerStats.maxHp / 2));
+                respawnPlayerAtEntrance(`⚠️ Revived at the entrance with ${revivedHp} HP. Be prepared next time!`);
+            } else {
+                updateAdventureHUD();
+            }
         });
     </script>
 </body>

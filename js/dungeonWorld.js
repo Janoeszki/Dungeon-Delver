@@ -1,18 +1,636 @@
 import * as THREE from '../vendor/three.module.js';
 import { CharacterBuilder } from './characterBuilder.js';
 import { sound } from './audio.js';
-import { ENCOUNTERS } from './encounters.js';
+import { music } from './music.js';
+import { createFloor1Layout, buildNavGrid } from './floor1Layout.js';
+import { createFloor1Run } from './encounters.js';
+import {
+    buildOverworldMonster,
+    updateOverworldMonster,
+    buildTrapProp,
+    updateTrapPropVisual,
+    buildDoorProp,
+    updateDoorPropVisual,
+    buildShrineProp,
+    buildExitSealProp,
+    buildRoomPropAnchor,
+    buildTorchSconceMesh,
+    buildBeacon,
+    buildDustMotesSystem,
+    disposeObject3D
+} from './overworldProps.js';
+
+export const MAX_SCENE_POINT_LIGHTS = 8;
+export const DEFAULT_ENV_LIGHT_POOL_SIZE = 6;
 
 /**
- * 3D Dungeon Crawl Adventure World
- * Point-and-Click navigation, camera tracking, interactive POIs and character locomotion.
+ * Generates a Node-safe procedural pixel-art stone flagstone DataTexture (zero DOM dependencies).
+ */
+export function createStoneFloorTexture(repeatX = 2, repeatY = 2) {
+    const size = 32;
+    const data = new Uint8Array(size * size * 4);
+    for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+            const idx = (y * size + x) * 4;
+            const tileY = Math.floor(y / 8);
+            const xOff = (tileY % 2) * 8;
+            const tx = (x + xOff) % 16;
+            const ty = y % 8;
+            const isMortar = tx <= 1 || ty <= 1;
+
+            const h = Math.sin((x + 1) * 12.9898 + (y + 1) * 78.233) * 43758.5453;
+            const noise = (h - Math.floor(h)) * 22 - 11;
+            const tileIdx = (Math.floor((x + xOff) / 16) + tileY) % 3;
+            const tileBoost = tileIdx === 0 ? -18 : (tileIdx === 1 ? 16 : 36);
+
+            let r;
+            let g;
+            let b;
+            if (isMortar) {
+                r = 16;
+                g = 20;
+                b = 28;
+            } else {
+                r = Math.max(36, Math.min(185, 102 + tileBoost + noise));
+                g = Math.max(44, Math.min(200, 118 + tileBoost + noise));
+                b = Math.max(58, Math.min(220, 145 + tileBoost + noise));
+            }
+            data[idx] = r;
+            data[idx + 1] = g;
+            data[idx + 2] = b;
+            data[idx + 3] = 255;
+        }
+    }
+    const tex = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(Math.max(1, repeatX), Math.max(1, repeatY));
+    tex.magFilter = THREE.NearestFilter;
+    tex.minFilter = THREE.NearestFilter;
+    if (THREE.SRGBColorSpace) tex.colorSpace = THREE.SRGBColorSpace;
+    tex.needsUpdate = true;
+    return tex;
+}
+
+/**
+ * Generates a Node-safe procedural dark stone brick wall DataTexture.
+ */
+export function createStoneWallTexture(repeatX = 2, repeatY = 2) {
+    const size = 32;
+    const data = new Uint8Array(size * size * 4);
+    for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+            const idx = (y * size + x) * 4;
+            const row = Math.floor(y / 8);
+            const xOff = (row % 2) * 8;
+            const bx = (x + xOff) % 16;
+            const by = y % 8;
+            const isMortar = bx <= 1 || by <= 1;
+
+            const h = Math.sin((x + 3) * 19.13 + (y + 5) * 47.71) * 29183.17;
+            const noise = (h - Math.floor(h)) * 18 - 9;
+            const brickTone = ((Math.floor((x + xOff) / 16) + row * 2) % 3) * 18;
+
+            let r;
+            let g;
+            let b;
+            if (isMortar) {
+                r = 14;
+                g = 18;
+                b = 26;
+            } else {
+                r = Math.max(32, Math.min(170, 82 + brickTone + noise));
+                g = Math.max(38, Math.min(185, 96 + brickTone + noise));
+                b = Math.max(50, Math.min(205, 120 + brickTone + noise));
+            }
+            data[idx] = r;
+            data[idx + 1] = g;
+            data[idx + 2] = b;
+            data[idx + 3] = 255;
+        }
+    }
+    const tex = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(Math.max(1, repeatX), Math.max(1, repeatY));
+    tex.magFilter = THREE.NearestFilter;
+    tex.minFilter = THREE.NearestFilter;
+    if (THREE.SRGBColorSpace) tex.colorSpace = THREE.SRGBColorSpace;
+    tex.needsUpdate = true;
+    return tex;
+}
+
+/**
+ * Normalizes hero configuration across both CharacterCreator schema (`charClass`, `ancestry`)
+ * and test fixtures (`classKey`, `race`).
+ */
+export function normalizeHeroConfig(heroConfig = {}) {
+    const cfg = heroConfig && typeof heroConfig === 'object' ? heroConfig : {};
+    const rawClass = cfg.charClass || cfg.classKey || 'warrior';
+    const charClass = String(rawClass).toLowerCase();
+    const rawAncestry = cfg.ancestry || cfg.race || 'human';
+    const ancestry = String(rawAncestry).toLowerCase();
+
+    return {
+        ...cfg,
+        name: typeof cfg.name === 'string' && cfg.name.trim() ? cfg.name : 'Delver',
+        charClass,
+        classKey: charClass,
+        ancestry,
+        race: ancestry,
+        bodyType: cfg.bodyType || 'a',
+        hairStyle: cfg.hairStyle ?? 0,
+        beardStyle: cfg.beardStyle ?? 0,
+        showHelm: cfg.showHelm !== undefined ? Boolean(cfg.showHelm) : true,
+        skinColor: cfg.skinColor ?? 0xd8a888,
+        hairColor: cfg.hairColor ?? 0x3b281c,
+        clothColor: cfg.clothColor ?? 0x7f1d1d,
+        armorColor: cfg.armorColor ?? 0x64748b
+    };
+}
+
+/**
+ * Resolves WASD / Arrow key state into a normalized 2D XZ movement vector.
+ */
+export function resolveKeyboardDirection(pressedKeys) {
+    if (!pressedKeys) return { x: 0, z: 0 };
+
+    const has = (code) => {
+        if (pressedKeys instanceof Set) return pressedKeys.has(code);
+        if (Array.isArray(pressedKeys)) return pressedKeys.includes(code);
+        if (typeof pressedKeys === 'object') return Boolean(pressedKeys[code]);
+        return false;
+    };
+
+    let dx = 0;
+    let dz = 0;
+
+    if (has('KeyW') || has('ArrowUp') || has('w') || has('W')) dz -= 1;
+    if (has('KeyS') || has('ArrowDown') || has('s') || has('S')) dz += 1;
+    if (has('KeyA') || has('ArrowLeft') || has('a') || has('A')) dx -= 1;
+    if (has('KeyD') || has('ArrowRight') || has('d') || has('D')) dx += 1;
+
+    if (dx === 0 && dz === 0) return { x: 0, z: 0 };
+
+    const len = Math.hypot(dx, dz);
+    return { x: dx / len, z: dz / len };
+}
+
+/**
+ * Ensures South-facing cutaway walls never exceed camera sightline threshold (<= 1.4, clamped <= 1.2).
+ */
+export function clampSouthWallHeight(wall) {
+    if (!wall || typeof wall !== 'object') return 4.0;
+    const h = Number.isFinite(wall.height) && wall.height > 0 ? wall.height : (wall.isSouthFace ? 1.2 : 4.0);
+    if (wall.isSouthFace) {
+        return Math.min(1.2, Math.max(0.1, h));
+    }
+    return h;
+}
+
+export function shouldAddWallTrim(wall) {
+    return Boolean(wall && !wall.isSouthFace);
+}
+
+/**
+ * Selects up to `maxTotalPointLights - playerLightsCount` closest discovered environmental
+ * PointLight candidates so total active/instantiated PointLights in the scene stay strictly <= 8.
+ */
+export function selectPooledLights(arg1 = {}, arg2 = null, arg3 = null) {
+    let playerLightsCount = 1;
+    let candidates = [];
+    let playerPos = { x: 0, z: 0 };
+    let maxTotalPointLights = MAX_SCENE_POINT_LIGHTS;
+    let maxEnvLights = null;
+
+    if (Array.isArray(arg1)) {
+        candidates = arg1;
+        playerPos = arg2 || { x: 0, z: 0 };
+        maxEnvLights = typeof arg3 === 'number' ? arg3 : DEFAULT_ENV_LIGHT_POOL_SIZE;
+    } else if (arg1 && typeof arg1 === 'object') {
+        playerLightsCount = Number.isFinite(arg1.playerLightsCount) ? Math.max(0, arg1.playerLightsCount) : 1;
+        candidates = Array.isArray(arg1.candidates) ? arg1.candidates : [];
+        playerPos = arg1.playerPos || { x: 0, z: 0 };
+        maxTotalPointLights = Number.isFinite(arg1.maxTotalPointLights)
+            ? Math.max(0, arg1.maxTotalPointLights)
+            : MAX_SCENE_POINT_LIGHTS;
+        maxEnvLights = Number.isFinite(arg1.maxEnvLights) ? Math.max(0, arg1.maxEnvLights) : null;
+    }
+
+    const remainingBudget = Math.max(0, maxTotalPointLights - playerLightsCount);
+    const cap = maxEnvLights !== null ? Math.min(remainingBudget, maxEnvLights) : remainingBudget;
+    if (cap <= 0) return [];
+
+    const px = Number.isFinite(playerPos.x) ? playerPos.x : 0;
+    const pz = Number.isFinite(playerPos.z) ? playerPos.z : 0;
+
+    const eligible = [];
+    for (const cand of candidates) {
+        if (!cand || cand.discovered === false || cand.enabled === false) continue;
+        if (!Number.isFinite(cand.x) || !Number.isFinite(cand.z)) continue;
+        const distSq = (cand.x - px) ** 2 + (cand.z - pz) ** 2;
+        eligible.push({ cand, distSq });
+    }
+
+    eligible.sort((a, b) => a.distSq - b.distSq);
+    return eligible.slice(0, cap).map((entry) => entry.cand);
+}
+
+/**
+ * Initializes room discovery / fog-of-war state.
+ */
+export function createRoomDiscoveryState(rooms = [], initialRoomId = 'entrance') {
+    const list = Array.isArray(rooms) ? rooms : [];
+    const roomsById = new Map();
+    const discoveredRoomIds = new Set();
+
+    for (const room of list) {
+        if (!room || !room.id) continue;
+        roomsById.set(room.id, room);
+        if (room.discoveredInitially === true || room.id === initialRoomId) {
+            discoveredRoomIds.add(room.id);
+        }
+    }
+
+    if (initialRoomId && roomsById.has(initialRoomId)) {
+        discoveredRoomIds.add(initialRoomId);
+    }
+
+    return {
+        roomsById,
+        discoveredRoomIds,
+        currentRoomId: roomsById.has(initialRoomId) ? initialRoomId : null,
+        lastRoomId: roomsById.has(initialRoomId) ? initialRoomId : null
+    };
+}
+
+/**
+ * Steps room discovery state from player world position using `navGrid.getRoomAt`.
+ */
+export function stepRoomDiscovery(state, pos, navGrid) {
+    if (!state || !pos || !navGrid || typeof navGrid.getRoomAt !== 'function') {
+        return {
+            room: null,
+            currentRoomId: state?.currentRoomId || null,
+            firstDiscovery: false,
+            enteredRoom: false,
+            discoveredRoomIds: state?.discoveredRoomIds || new Set()
+        };
+    }
+
+    const room = navGrid.getRoomAt(pos.x, pos.z);
+    state.currentRoomId = room ? room.id : null;
+
+    if (!room) {
+        return {
+            room: null,
+            currentRoomId: null,
+            firstDiscovery: false,
+            enteredRoom: false,
+            discoveredRoomIds: state.discoveredRoomIds
+        };
+    }
+
+    const firstDiscovery = !state.discoveredRoomIds.has(room.id);
+    if (firstDiscovery) {
+        state.discoveredRoomIds.add(room.id);
+    }
+    const enteredRoom = firstDiscovery || state.lastRoomId !== room.id;
+    state.lastRoomId = room.id;
+
+    return {
+        room,
+        currentRoomId: room.id,
+        firstDiscovery,
+        enteredRoom,
+        discoveredRoomIds: state.discoveredRoomIds
+    };
+}
+
+/**
+ * Filters encounters that are valid to trigger at `playerPos`, preventing cross-wall triggers,
+ * closed-door bypasses, triggered-trap re-triggers, and failed-modal infinite loops.
+ */
+export function filterTriggerableEncounters({
+    encounters = [],
+    playerPos,
+    currentRoomId = null,
+    navGrid,
+    unlockedDoorIds = new Set(),
+    activeEncounterId = null,
+    cooldownMap = null,
+    nowMs = 0,
+    isMoving = true
+} = {}) {
+    if (!Array.isArray(encounters) || !playerPos || !Number.isFinite(playerPos.x) || !Number.isFinite(playerPos.z)) {
+        return [];
+    }
+
+    const candidates = [];
+
+    for (const enc of encounters) {
+        if (!enc || enc.resolved === true) continue;
+        if (activeEncounterId && enc.id === activeEncounterId) continue;
+
+        if (enc.kind === 'trap' && (enc.trapState === 'triggered' || enc.trapState === 'disarmed')) {
+            continue;
+        }
+
+        if (!enc.pos || !Number.isFinite(enc.pos.x) || !Number.isFinite(enc.pos.z)) continue;
+
+        const radius = Number.isFinite(enc.triggerRadius) ? enc.triggerRadius : 2.1;
+        const dist = Math.hypot(playerPos.x - enc.pos.x, playerPos.z - enc.pos.z);
+        if (dist > radius) continue;
+
+        if (cooldownMap instanceof Map && cooldownMap.has(enc.id)) {
+            const cd = cooldownMap.get(enc.id);
+            const untilMs = typeof cd === 'number' ? cd : (cd?.untilMs || 0);
+            if (nowMs < untilMs) continue;
+            if (cd && typeof cd === 'object' && cd.requireMoveOrExit) {
+                const exitedRadius = dist > radius + 0.35;
+                if (!exitedRadius && !isMoving) {
+                    continue;
+                }
+            }
+        }
+
+        if (navGrid && typeof navGrid.hasLineOfSight === 'function') {
+            const losOk = navGrid.hasLineOfSight(playerPos, enc.pos, {
+                includeClosedDoors: true,
+                unlockedDoorIds,
+                ignoreDoorIds: enc.doorId ? [enc.doorId] : null
+            });
+            if (!losOk) continue;
+        } else if (currentRoomId && enc.roomId && enc.kind !== 'door' && enc.roomId !== currentRoomId) {
+            continue;
+        }
+
+        candidates.push({ enc, dist });
+    }
+
+    candidates.sort((a, b) => a.dist - b.dist);
+    return candidates.map((c) => c.enc);
+}
+
+/**
+ * Advances room-bounded monster aggro/patrol. Monsters only aggro when the hero is in the
+ * same room with clear LOS within `aggroRadius`, and are clamped strictly inside `roomBounds`.
+ */
+export function stepMonsterAggro(
+    monsterEntry,
+    playerPos,
+    playerRoomId,
+    roomBounds,
+    navGrid,
+    delta = 0.016,
+    unlockedDoorIds = new Set()
+) {
+    if (!monsterEntry || !monsterEntry.pos) {
+        return { pos: { x: 0, z: 0 }, isAggro: false, moved: false, rotationY: 0 };
+    }
+
+    const cur = { x: monsterEntry.pos.x, z: monsterEntry.pos.z };
+    const home = monsterEntry.homePos || cur;
+    if (monsterEntry.resolved) {
+        return { pos: cur, isAggro: false, moved: false, rotationY: monsterEntry.rotationY || 0 };
+    }
+
+    const dt = Number.isFinite(delta) && delta > 0 ? Math.min(delta, 0.1) : 0;
+    const inset = 0.45;
+    const clampToRoom = (p) => {
+        if (!roomBounds) return { x: p.x, z: p.z };
+        const minX = roomBounds.minX + inset;
+        const maxX = roomBounds.maxX - inset;
+        const minZ = roomBounds.minZ + inset;
+        const maxZ = roomBounds.maxZ - inset;
+        return {
+            x: minX <= maxX ? Math.max(minX, Math.min(maxX, p.x)) : (roomBounds.minX + roomBounds.maxX) / 2,
+            z: minZ <= maxZ ? Math.max(minZ, Math.min(maxZ, p.z)) : (roomBounds.minZ + roomBounds.maxZ) / 2
+        };
+    };
+
+    const distToPlayer = playerPos
+        ? Math.hypot(playerPos.x - cur.x, playerPos.z - cur.z)
+        : Infinity;
+    const aggroRadius = Number.isFinite(monsterEntry.aggroRadius) ? monsterEntry.aggroRadius : 5.0;
+    const inSameRoom = Boolean(playerRoomId && monsterEntry.roomId && playerRoomId === monsterEntry.roomId);
+    const hasLos = Boolean(
+        inSameRoom &&
+        playerPos &&
+        (!navGrid || navGrid.hasLineOfSight(cur, playerPos, { includeClosedDoors: true, unlockedDoorIds }))
+    );
+
+    const isAggro = Boolean(inSameRoom && hasLos && distToPlayer <= aggroRadius);
+    const speed = Number.isFinite(monsterEntry.speed) ? monsterEntry.speed : 2.35;
+
+    let nextPos = cur;
+    let moved = false;
+    let rotationY = monsterEntry.rotationY || 0;
+
+    if (isAggro && playerPos) {
+        const dx = playerPos.x - cur.x;
+        const dz = playerPos.z - cur.z;
+        rotationY = Math.atan2(dx, dz);
+
+        const stopDist = Math.max(1.15, (monsterEntry.triggerRadius || 2.2) * 0.58);
+        if (distToPlayer > stopDist && dt > 0) {
+            const step = Math.min(distToPlayer - stopDist, speed * dt);
+            if (step > 1e-4) {
+                const dirX = dx / distToPlayer;
+                const dirZ = dz / distToPlayer;
+                const candidate = clampToRoom({ x: cur.x + dirX * step, z: cur.z + dirZ * step });
+                const walked = navGrid && typeof navGrid.clampWalkable === 'function'
+                    ? navGrid.clampWalkable(candidate, cur, unlockedDoorIds)
+                    : candidate;
+                nextPos = clampToRoom(walked);
+                moved = Math.hypot(nextPos.x - cur.x, nextPos.z - cur.z) > 1e-4;
+            }
+        }
+    } else {
+        const hdx = home.x - cur.x;
+        const hdz = home.z - cur.z;
+        const distHome = Math.hypot(hdx, hdz);
+        if (distHome > 0.08 && dt > 0) {
+            rotationY = Math.atan2(hdx, hdz);
+            const step = Math.min(distHome, speed * 0.75 * dt);
+            const candidate = clampToRoom({
+                x: cur.x + (hdx / distHome) * step,
+                z: cur.z + (hdz / distHome) * step
+            });
+            const walked = navGrid && typeof navGrid.clampWalkable === 'function'
+                ? navGrid.clampWalkable(candidate, cur, unlockedDoorIds)
+                : candidate;
+            nextPos = clampToRoom(walked);
+            moved = Math.hypot(nextPos.x - cur.x, nextPos.z - cur.z) > 1e-4;
+        } else {
+            rotationY = 0;
+        }
+    }
+
+    return { pos: nextPos, isAggro, moved, rotationY };
+}
+
+/**
+ * Computes an unobstructed A* path plan for click-to-move (either ground or encounter click).
+ */
+export function resolveClickMovePlan({
+    clickPoint = null,
+    clickedEncounterId = null,
+    playerPos,
+    encounters = [],
+    navGrid,
+    unlockedDoorIds = new Set()
+} = {}) {
+    if (!navGrid || !playerPos) {
+        return { type: 'none', encounterId: null, target: null, waypoints: [] };
+    }
+
+    if (clickedEncounterId) {
+        const enc = encounters.find((e) => e.id === clickedEncounterId);
+        if (enc && !enc.resolved) {
+            const approach = navGrid.computeApproachPoint(playerPos, enc.pos, 1.5, unlockedDoorIds);
+            if (!approach) {
+                return { type: 'blocked', encounterId: enc.id, target: null, waypoints: [] };
+            }
+            const waypoints = navGrid.findPath(playerPos, approach, { snapGoal: true, unlockedDoorIds });
+            if (waypoints.length > 0) {
+                return { type: 'encounter', encounterId: enc.id, target: approach, waypoints };
+            }
+            return { type: 'blocked', encounterId: enc.id, target: null, waypoints: [] };
+        }
+    }
+
+    if (clickPoint && Number.isFinite(clickPoint.x) && Number.isFinite(clickPoint.z)) {
+        const waypoints = navGrid.findPath(playerPos, clickPoint, { snapGoal: true, unlockedDoorIds });
+        if (waypoints.length > 0) {
+            return {
+                type: 'ground',
+                encounterId: null,
+                target: waypoints[waypoints.length - 1],
+                waypoints
+            };
+        }
+    }
+
+    return { type: 'none', encounterId: null, target: null, waypoints: [] };
+}
+
+export function computeTrapVisualState(enc, success) {
+    if (success === true) return 'disarmed';
+    if (success === false) return 'triggered';
+    return enc?.trapState || 'armed';
+}
+
+/**
+ * Pure state transition logic for encounter resolution.
+ * Keeps failed doors (`enc.kind === 'door' || enc.retryable`) `resolved = false`.
+ */
+export function applyEncounterResolution(enc, success, opts = {}) {
+    if (!enc) {
+        return { resolved: false, trapState: null, unlockDoorId: null, victory: false, hideBeacon: false };
+    }
+
+    if (enc.kind === 'door' || enc.retryable) {
+        const shouldUnlock = Boolean(success === true || opts?.unlocksDoor);
+        enc.resolved = shouldUnlock;
+        return {
+            resolved: shouldUnlock,
+            trapState: null,
+            unlockDoorId: shouldUnlock ? (enc.doorId || null) : null,
+            victory: false,
+            retryable: true,
+            hideBeacon: shouldUnlock
+        };
+    }
+
+    if (enc.kind === 'trap') {
+        const trapState = computeTrapVisualState(enc, success);
+        enc.trapState = trapState;
+        enc.resolved = true;
+        return {
+            resolved: true,
+            trapState,
+            unlockDoorId: null,
+            victory: false,
+            hideBeacon: true
+        };
+    }
+
+    if (enc.kind === 'exit') {
+        const resolved = Boolean(success === true || opts?.resolved === true);
+        enc.resolved = resolved;
+        return {
+            resolved,
+            trapState: null,
+            unlockDoorId: null,
+            victory: resolved,
+            hideBeacon: resolved
+        };
+    }
+
+    const resolved = Boolean(success === true || opts?.resolved === true);
+    enc.resolved = resolved;
+    return {
+        resolved,
+        trapState: null,
+        unlockDoorId: null,
+        victory: false,
+        hideBeacon: resolved
+    };
+}
+
+/**
+ * 3D Multi-Room Dungeon Crawl Adventure World
  */
 export class DungeonWorldApp {
-    constructor(container, heroConfig, onEncounterTrigger, onPlayerStatsUpdate) {
+    constructor(container, heroConfig, onEncounterTrigger, onPlayerStatsUpdate, runDataOrCallbacks = {}) {
         this.container = container;
-        this.heroConfig = heroConfig;
+        this.heroConfig = normalizeHeroConfig(heroConfig);
         this.onEncounterTrigger = onEncounterTrigger;
         this.onPlayerStatsUpdate = onPlayerStatsUpdate;
+
+        const opts = runDataOrCallbacks && typeof runDataOrCallbacks === 'object' ? runDataOrCallbacks : {};
+        const isDirectRunData = Boolean(opts.floor && Array.isArray(opts.encounters));
+
+        this.callbacks = {
+            onRoomEnter: typeof opts.onRoomEnter === 'function' ? opts.onRoomEnter : null,
+            onTrapStep: typeof opts.onTrapStep === 'function' ? opts.onTrapStep : null,
+            onDoorUnlock: typeof opts.onDoorUnlock === 'function' ? opts.onDoorUnlock : null,
+            onFloorVictory: typeof opts.onFloorVictory === 'function'
+                ? opts.onFloorVictory
+                : (typeof opts.onExitVictory === 'function' ? opts.onExitVictory : null),
+            onEncounterFail: typeof opts.onEncounterFail === 'function' ? opts.onEncounterFail : null,
+            isInputBlocked: typeof opts.isInputBlocked === 'function' ? opts.isInputBlocked : null
+        };
+
+        if (isDirectRunData) {
+            this.runData = opts;
+        } else if (opts.runData && opts.runData.floor && Array.isArray(opts.runData.encounters)) {
+            this.runData = opts.runData;
+        } else {
+            this.runData = createFloor1Run({
+                seed: opts.seed ?? null,
+                randomizeThemes: Boolean(opts.randomizeThemes)
+            });
+        }
+
+        this.floor = this.runData.floor || createFloor1Layout();
+        this.layout = this.floor;
+        this.encounters = Array.isArray(this.runData.encounters) ? this.runData.encounters : [];
+        this.doors = Array.isArray(this.runData.doors) ? this.runData.doors : (this.floor.doors || []);
+        this.rooms = Array.isArray(this.runData.rooms) ? this.runData.rooms : (this.floor.rooms || []);
+
+        this.unlockedDoorIds = new Set();
+        for (const d of this.doors) {
+            if (d && d.initiallyLocked === false) {
+                this.unlockedDoorIds.add(d.id);
+            }
+        }
+        this.navGrid = buildNavGrid(this.floor, this.unlockedDoorIds);
+
+        this.discoveryState = createRoomDiscoveryState(this.rooms, 'entrance');
+        this.discoveredRoomIds = this.discoveryState.discoveredRoomIds;
+        this.currentRoom = this.rooms.find((r) => r.id === 'entrance') || this.rooms[0] || null;
 
         this.scene = null;
         this.camera = null;
@@ -21,76 +639,128 @@ export class DungeonWorldApp {
         this.builder = new CharacterBuilder();
 
         // Player state
+        const sp = this.floor.spawnPoint || { x: 0, z: 21 };
         this.player = null;
         this.playerModel = null;
+        this.playerTorchLight = null;
+        this.playerTorchFlame = null;
         this.isMoving = false;
-        this.targetPos = new THREE.Vector3(0, 0, 8);
-        this.moveSpeed = 5.2;
+        this.targetPos = new THREE.Vector3(sp.x, 0, sp.z);
+        this.path = [];
+        this.moveSpeed = 5.4;
         this.walkCycle = 0;
         this.footstepTimer = 0;
+        this.elapsedTime = 0;
 
-        // Interactive entities & props
+        // Lighting & atmosphere
+        this.ambientLight = null;
+        this.moonLight = null;
+        this.moonLightTarget = null;
+        this.envLightPool = [];
+        this.lightCandidates = [];
+        this.torchEntries = [];
+        this.torches = [];
+        this.dustMotes = null;
+
+        // Rooms, shrouds, doors, interactables
+        this.roomVisuals = new Map();
+        this.walkableFloorMeshes = [];
+        this.clickableEncounterMeshes = [];
+        this.doorEntries = [];
         this.interactables = [];
+
         this.raycaster = new THREE.Raycaster();
         this.mouse = new THREE.Vector2();
         this.floorPlane = null;
         this.activeEncounterId = null;
-
-        // Click waypoint reticle
+        this.cooldownMap = new Map();
+        this._respawnGraceUntil = 0;
         this.clickReticle = null;
-        this.torches = [];
+
+        // Controls & lifecycle
+        this.keysPressed = new Set();
+        this.paused = false;
         this.disposed = false;
         this.rafId = null;
+        this._resizeObserver = null;
         this._onResize = null;
+        this._onPointerDown = null;
+        this._onKeyDown = null;
+        this._onKeyUp = null;
+        this._onBlur = null;
 
-        this.initScene();
-        this.buildDungeonEnvironment();
-        this.spawnEncounters();
-        this.spawnPlayer();
-        this.setupEventListeners();
-        this.animate();
+        const headless = Boolean(opts.headless) || !this.container;
+        if (!headless) {
+            this.initScene();
+            this.buildDungeonEnvironment();
+            this.spawnEncounters();
+            this.spawnPlayer();
+            this.refreshVisibilityAndLights(0, true);
+            this.setupEventListeners();
+
+            if (typeof window !== 'undefined') {
+                window.__dungeonWorld = this;
+            }
+            this.animate();
+        }
     }
 
     initScene() {
-        const width = this.container.clientWidth || window.innerWidth;
-        const height = this.container.clientHeight || window.innerHeight;
+        const width = this.container.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 1280);
+        const height = this.container.clientHeight || (typeof window !== 'undefined' ? window.innerHeight : 800);
+        const sp = this.floor.spawnPoint || { x: 0, z: 21 };
 
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x0a0d14);
-        this.scene.fog = new THREE.FogExp2(0x0a0d14, 0.045);
+        this.scene.background = new THREE.Color(0x040509);
+        this.scene.fog = new THREE.FogExp2(0x040509, 0.056);
 
-        // Isometric perspective camera
+        // Isometric perspective camera tracking player at (x, 14, z + 10)
         this.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
-        this.camera.position.set(0, 14, 18);
-        this.camera.lookAt(0, 0, 8);
+        this.camera.position.set(sp.x, 14, sp.z + 10);
+        this.camera.lookAt(sp.x, 1.0, sp.z);
 
         // WebGL Renderer
         this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
         this.renderer.setSize(width, height);
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        const dpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
+        this.renderer.setPixelRatio(Math.min(dpr, 2));
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.container.appendChild(this.renderer.domElement);
 
-        // Ambient & Directional Lighting
-        const ambientLight = new THREE.AmbientLight(0x3a4b6e, 0.75);
-        this.scene.add(ambientLight);
+        // Dim Horror Ambient (<= 0.24) & Moon DirectionalLight (<= 0.34) tracking player
+        this.ambientLight = new THREE.AmbientLight(0x283652, 0.24);
+        this.scene.add(this.ambientLight);
 
-        const moonLight = new THREE.DirectionalLight(0x7eb0d5, 0.9);
-        moonLight.position.set(12, 22, 12);
-        moonLight.castShadow = true;
-        moonLight.shadow.mapSize.width = 1024;
-        moonLight.shadow.mapSize.height = 1024;
-        moonLight.shadow.camera.near = 0.5;
-        moonLight.shadow.camera.far = 50;
-        moonLight.shadow.camera.left = -20;
-        moonLight.shadow.camera.right = 20;
-        moonLight.shadow.camera.top = 20;
-        moonLight.shadow.camera.bottom = -20;
-        this.scene.add(moonLight);
+        this.moonLightTarget = new THREE.Object3D();
+        this.moonLightTarget.position.set(sp.x, 0, sp.z);
+        this.scene.add(this.moonLightTarget);
 
-        // Click Reticle (Pulsing diamond waypoint)
-        const reticleGeo = new THREE.RingGeometry(0.3, 0.42, 4);
+        this.moonLight = new THREE.DirectionalLight(0x5e82b5, 0.34);
+        this.moonLight.position.set(sp.x + 10, 20, sp.z + 10);
+        this.moonLight.target = this.moonLightTarget;
+        this.moonLight.castShadow = true;
+        this.moonLight.shadow.mapSize.width = 1024;
+        this.moonLight.shadow.mapSize.height = 1024;
+        this.moonLight.shadow.camera.near = 0.5;
+        this.moonLight.shadow.camera.far = 45;
+        this.moonLight.shadow.camera.left = -14;
+        this.moonLight.shadow.camera.right = 14;
+        this.moonLight.shadow.camera.top = 14;
+        this.moonLight.shadow.camera.bottom = -14;
+        this.scene.add(this.moonLight);
+
+        // Pooled environmental PointLights (strictly <= 6 so + player lights <= 8 total)
+        for (let i = 0; i < DEFAULT_ENV_LIGHT_POOL_SIZE; i++) {
+            const pLight = new THREE.PointLight(0xff9933, 0, 15, 1.2);
+            pLight.visible = false;
+            pLight.castShadow = false;
+            this.scene.add(pLight);
+            this.envLightPool.push(pLight);
+        }
+
+        // Click Reticle
+        const reticleGeo = new THREE.RingGeometry(0.28, 0.42, 4);
         const reticleMat = new THREE.MeshBasicMaterial({
             color: 0xffcf40,
             side: THREE.DoubleSide,
@@ -104,491 +774,451 @@ export class DungeonWorldApp {
     }
 
     buildDungeonEnvironment() {
-        // Floor Plane
-        const floorGeo = new THREE.PlaneGeometry(36, 48);
-        const floorMat = new THREE.MeshLambertMaterial({
-            color: 0x1f2430,
-            flatShading: true
+        const wallTex = createStoneWallTexture(2, 1);
+        const wallMat = new THREE.MeshLambertMaterial({ color: 0xc2cde0, map: wallTex, flatShading: true });
+        const trimMat = new THREE.MeshLambertMaterial({ color: 0x3b4860, flatShading: true });
+        const southCapMat = new THREE.MeshLambertMaterial({ color: 0x2c3648, flatShading: true });
+
+        // 1. Rooms: textured stone flagstone floors, grid overlays, props, sconces, fog-of-war shrouds
+        for (const room of this.rooms) {
+            const b = room.bounds;
+            const w = b.maxX - b.minX;
+            const d = b.maxZ - b.minZ;
+            const cx = (b.minX + b.maxX) / 2;
+            const cz = (b.minZ + b.maxZ) / 2;
+
+            const roomFloorTex = createStoneFloorTexture(Math.max(1, w / 2), Math.max(1, d / 2));
+            const roomFloorMat = new THREE.MeshLambertMaterial({
+                color: 0xd2dced,
+                map: roomFloorTex,
+                flatShading: true
+            });
+            const slab = new THREE.Mesh(new THREE.BoxGeometry(w, 0.2, d), roomFloorMat);
+            slab.position.set(cx, -0.1, cz);
+            slab.receiveShadow = true;
+            slab.name = `Floor_${room.id}`;
+            slab.userData = { isWalkableFloor: true, roomId: room.id };
+            this.scene.add(slab);
+            this.walkableFloorMeshes.push(slab);
+            if (!this.floorPlane) this.floorPlane = slab;
+
+            // Stone grid lines for clear movement contrast
+            const gridDiv = Math.max(2, Math.round(Math.max(w, d) / 2));
+            const gridSize = Math.max(w, d);
+            const grid = new THREE.GridHelper(gridSize, gridDiv, 0x35435c, 0x222c3d);
+            grid.scale.set(w / gridSize, 1, d / gridSize);
+            grid.position.set(cx, 0.012, cz);
+            this.scene.add(grid);
+
+            // Group containing props & sconces hidden while room is shrouded
+            const visualGroup = new THREE.Group();
+            visualGroup.name = `RoomVisuals_${room.id}`;
+            const isDiscovered = this.discoveredRoomIds.has(room.id);
+            visualGroup.visible = isDiscovered;
+            this.scene.add(visualGroup);
+
+            // Scary crypt props from layout propAnchors
+            if (Array.isArray(room.propAnchors)) {
+                for (const anchor of room.propAnchors) {
+                    const prop = buildRoomPropAnchor(anchor);
+                    visualGroup.add(prop);
+                }
+            }
+
+            // Wall sconces (zero PointLights embedded — feed lightCandidates instead)
+            if (Array.isArray(room.torchSpots)) {
+                for (const spot of room.torchSpots) {
+                    const sconce = buildTorchSconceMesh(spot);
+                    visualGroup.add(sconce.group);
+                    const entry = {
+                        roomId: room.id,
+                        flame: sconce.flame,
+                        x: spot.x,
+                        y: 2.6,
+                        z: spot.z + 0.35,
+                        color: spot.color || 0xff9933,
+                        intensity: (spot.intensity || 1.2) * 10.5,
+                        distance: 16,
+                        decay: 1.15,
+                        discovered: isDiscovered
+                    };
+                    this.torchEntries.push(entry);
+                    this.torches.push(entry);
+                    this.lightCandidates.push(entry);
+                }
+            }
+
+            // Fog-of-war shroud for undiscovered rooms
+            const floorVeilMat = new THREE.MeshBasicMaterial({
+                color: 0x020306,
+                transparent: true,
+                opacity: isDiscovered ? 0 : 0.94,
+                depthWrite: false
+            });
+            const floorVeil = new THREE.Mesh(new THREE.PlaneGeometry(w + 0.2, d + 0.2), floorVeilMat);
+            floorVeil.rotation.x = -Math.PI / 2;
+            floorVeil.position.set(cx, 0.045, cz);
+
+            const canopyMat = new THREE.MeshBasicMaterial({
+                color: 0x030408,
+                transparent: true,
+                opacity: isDiscovered ? 0 : 0.84,
+                depthWrite: false
+            });
+            const canopy = new THREE.Mesh(new THREE.BoxGeometry(w, 1.9, d), canopyMat);
+            canopy.position.set(cx, 1.0, cz);
+
+            const shroudGroup = new THREE.Group();
+            shroudGroup.name = `Shroud_${room.id}`;
+            shroudGroup.add(floorVeil, canopy);
+            shroudGroup.visible = !isDiscovered;
+            this.scene.add(shroudGroup);
+
+            this.roomVisuals.set(room.id, {
+                room,
+                visualGroup,
+                shroudGroup,
+                floorVeil,
+                floorVeilMat,
+                canopyMat,
+                fadeProgress: isDiscovered ? 1 : 0
+            });
+        }
+
+        // 2. Corridors
+        for (const corr of this.floor.corridors || []) {
+            const b = corr.bounds;
+            const w = b.maxX - b.minX;
+            const d = b.maxZ - b.minZ;
+            const cx = (b.minX + b.maxX) / 2;
+            const cz = (b.minZ + b.maxZ) / 2;
+
+            const corrTex = createStoneFloorTexture(Math.max(1, w / 2), Math.max(1, d / 2));
+            const corrMat = new THREE.MeshLambertMaterial({
+                color: 0xbac6da,
+                map: corrTex,
+                flatShading: true
+            });
+            const slab = new THREE.Mesh(new THREE.BoxGeometry(w, 0.2, d), corrMat);
+            slab.position.set(cx, -0.1, cz);
+            slab.receiveShadow = true;
+            slab.name = `Corridor_${corr.id}`;
+            slab.userData = { isWalkableFloor: true, corridorId: corr.id };
+            this.scene.add(slab);
+            this.walkableFloorMeshes.push(slab);
+
+            const gridDiv = Math.max(2, Math.round(Math.max(w, d)));
+            const gSize = Math.max(w, d);
+            const grid = new THREE.GridHelper(gSize, gridDiv, 0x2f3b52, 0x1e2636);
+            grid.scale.set(w / gSize, 1, d / gSize);
+            grid.position.set(cx, 0.012, cz);
+            this.scene.add(grid);
+        }
+
+        // 3. Walls with South-wall cutaway invariant (isSouthFace height <= 1.2, NO tall trim)
+        for (const wall of this.floor.walls || []) {
+            const w = wall.maxX - wall.minX;
+            const d = wall.maxZ - wall.minZ;
+            const cx = (wall.minX + wall.maxX) / 2;
+            const cz = (wall.minZ + wall.maxZ) / 2;
+            const h = clampSouthWallHeight(wall);
+
+            const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
+            mesh.position.set(cx, h / 2, cz);
+            mesh.castShadow = !wall.isSouthFace;
+            mesh.receiveShadow = true;
+            mesh.userData = {
+                isWall: true,
+                isSouthFace: Boolean(wall.isSouthFace),
+                wallHeight: h
+            };
+            this.scene.add(mesh);
+
+            if (shouldAddWallTrim(wall)) {
+                const trim = new THREE.Mesh(new THREE.BoxGeometry(w + 0.08, 0.22, d + 0.08), trimMat);
+                trim.position.set(cx, h + 0.11, cz);
+                this.scene.add(trim);
+            } else {
+                // Flush dark coping strictly inside h <= 1.2
+                const coping = new THREE.Mesh(new THREE.BoxGeometry(w + 0.04, 0.06, d + 0.04), southCapMat);
+                coping.position.set(cx, h - 0.03, cz);
+                this.scene.add(coping);
+            }
+        }
+
+        // 4. Doors
+        for (const doorDef of this.doors) {
+            const doorEntry = buildDoorProp(doorDef);
+            doorEntry.group.position.set(doorDef.x, 0, doorDef.z);
+            doorEntry.doorDef = doorDef;
+            if (this.unlockedDoorIds.has(doorDef.id)) {
+                updateDoorPropVisual(doorEntry, true, 1);
+            }
+            this.scene.add(doorEntry.group);
+            this.doorEntries.push(doorEntry);
+        }
+
+        // 5. Floating Dust Motes across Floor 1 bounds
+        this.dustMotes = buildDustMotesSystem({
+            bounds: { minX: -18, maxX: 18, minZ: -35, maxZ: 25 },
+            count: 140
         });
-        this.floorPlane = new THREE.Mesh(floorGeo, floorMat);
-        this.floorPlane.rotation.x = -Math.PI / 2;
-        this.floorPlane.receiveShadow = true;
-        this.floorPlane.name = 'WalkableFloor';
-        this.scene.add(this.floorPlane);
-
-        // Stone Tile Grid Pattern
-        const gridHelper = new THREE.GridHelper(36, 18, 0x334155, 0x1e293b);
-        gridHelper.position.y = 0.02;
-        this.scene.add(gridHelper);
-
-        // Perimeter Walls
-        const wallMat = new THREE.MeshLambertMaterial({ color: 0x181e2b, flatShading: true });
-        const trimMat = new THREE.MeshLambertMaterial({ color: 0x2d3748, flatShading: true });
-
-        const makeWall = (x, z, w, h, d) => {
-            const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
-            wall.position.set(x, h / 2, z);
-            wall.castShadow = true;
-            wall.receiveShadow = true;
-            this.scene.add(wall);
-
-            const trim = new THREE.Mesh(new THREE.BoxGeometry(w + 0.1, 0.4, d + 0.1), trimMat);
-            trim.position.set(x, h, z);
-            this.scene.add(trim);
-        };
-
-        // Outer bounds
-        makeWall(0, -22, 36, 4.5, 1.2);    // Far North Wall
-        makeWall(0, 16, 36, 3.5, 1.2);     // South Entrance Wall
-        makeWall(-15, -3, 1.2, 4.0, 38);   // West Wall
-        makeWall(15, -3, 1.2, 4.0, 38);    // East Wall
-
-        // Interior Arch dividing Outer Hall from Royal Crypt
-        makeWall(-8, -7, 12, 4.0, 1.0);
-        makeWall(8, -7, 12, 4.0, 1.0);
-
-        // Pillars with Flickering Torches
-        const pillarPositions = [
-            { x: -5, z: 5 }, { x: 5, z: 5 },
-            { x: -5, z: -1 }, { x: 5, z: -1 },
-            { x: -5, z: -13 }, { x: 5, z: -13 }
-        ];
-
-        const pillarGeo = new THREE.BoxGeometry(0.9, 4.2, 0.9);
-        const pillarMat = new THREE.MeshLambertMaterial({ color: 0x283244, flatShading: true });
-
-        pillarPositions.forEach(p => {
-            const pillar = new THREE.Mesh(pillarGeo, pillarMat);
-            pillar.position.set(p.x, 2.1, p.z);
-            pillar.castShadow = true;
-            pillar.receiveShadow = true;
-            this.scene.add(pillar);
-
-            // Torch sconce on pillar
-            this.createTorch(p.x, 2.5, p.z + 0.55);
-        });
-    }
-
-    createTorch(x, y, z) {
-        const torchGroup = new THREE.Group();
-        torchGroup.position.set(x, y, z);
-
-        // Sconce bracket
-        const bracketGeo = new THREE.BoxGeometry(0.12, 0.25, 0.22);
-        const bracketMat = new THREE.MeshLambertMaterial({ color: 0x111116 });
-        const bracket = new THREE.Mesh(bracketGeo, bracketMat);
-        torchGroup.add(bracket);
-
-        // Flame mesh
-        const flameGeo = new THREE.ConeGeometry(0.09, 0.22, 5);
-        const flameMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
-        const flame = new THREE.Mesh(flameGeo, flameMat);
-        flame.position.set(0, 0.16, 0.08);
-        torchGroup.add(flame);
-
-        // Dynamic warm light
-        const light = new THREE.PointLight(0xff9922, 1.4, 8);
-        light.position.set(0, 0.2, 0.12);
-        light.castShadow = false;
-        torchGroup.add(light);
-
-        this.torches.push({ light, flame, baseIntensity: 1.4 });
-        this.scene.add(torchGroup);
+        this.scene.add(this.dustMotes.points);
     }
 
     spawnEncounters() {
-        ENCOUNTERS.forEach(enc => {
+        for (const enc of this.encounters) {
             const propGroup = new THREE.Group();
             propGroup.position.set(enc.pos.x, 0, enc.pos.z);
-            propGroup.userData = { encounterId: enc.id, isEncounter: true };
+            propGroup.userData = {
+                encounterId: enc.id,
+                isEncounter: true,
+                kind: enc.kind
+            };
 
-            // Build distinct 3D visual prop per encounter
-            if (enc.id === 'portcullis') {
-                // Iron Portcullis Bars
-                const gate = new THREE.Group();
-                gate.name = 'GateMesh';
-                for (let i = -1.5; i <= 1.5; i += 0.38) {
-                    const bar = new THREE.Mesh(
-                        new THREE.CylinderGeometry(0.04, 0.04, 3.8, 6),
-                        new THREE.MeshLambertMaterial({ color: 0x3d4352, flatShading: true })
-                    );
-                    bar.position.set(i, 1.9, 0);
-                    gate.add(bar);
+            let propEntry = null;
+
+            if (enc.kind === 'combat') {
+                propEntry = buildOverworldMonster(enc.monsterId || 'skeleton', enc.monsterScale || 1.0);
+                propGroup.add(propEntry.group);
+            } else if (enc.kind === 'trap') {
+                propEntry = buildTrapProp(enc.trapType || 'spike_pit', enc.trapState || 'armed');
+                propGroup.add(propEntry.group);
+            } else if (enc.kind === 'door') {
+                const doorEntry = this.doorEntries.find((d) => d.doorId === enc.doorId);
+                if (doorEntry) {
+                    doorEntry.group.userData.encounterId = enc.id;
+                    doorEntry.group.userData.isEncounter = true;
                 }
-                const crossbar1 = new THREE.Mesh(
-                    new THREE.BoxGeometry(3.4, 0.1, 0.1),
-                    new THREE.MeshLambertMaterial({ color: 0x232733 })
+                // Hitbox proxy at doorway so clicking doorway registers cleanly
+                const hitProxy = new THREE.Mesh(
+                    new THREE.BoxGeometry(2.0, 2.4, 0.8),
+                    new THREE.MeshBasicMaterial({ visible: false })
                 );
-                crossbar1.position.y = 1.0;
-                const crossbar2 = crossbar1.clone();
-                crossbar2.position.y = 2.8;
-                gate.add(crossbar1, crossbar2);
-                propGroup.add(gate);
-
-            } else if (enc.id === 'sarcophagus') {
-                // Stone Sarcophagus
-                const coffin = new THREE.Mesh(
-                    new THREE.BoxGeometry(1.4, 0.7, 2.4),
-                    new THREE.MeshLambertMaterial({ color: 0x3d4454, flatShading: true })
-                );
-                coffin.position.y = 0.35;
-                coffin.castShadow = true;
-
-                const lid = new THREE.Mesh(
-                    new THREE.BoxGeometry(1.5, 0.18, 2.5),
-                    new THREE.MeshLambertMaterial({ color: 0x4e576d, flatShading: true })
-                );
-                lid.position.y = 0.79;
-                lid.name = 'LidMesh';
-                propGroup.add(coffin, lid);
-
-            } else if (enc.id === 'monolith') {
-                // Floating Arcane Monolith
-                const obelisk = new THREE.Mesh(
-                    new THREE.OctahedronGeometry(0.8, 0),
-                    new THREE.MeshLambertMaterial({
-                        color: 0x1a233a,
-                        emissive: 0x1e88e5,
-                        emissiveIntensity: 0.6,
-                        flatShading: true
-                    })
-                );
-                obelisk.position.y = 1.6;
-                obelisk.scale.set(0.7, 1.8, 0.7);
-                obelisk.name = 'ObeliskMesh';
-
-                const ring = new THREE.Mesh(
-                    new THREE.TorusGeometry(1.1, 0.03, 4, 16),
-                    new THREE.MeshBasicMaterial({ color: 0x38bdf8 })
-                );
-                ring.position.y = 1.6;
-                ring.rotation.x = Math.PI / 3;
-
-                const monoLight = new THREE.PointLight(0x38bdf8, 1.5, 6);
-                monoLight.position.y = 1.6;
-
-                propGroup.add(obelisk, ring, monoLight);
-
-            } else if (enc.id === 'pit_trap') {
-                // Spike Pit
-                const hole = new THREE.Mesh(
-                    new THREE.BoxGeometry(2.4, 0.05, 2.4),
-                    new THREE.MeshBasicMaterial({ color: 0x05070a })
-                );
-                hole.position.y = 0.02;
-
-                const rim = new THREE.Mesh(
-                    new THREE.RingGeometry(1.2, 1.45, 4),
-                    new THREE.MeshLambertMaterial({ color: 0x7c2d12, side: THREE.DoubleSide })
-                );
-                rim.rotation.x = -Math.PI / 2;
-                rim.position.y = 0.03;
-                propGroup.add(hole, rim);
-
-            } else if (enc.id === 'skeleton') {
-                // Low-Poly RuneScape Skeletal Vanguard
-                propGroup.add(this.buildSkeletonVanguard());
-
-            } else if (enc.id === 'moonwell') {
-                // Sacred Moonwell
-                const basin = new THREE.Mesh(
-                    new THREE.CylinderGeometry(1.2, 1.3, 0.6, 12),
-                    new THREE.MeshLambertMaterial({ color: 0xd8e2dc, flatShading: true })
-                );
-                basin.position.y = 0.3;
-
-                const water = new THREE.Mesh(
-                    new THREE.CylinderGeometry(1.05, 1.05, 0.05, 12),
-                    new THREE.MeshBasicMaterial({ color: 0x2dd4bf })
-                );
-                water.position.y = 0.58;
-
-                const wellLight = new THREE.PointLight(0x2dd4bf, 1.2, 5);
-                wellLight.position.y = 0.8;
-
-                propGroup.add(basin, water, wellLight);
-
-            } else if (enc.id === 'grand_chest') {
-                // Crown Vault Chest
-                const chestBase = new THREE.Mesh(
-                    new THREE.BoxGeometry(1.4, 0.7, 0.9),
-                    new THREE.MeshLambertMaterial({ color: 0x7c4f1c, flatShading: true })
-                );
-                chestBase.position.y = 0.35;
-
-                const goldTrim = new THREE.Mesh(
-                    new THREE.BoxGeometry(1.44, 0.74, 0.94),
-                    new THREE.MeshLambertMaterial({ color: 0xf59e0b, wireframe: true })
-                );
-                goldTrim.position.y = 0.35;
-
-                const chestLid = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.46, 0.46, 1.4, 8),
-                    new THREE.MeshLambertMaterial({ color: 0x925e24, flatShading: true })
-                );
-                chestLid.position.set(0, 0.7, 0);
-                chestLid.rotation.z = Math.PI / 2;
-                chestLid.name = 'ChestLid';
-
-                const lock = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.2, 0.25, 0.1),
-                    new THREE.MeshLambertMaterial({ color: 0xffd700 })
-                );
-                lock.position.set(0, 0.5, 0.48);
-
-                propGroup.add(chestBase, goldTrim, chestLid, lock);
+                hitProxy.position.y = 1.2;
+                propGroup.add(hitProxy);
+                propEntry = doorEntry || { group: hitProxy };
+            } else if (enc.kind === 'exit') {
+                propEntry = buildExitSealProp(enc);
+                propGroup.add(propEntry.group);
+                this.lightCandidates.push({
+                    roomId: enc.roomId,
+                    x: enc.pos.x,
+                    y: 1.4,
+                    z: enc.pos.z,
+                    color: 0xfbbf24,
+                    intensity: 6.5,
+                    distance: 10,
+                    decay: 1.2,
+                    discovered: this.discoveredRoomIds.has(enc.roomId)
+                });
+            } else {
+                // Shrine (moonwell / sarcophagus / monolith)
+                propEntry = buildShrineProp(enc);
+                propGroup.add(propEntry.group);
+                this.lightCandidates.push({
+                    roomId: enc.roomId,
+                    x: enc.pos.x,
+                    y: 1.2,
+                    z: enc.pos.z,
+                    color: 0x2dd4bf,
+                    intensity: 5.5,
+                    distance: 9,
+                    decay: 1.2,
+                    discovered: this.discoveredRoomIds.has(enc.roomId)
+                });
             }
 
-            // Floating 3D POI Beacon Marker
-            const beacon = this.createBeaconMarker(enc.icon);
+            const beacon = buildBeacon(0xffcf40, 0x38bdf8);
             beacon.position.y = 2.4;
-            beacon.name = 'Beacon';
+            beacon.visible = !enc.resolved && (enc.kind !== 'trap' || enc.trapState === 'revealed');
             propGroup.add(beacon);
 
             this.scene.add(propGroup);
-            this.interactables.push({ enc, group: propGroup });
-        });
-    }
 
-    /**
-     * Builds the low-poly RuneScape-style Skeletal Vanguard encounter mesh.
-     */
-    buildSkeletonVanguard() {
-        const skelGroup = new THREE.Group();
-        skelGroup.name = 'SkeletonMesh';
-
-        const boneMat = new THREE.MeshLambertMaterial({ color: 0xdde2ea, flatShading: true });
-        const darkBoneMat = new THREE.MeshLambertMaterial({ color: 0x94a3b8, flatShading: true });
-        const socketMat = new THREE.MeshBasicMaterial({ color: 0x0b0e14 });
-        const eyeGlowMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
-        const steelMat = new THREE.MeshPhongMaterial({ color: 0x94a3b8, shininess: 25, flatShading: true });
-        const rustTrimMat = new THREE.MeshLambertMaterial({ color: 0x7c2d12, flatShading: true });
-        const woodMat = new THREE.MeshLambertMaterial({ color: 0x5a422d, flatShading: true });
-
-        // Feet, Shins, Knees & Thighs
-        const footGeo = this.builder.createLoftedPrism([
-            { y: 0.0, rx: 0.075, rz: 0.14, offsetZ: 0.04 },
-            { y: 0.08, rx: 0.055, rz: 0.075, offsetZ: 0.0 }
-        ], 6);
-        const shinGeo = this.builder.makeFaceted(new THREE.CylinderGeometry(0.042, 0.036, 0.34, 6));
-        const kneeGeo = new THREE.OctahedronGeometry(0.052, 0);
-        const thighGeo = this.builder.makeFaceted(new THREE.CylinderGeometry(0.05, 0.04, 0.30, 6));
-
-        [-1, 1].forEach((side) => {
-            const x = side * 0.14;
-            const foot = new THREE.Mesh(footGeo, boneMat);
-            foot.position.x = x;
-            skelGroup.add(foot);
-
-            const shin = new THREE.Mesh(shinGeo, boneMat);
-            shin.position.set(x, 0.24, 0);
-            skelGroup.add(shin);
-
-            const knee = new THREE.Mesh(kneeGeo, darkBoneMat);
-            knee.position.set(x, 0.42, 0.02);
-            skelGroup.add(knee);
-
-            const thigh = new THREE.Mesh(thighGeo, boneMat);
-            thigh.position.set(x, 0.56, 0);
-            skelGroup.add(thigh);
-        });
-
-        // Pelvis & Spine
-        const pelvisGeo = this.builder.createLoftedPrism([
-            { y: 0.67, rx: 0.20, rz: 0.12 },
-            { y: 0.81, rx: 0.17, rz: 0.11 }
-        ], 6);
-        skelGroup.add(new THREE.Mesh(pelvisGeo, boneMat));
-
-        const spine = new THREE.Mesh(
-            this.builder.makeFaceted(new THREE.CylinderGeometry(0.05, 0.055, 0.54, 6)),
-            darkBoneMat
-        );
-        spine.position.set(0, 1.07, -0.05);
-        skelGroup.add(spine);
-
-        // Faceted Tapered Ribcage & Horizontal Rib Rings
-        const ribCore = new THREE.Mesh(
-            this.builder.makeFaceted(new THREE.CylinderGeometry(0.25, 0.18, 0.44, 6)),
-            darkBoneMat
-        );
-        ribCore.scale.set(1.0, 1.0, 0.68);
-        ribCore.position.set(0, 1.12, 0);
-        skelGroup.add(ribCore);
-
-        const ribRingGeo = this.builder.makeFaceted(new THREE.TorusGeometry(0.22, 0.028, 4, 6));
-        [0.99, 1.12, 1.25].forEach((ry, idx) => {
-            const ring = new THREE.Mesh(ribRingGeo, boneMat);
-            const wScale = 0.92 + idx * 0.1;
-            ring.scale.set(wScale, 0.72, 1.0);
-            ring.rotation.x = Math.PI / 2;
-            ring.position.set(0, ry, 0);
-            skelGroup.add(ring);
-        });
-
-        const sternumGeo = this.builder.createLoftedPrism([
-            { y: 0.95, rx: 0.045, rz: 0.028, offsetZ: 0.155 },
-            { y: 1.30, rx: 0.06, rz: 0.032, offsetZ: 0.165 }
-        ], 4);
-        skelGroup.add(new THREE.Mesh(sternumGeo, boneMat));
-
-        // Faceted Skull, Jawbone, Dark Eye Sockets, Glowing Eyes & Nasal Cavity
-        const cranium = new THREE.Mesh(new THREE.IcosahedronGeometry(0.23, 0), boneMat);
-        cranium.scale.set(0.95, 1.04, 1.0);
-        cranium.position.set(0, 1.62, 0.01);
-        skelGroup.add(cranium);
-
-        const jawGeo = this.builder.createLoftedPrism([
-            { y: 1.41, rx: 0.12, rz: 0.12, offsetZ: 0.04, twist: Math.PI / 6 },
-            { y: 1.52, rx: 0.16, rz: 0.15, offsetZ: 0.04, twist: Math.PI / 6 }
-        ], 6);
-        skelGroup.add(new THREE.Mesh(jawGeo, boneMat));
-
-        const socketGeo = new THREE.OctahedronGeometry(0.052, 0);
-        const eyeGeo = new THREE.OctahedronGeometry(0.032, 0);
-        [-1, 1].forEach((side) => {
-            const socket = new THREE.Mesh(socketGeo, socketMat);
-            socket.scale.set(1.0, 0.85, 0.5);
-            socket.position.set(side * 0.085, 1.63, 0.19);
-            skelGroup.add(socket);
-
-            const eye = new THREE.Mesh(eyeGeo, eyeGlowMat);
-            eye.position.set(side * 0.085, 1.63, 0.215);
-            skelGroup.add(eye);
-        });
-
-        const nasal = new THREE.Mesh(
-            this.builder.makeFaceted(new THREE.ConeGeometry(0.036, 0.06, 3)),
-            socketMat
-        );
-        nasal.position.set(0, 1.55, 0.215);
-        skelGroup.add(nasal);
-
-        // Articulated Bone Arms
-        const shoulderGeo = new THREE.OctahedronGeometry(0.065, 0);
-        const armBoneGeo = this.builder.makeFaceted(new THREE.CylinderGeometry(0.04, 0.032, 0.30, 6));
-        [-1, 1].forEach((side) => {
-            const shoulder = new THREE.Mesh(shoulderGeo, boneMat);
-            shoulder.position.set(side * 0.31, 1.32, 0);
-            skelGroup.add(shoulder);
-
-            const upper = new THREE.Mesh(armBoneGeo, boneMat);
-            upper.position.set(side * 0.34, 1.18, 0.04);
-            upper.rotation.set(-0.25, 0, side * 0.16);
-            skelGroup.add(upper);
-
-            const elbow = new THREE.Mesh(kneeGeo, darkBoneMat);
-            elbow.scale.setScalar(0.8);
-            elbow.position.set(side * 0.36, 1.03, 0.08);
-            skelGroup.add(elbow);
-
-            const forearm = new THREE.Mesh(armBoneGeo, boneMat);
-            forearm.position.set(side * 0.40, 0.96, 0.18);
-            forearm.rotation.set(0.95, 0, side * -0.15);
-            skelGroup.add(forearm);
-        });
-
-        // Left Arm: Battered Polygonal Shield
-        const shieldGroup = new THREE.Group();
-        shieldGroup.position.set(-0.44, 0.98, 0.24);
-        shieldGroup.rotation.set(-0.15, -0.35, 0);
-
-        const shieldPlate = new THREE.Mesh(
-            this.builder.makeFaceted(new THREE.CylinderGeometry(0.32, 0.30, 0.05, 8)),
-            steelMat
-        );
-        shieldPlate.rotation.x = Math.PI / 2;
-        shieldGroup.add(shieldPlate);
-
-        const shieldRim = new THREE.Mesh(
-            this.builder.makeFaceted(new THREE.TorusGeometry(0.31, 0.024, 4, 8)),
-            rustTrimMat
-        );
-        shieldRim.position.z = 0.015;
-        shieldGroup.add(shieldRim);
-
-        const shieldBoss = new THREE.Mesh(new THREE.OctahedronGeometry(0.075, 0), rustTrimMat);
-        shieldBoss.scale.set(1.0, 1.0, 0.5);
-        shieldBoss.position.z = 0.035;
-        shieldGroup.add(shieldBoss);
-
-        skelGroup.add(shieldGroup);
-
-        // Right Arm: Faceted Halberd
-        const pole = new THREE.Mesh(
-            this.builder.makeFaceted(new THREE.CylinderGeometry(0.032, 0.036, 2.25, 6)),
-            woodMat
-        );
-        pole.position.set(0.44, 1.13, 0.24);
-        skelGroup.add(pole);
-
-        const spearTip = new THREE.Mesh(
-            this.builder.makeFaceted(new THREE.ConeGeometry(0.065, 0.34, 4)),
-            steelMat
-        );
-        spearTip.position.set(0.44, 2.38, 0.24);
-        skelGroup.add(spearTip);
-
-        const axeBladeGeo = this.builder.createLoftedPrism([
-            { y: 1.82, rx: 0.025, rz: 0.14, offsetZ: 0.07, twist: Math.PI / 4 },
-            { y: 2.02, rx: 0.02, rz: 0.20, offsetZ: 0.13, twist: Math.PI / 4 },
-            { y: 2.20, rx: 0.025, rz: 0.12, offsetZ: 0.06, twist: Math.PI / 4 }
-        ], 4);
-        const axeBlade = new THREE.Mesh(axeBladeGeo, steelMat);
-        axeBlade.position.set(0.44, 0, 0.24);
-        skelGroup.add(axeBlade);
-
-        const backSpike = new THREE.Mesh(
-            this.builder.makeFaceted(new THREE.ConeGeometry(0.036, 0.18, 4)),
-            steelMat
-        );
-        backSpike.position.set(0.44, 2.04, 0.12);
-        backSpike.rotation.x = -Math.PI / 2;
-        skelGroup.add(backSpike);
-
-        skelGroup.traverse((child) => {
-            if (child.isMesh) child.castShadow = true;
-        });
-
-        return skelGroup;
-    }
-
-    createBeaconMarker(iconText) {
-        const beacon = new THREE.Group();
-
-        // Pulsing glowing octahedron diamond
-        const diamondGeo = new THREE.OctahedronGeometry(0.22, 0);
-        const diamondMat = new THREE.MeshBasicMaterial({
-            color: 0xffcf40,
-            wireframe: false
-        });
-        const diamond = new THREE.Mesh(diamondGeo, diamondMat);
-        beacon.add(diamond);
-
-        const outerRing = new THREE.Mesh(
-            new THREE.TorusGeometry(0.36, 0.02, 4, 16),
-            new THREE.MeshBasicMaterial({ color: 0x38bdf8 })
-        );
-        outerRing.rotation.x = Math.PI / 2;
-        beacon.add(outerRing);
-
-        return beacon;
+            const item = {
+                enc,
+                group: propGroup,
+                propEntry,
+                beacon,
+                homePos: { x: enc.pos.x, z: enc.pos.z },
+                roomBounds: this.rooms.find((r) => r.id === enc.roomId)?.bounds || null,
+                isAggro: false,
+                lastGrowlMs: 0,
+                rotationY: 0
+            };
+            this.interactables.push(item);
+        }
     }
 
     spawnPlayer() {
+        const sp = this.floor.spawnPoint || { x: 0, z: 21 };
         this.player = new THREE.Group();
-        this.player.position.set(0, 0, 10); // Start at South entrance
+        this.player.name = 'PlayerHero';
+        this.player.position.set(sp.x, 0, sp.z);
 
         this.playerModel = this.builder.createCharacter(this.heroConfig);
         this.player.add(this.playerModel.group);
+
+        // Universal flickering torch/lantern rig attached on shoulder/hip for ALL classes (Warrior + Mage)
+        const torchRig = new THREE.Group();
+        torchRig.name = 'PlayerTorchRig';
+        torchRig.position.set(0.35, 1.35, 0.28);
+
+        const lanternCage = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.06, 0.05, 0.16, 6),
+            new THREE.MeshLambertMaterial({ color: 0x4b5563, flatShading: true })
+        );
+        const flameMesh = new THREE.Mesh(
+            new THREE.OctahedronGeometry(0.065, 0),
+            new THREE.MeshBasicMaterial({ color: 0xffaa33 })
+        );
+        flameMesh.position.y = 0.04;
+        torchRig.add(lanternCage, flameMesh);
+        this.playerTorchFlame = flameMesh;
+
+        this.playerTorchLight = new THREE.PointLight(0xff9b3d, 22.0, 16.5, 1.15);
+        this.playerTorchLight.position.set(0, 0.15, 0.08);
+        this.playerTorchLight.castShadow = false;
+        torchRig.add(this.playerTorchLight);
+
+        this.player.add(torchRig);
         this.scene.add(this.player);
 
-        this.targetPos.copy(this.player.position);
+        this.targetPos.set(sp.x, 0, sp.z);
+    }
+
+    isEncounterDiscoverable(enc) {
+        if (!enc) return false;
+        if (enc.kind === 'door') {
+            const door = this.doors.find((d) => d.id === enc.doorId);
+            if (door && Array.isArray(door.connects)) {
+                return door.connects.some((rid) => this.discoveredRoomIds.has(rid));
+            }
+        }
+        return !enc.roomId || this.discoveredRoomIds.has(enc.roomId);
+    }
+
+    refreshVisibilityAndLights(delta = 0, immediateShroud = false) {
+        // 1. Sync room shrouds & room props
+        for (const [roomId, rec] of this.roomVisuals.entries()) {
+            const discovered = this.discoveredRoomIds.has(roomId);
+            rec.visualGroup.visible = discovered;
+            if (discovered) {
+                rec.floorVeil.visible = false;
+                if (immediateShroud) {
+                    rec.fadeProgress = 1;
+                    rec.shroudGroup.visible = false;
+                } else if (rec.fadeProgress < 1) {
+                    rec.fadeProgress = Math.min(1, rec.fadeProgress + Math.max(0.05, delta * 5.0));
+                    rec.canopyMat.opacity = 0.84 * (1 - rec.fadeProgress);
+                    if (rec.fadeProgress >= 1) {
+                        rec.shroudGroup.visible = false;
+                    }
+                }
+            }
+        }
+
+        // 2. Sync interactables visibility & clickable mesh list
+        this.clickableEncounterMeshes = [];
+        for (const item of this.interactables) {
+            const enc = item.enc;
+            const visible = this.isEncounterDiscoverable(enc);
+            item.group.visible = visible;
+            if (item.beacon) {
+                const showBeacon = visible && !enc.resolved && (enc.kind !== 'trap' || enc.trapState === 'revealed');
+                item.beacon.visible = showBeacon;
+            }
+            if (visible && !enc.resolved) {
+                this.clickableEncounterMeshes.push(item.group);
+            }
+        }
+
+        // 3. Sync light candidate discovery flags
+        for (const cand of this.lightCandidates) {
+            if (cand.roomId) {
+                cand.discovered = this.discoveredRoomIds.has(cand.roomId);
+            }
+        }
+
+        this.updatePooledLights(this.elapsedTime);
+    }
+
+    updatePooledLights(time = 0) {
+        if (!this.scene || this.envLightPool.length === 0 || !this.player) return;
+        const playerLightsCount = this.playerModel?.animState?.magicLight ? 2 : 1;
+        const selected = selectPooledLights({
+            playerLightsCount,
+            candidates: this.lightCandidates,
+            playerPos: this.player.position,
+            maxTotalPointLights: MAX_SCENE_POINT_LIGHTS,
+            maxEnvLights: this.envLightPool.length
+        });
+
+        for (let i = 0; i < this.envLightPool.length; i++) {
+            const pLight = this.envLightPool[i];
+            if (i < selected.length) {
+                const cand = selected[i];
+                const flicker = 1.0 + Math.sin(time * 5.5 + i * 2.1) * 0.04;
+                pLight.visible = true;
+                pLight.position.set(cand.x, cand.y ?? 2.4, cand.z);
+                pLight.color.setHex(cand.color || 0xff9933);
+                pLight.intensity = (cand.intensity || 2.0) * flicker;
+                pLight.distance = cand.distance || 14;
+                pLight.decay = cand.decay || 1.25;
+            } else {
+                pLight.visible = false;
+                pLight.intensity = 0;
+            }
+        }
+    }
+
+    isInputBlocked() {
+        if (this.disposed || this.paused) return true;
+        if (this.callbacks.isInputBlocked && this.callbacks.isInputBlocked()) return true;
+
+        if (typeof document !== 'undefined') {
+            const activeTag = document.activeElement?.tagName;
+            if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') {
+                return true;
+            }
+
+            const screenAdv = document.getElementById('screenAdventure');
+            if (screenAdv) {
+                const advStyle = typeof window !== 'undefined' && window.getComputedStyle
+                    ? window.getComputedStyle(screenAdv)
+                    : screenAdv.style;
+                if (advStyle && advStyle.display === 'none') return true;
+            }
+
+            const selectors = [
+                '#encounterModal',
+                '#combatModal',
+                '#loreModal',
+                '#victoryModal',
+                '.modal.active',
+                '.encounter-overlay',
+                '.combat-overlay'
+            ];
+            for (const sel of selectors) {
+                const els = document.querySelectorAll(sel);
+                for (const el of els) {
+                    const style = typeof window !== 'undefined' && window.getComputedStyle
+                        ? window.getComputedStyle(el)
+                        : el.style;
+                    if (style && style.display !== 'none' && style.visibility !== 'hidden') {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     setupEventListeners() {
         this._onResize = () => {
-            if (this.disposed) return;
+            if (this.disposed || !this.container || !this.renderer || !this.camera) return;
             const width = this.container.clientWidth;
             const height = this.container.clientHeight;
             if (width <= 0 || height <= 0) return;
@@ -596,236 +1226,764 @@ export class DungeonWorldApp {
             this.camera.updateProjectionMatrix();
             this.renderer.setSize(width, height);
         };
-        window.addEventListener('resize', this._onResize);
+        if (typeof window !== 'undefined') {
+            window.addEventListener('resize', this._onResize);
+        }
+        if (typeof ResizeObserver !== 'undefined' && this.container) {
+            this._resizeObserver = new ResizeObserver(() => this._onResize?.());
+            this._resizeObserver.observe(this.container);
+        }
 
-        // Click to Move / Click to Interact
-        this.renderer.domElement.addEventListener('pointerdown', (e) => {
-            // Calculate pointer in normalized coordinates
+        this._onPointerDown = (e) => {
+            if (this.isInputBlocked()) {
+                this.keysPressed.clear();
+                return;
+            }
+            if (!this.renderer || !this.camera || !this.player) return;
+
             const rect = this.renderer.domElement.getBoundingClientRect();
+            if (!rect.width || !rect.height) return;
             this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
             this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
             this.raycaster.setFromCamera(this.mouse, this.camera);
 
-            // 1. Check if clicked an encounter prop
-            const propHits = this.raycaster.intersectObjects(this.scene.children, true);
-            let clickedEncounter = null;
-
-            for (const hit of propHits) {
-                let obj = hit.object;
-                while (obj && obj !== this.scene) {
-                    if (obj.userData && obj.userData.encounterId) {
-                        clickedEncounter = obj.userData.encounterId;
-                        break;
+            // 1. Check discovered clickable encounter props first
+            let clickedEncounterId = null;
+            if (this.clickableEncounterMeshes.length > 0) {
+                const propHits = this.raycaster.intersectObjects(this.clickableEncounterMeshes, true);
+                for (const hit of propHits) {
+                    let obj = hit.object;
+                    while (obj && obj !== this.scene) {
+                        if (obj.userData && obj.userData.encounterId) {
+                            clickedEncounterId = obj.userData.encounterId;
+                            break;
+                        }
+                        obj = obj.parent;
                     }
-                    obj = obj.parent;
-                }
-                if (clickedEncounter) break;
-            }
-
-            if (clickedEncounter) {
-                const enc = ENCOUNTERS.find(item => item.id === clickedEncounter);
-                if (enc) {
-                    // Set move target right in front of the encounter
-                    this.setMoveTarget(new THREE.Vector3(enc.pos.x, 0, enc.pos.z + 1.8));
-                    return;
+                    if (clickedEncounterId) break;
                 }
             }
 
-            // 2. Clicked ground plane
-            const floorHits = this.raycaster.intersectObject(this.floorPlane);
+            if (clickedEncounterId) {
+                const plan = resolveClickMovePlan({
+                    clickedEncounterId,
+                    playerPos: this.player.position,
+                    encounters: this.encounters,
+                    navGrid: this.navGrid,
+                    unlockedDoorIds: this.unlockedDoorIds
+                });
+                if (plan.waypoints.length > 0 && plan.target) {
+                    this.applyMovePlan(plan);
+                } else if (plan.type === 'blocked') {
+                    sound.playDoorLocked();
+                }
+                return;
+            }
+
+            // 2. Raycast walkable room/corridor floors only
+            const floorHits = this.raycaster.intersectObjects(this.walkableFloorMeshes, false);
             if (floorHits.length > 0) {
                 const point = floorHits[0].point;
-                this.setMoveTarget(point);
+                const plan = resolveClickMovePlan({
+                    clickPoint: point,
+                    playerPos: this.player.position,
+                    encounters: this.encounters,
+                    navGrid: this.navGrid,
+                    unlockedDoorIds: this.unlockedDoorIds
+                });
+                if (plan.waypoints.length > 0 && plan.target) {
+                    this.applyMovePlan(plan);
+                }
             }
-        });
+        };
+        if (this.renderer?.domElement) {
+            this.renderer.domElement.addEventListener('pointerdown', this._onPointerDown);
+        }
+
+        const MOVEMENT_CODES = new Set([
+            'KeyW', 'KeyA', 'KeyS', 'KeyD',
+            'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'
+        ]);
+
+        this._onKeyDown = (e) => {
+            if (this.isInputBlocked()) {
+                this.keysPressed.clear();
+                return;
+            }
+            if (!MOVEMENT_CODES.has(e.code)) return;
+            if (e.code.startsWith('Arrow') && typeof e.preventDefault === 'function') {
+                e.preventDefault();
+            }
+            this.keysPressed.add(e.code);
+            // Keyboard steering cancels any active click-to-move A* path
+            this.path = [];
+        };
+
+        this._onKeyUp = (e) => {
+            this.keysPressed.delete(e.code);
+        };
+
+        this._onBlur = () => {
+            this.keysPressed.clear();
+        };
+
+        if (typeof window !== 'undefined') {
+            window.addEventListener('keydown', this._onKeyDown);
+            window.addEventListener('keyup', this._onKeyUp);
+            window.addEventListener('blur', this._onBlur);
+        }
     }
 
-    setMoveTarget(dest) {
-        // Clamp destination to dungeon walls bounds
-        const clampedX = THREE.MathUtils.clamp(dest.x, -13.5, 13.5);
-        const clampedZ = THREE.MathUtils.clamp(dest.z, -19.5, 14.5);
-
-        this.targetPos.set(clampedX, 0, clampedZ);
+    applyMovePlan(plan) {
+        if (!plan || !Array.isArray(plan.waypoints) || plan.waypoints.length === 0 || !plan.target) return;
+        this.path = plan.waypoints.map((wp) => ({ x: wp.x, z: wp.z }));
+        this.targetPos.set(plan.target.x, 0, plan.target.z);
         this.isMoving = true;
         sound.playSelect();
 
-        // Position click reticle
         if (this.clickReticle) {
-            this.clickReticle.position.set(clampedX, 0.05, clampedZ);
+            this.clickReticle.position.set(plan.target.x, 0.05, plan.target.z);
             this.clickReticle.material.opacity = 0.9;
             this.clickReticle.scale.set(1.5, 1.5, 1.5);
+        }
+    }
+
+    setMoveTarget(dest) {
+        if (!dest || !this.player) return;
+        const plan = resolveClickMovePlan({
+            clickPoint: dest,
+            playerPos: this.player.position,
+            encounters: this.encounters,
+            navGrid: this.navGrid,
+            unlockedDoorIds: this.unlockedDoorIds
+        });
+        if (plan.waypoints.length > 0 && plan.target) {
+            this.applyMovePlan(plan);
+        }
+    }
+
+    moveByDirection(dx, dz, delta = 0.016) {
+        if (!this.player || !this.navGrid) return false;
+        const len = Math.hypot(dx, dz);
+        if (len < 1e-6) return false;
+
+        const dt = Number.isFinite(delta) && delta > 0 ? Math.min(delta, 0.1) : 0.016;
+        const ndx = dx / len;
+        const ndz = dz / len;
+        const cur = { x: this.player.position.x, z: this.player.position.z };
+        const cand = {
+            x: cur.x + ndx * this.moveSpeed * dt,
+            z: cur.z + ndz * this.moveSpeed * dt
+        };
+        const clamped = this.navGrid.clampWalkable(cand, cur, this.unlockedDoorIds);
+        const movedDist = Math.hypot(clamped.x - cur.x, clamped.z - cur.z);
+
+        this.player.position.set(clamped.x, 0, clamped.z);
+        this.targetPos.set(clamped.x, 0, clamped.z);
+        this.faceDirection(ndx, ndz);
+        return movedDist > 1e-5;
+    }
+
+    faceDirection(dx, dz) {
+        if (!this.player || (Math.abs(dx) < 1e-6 && Math.abs(dz) < 1e-6)) return;
+        const targetAngle = Math.atan2(dx, dz);
+        let diff = targetAngle - this.player.rotation.y;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        this.player.rotation.y += diff * 0.25;
+    }
+
+    updateWalkPose(delta) {
+        this.walkCycle += delta * 12;
+        const swing = Math.sin(this.walkCycle);
+
+        if (this.playerModel && this.playerModel.animState) {
+            const anim = this.playerModel.animState;
+            if (anim.leftLeg) anim.leftLeg.rotation.x = swing * 0.55;
+            if (anim.rightLeg) anim.rightLeg.rotation.x = -swing * 0.55;
+            if (anim.leftArm) anim.leftArm.rotation.x = -swing * 0.45;
+            if (anim.rightArm) anim.rightArm.rotation.x = swing * 0.45;
+            if (anim.torso) anim.torso.position.y = Math.abs(swing) * 0.06;
+            if (anim.cape) anim.cape.rotation.x = 0.28 + Math.abs(swing) * 0.12;
+
+            if (anim.tail) {
+                anim.tail.rotation.x = -0.18 + Math.abs(swing) * 0.12;
+                anim.tail.rotation.y = Math.sin(this.walkCycle * 0.5) * 0.25;
+                const segs = anim.tail.userData?.segments;
+                if (segs) {
+                    for (let i = 0; i < segs.length; i++) {
+                        const seg = segs[i];
+                        const base = seg.userData.baseRot;
+                        seg.rotation.z = base.z + Math.sin(this.walkCycle * 0.8 - i * 0.65) * 0.12;
+                        seg.rotation.x = base.x + Math.cos(this.walkCycle - i * 0.5) * 0.08;
+                    }
+                }
+            }
+        }
+
+        this.footstepTimer += delta;
+        if (this.footstepTimer > 0.28) {
+            sound.playStep();
+            this.footstepTimer = 0;
         }
     }
 
     updatePlayerLocomotion(delta) {
         if (!this.player) return;
 
-        const dist = this.player.position.distanceTo(this.targetPos);
+        // Keep Mage crystal/orb & character breathing ticking on EVERY frame (even while moving)
+        if (this.playerModel) {
+            this.playerModel.update(delta);
+        }
 
-        if (this.isMoving && dist > 0.15) {
-            // Direction to target
-            const dir = new THREE.Vector3().subVectors(this.targetPos, this.player.position).normalize();
+        if (this.isInputBlocked()) {
+            this.keysPressed.clear();
+            this.isMoving = false;
+            return;
+        }
 
-            // Rotate smoothly toward movement direction
-            const targetAngle = Math.atan2(dir.x, dir.z);
-            let diff = targetAngle - this.player.rotation.y;
-            while (diff < -Math.PI) diff += Math.PI * 2;
-            while (diff > Math.PI) diff -= Math.PI * 2;
-            this.player.rotation.y += diff * 0.18;
+        const keyDir = resolveKeyboardDirection(this.keysPressed);
+        let movedThisFrame = false;
 
-            // Move forward
-            const step = Math.min(dist, this.moveSpeed * delta);
-            this.player.position.addScaledVector(dir, step);
+        if (keyDir.x !== 0 || keyDir.z !== 0) {
+            this.path = [];
+            const cur = { x: this.player.position.x, z: this.player.position.z };
+            const cand = {
+                x: cur.x + keyDir.x * this.moveSpeed * delta,
+                z: cur.z + keyDir.z * this.moveSpeed * delta
+            };
+            const clamped = this.navGrid.clampWalkable(cand, cur, this.unlockedDoorIds);
+            const stepMoved = Math.hypot(clamped.x - cur.x, clamped.z - cur.z);
 
-            // Procedural Walk Cycle Animation
-            this.walkCycle += delta * 12;
-            const swing = Math.sin(this.walkCycle);
+            this.player.position.set(clamped.x, 0, clamped.z);
+            this.targetPos.set(clamped.x, 0, clamped.z);
+            this.faceDirection(keyDir.x, keyDir.z);
+            this.isMoving = true;
+            movedThisFrame = stepMoved > 1e-4;
+        } else if (this.isMoving && this.path.length > 0) {
+            let remainingStep = this.moveSpeed * delta;
+            let cur = { x: this.player.position.x, z: this.player.position.z };
 
-            if (this.playerModel && this.playerModel.animState) {
-                const anim = this.playerModel.animState;
-                if (anim.leftLeg) anim.leftLeg.rotation.x = swing * 0.55;
-                if (anim.rightLeg) anim.rightLeg.rotation.x = -swing * 0.55;
-                if (anim.leftArm) anim.leftArm.rotation.x = -swing * 0.45;
-                if (anim.rightArm) anim.rightArm.rotation.x = swing * 0.45;
-                if (anim.torso) anim.torso.position.y = Math.abs(swing) * 0.06;
-                if (anim.cape) anim.cape.rotation.x = 0.28 + Math.abs(swing) * 0.12;
+            while (this.path.length > 0 && remainingStep > 1e-4) {
+                const wp = this.path[0];
+                const dx = wp.x - cur.x;
+                const dz = wp.z - cur.z;
+                const dist = Math.hypot(dx, dz);
 
-                // Feline tail run-bob & traveling wave
-                if (anim.tail) {
-                    anim.tail.rotation.x = -0.18 + Math.abs(swing) * 0.12;
-                    anim.tail.rotation.y = Math.sin(this.walkCycle * 0.5) * 0.25;
-                    const segs = anim.tail.userData.segments;
-                    if (segs) {
-                        for (let i = 0; i < segs.length; i++) {
-                            const seg = segs[i];
-                            const base = seg.userData.baseRot;
-                            seg.rotation.z = base.z + Math.sin(this.walkCycle * 0.8 - i * 0.65) * 0.12;
-                            seg.rotation.x = base.x + Math.cos(this.walkCycle - i * 0.5) * 0.08;
-                        }
-                    }
+                if (dist <= 0.14) {
+                    this.path.shift();
+                    continue;
+                }
+
+                const step = Math.min(dist, remainingStep);
+                const dirX = dx / dist;
+                const dirZ = dz / dist;
+                const cand = { x: cur.x + dirX * step, z: cur.z + dirZ * step };
+                const clamped = this.navGrid.clampWalkable(cand, cur, this.unlockedDoorIds);
+                const actualMoved = Math.hypot(clamped.x - cur.x, clamped.z - cur.z);
+
+                this.faceDirection(dirX, dirZ);
+                cur = clamped;
+                remainingStep -= step;
+
+                if (actualMoved < 1e-4 && step > 0.01) {
+                    // Blocked against obstacle/closed door
+                    this.path = [];
+                    break;
+                }
+                movedThisFrame = movedThisFrame || actualMoved > 1e-4;
+                if (dist <= step + 0.05) {
+                    this.path.shift();
                 }
             }
 
-            // Footstep sounds
-            this.footstepTimer += delta;
-            if (this.footstepTimer > 0.28) {
-                sound.playStep();
-                this.footstepTimer = 0;
+            this.player.position.set(cur.x, 0, cur.z);
+            if (this.path.length === 0) {
+                this.isMoving = false;
+                this.targetPos.set(cur.x, 0, cur.z);
             }
-
-            // Check if player reached proximity of any POI (within 2.2 units)
-            this.checkEncounterProximity();
-
+        } else if (this.isMoving && this.player.position.distanceTo(this.targetPos) > 0.15) {
+            // Legacy fallback if targetPos set directly
+            const cur = { x: this.player.position.x, z: this.player.position.z };
+            const dx = this.targetPos.x - cur.x;
+            const dz = this.targetPos.z - cur.z;
+            const dist = Math.hypot(dx, dz);
+            const step = Math.min(dist, this.moveSpeed * delta);
+            const clamped = this.navGrid.clampWalkable(
+                { x: cur.x + (dx / dist) * step, z: cur.z + (dz / dist) * step },
+                cur,
+                this.unlockedDoorIds
+            );
+            this.faceDirection(dx / dist, dz / dist);
+            this.player.position.set(clamped.x, 0, clamped.z);
+            movedThisFrame = Math.hypot(clamped.x - cur.x, clamped.z - cur.z) > 1e-4;
+            if (!movedThisFrame) this.isMoving = false;
         } else {
-            // Stopped: return limbs to idle stance
             this.isMoving = false;
-            if (this.playerModel) {
-                this.playerModel.update(delta);
-                // Return legs toward 0 rotation
-                const anim = this.playerModel.animState;
-                if (anim && anim.leftLeg) anim.leftLeg.rotation.x *= 0.8;
-                if (anim && anim.rightLeg) anim.rightLeg.rotation.x *= 0.8;
+            this.path = [];
+        }
+
+        if (this.isMoving && movedThisFrame) {
+            this.updateWalkPose(delta);
+        } else {
+            const anim = this.playerModel?.animState;
+            if (anim?.leftLeg) anim.leftLeg.rotation.x *= 0.8;
+            if (anim?.rightLeg) anim.rightLeg.rotation.x *= 0.8;
+        }
+
+        // Room discovery & fog-of-war progression
+        const disc = stepRoomDiscovery(this.discoveryState, this.player.position, this.navGrid);
+        if (disc.room) {
+            this.currentRoom = disc.room;
+            if (disc.firstDiscovery) {
+                sound.playRoomDiscover();
+                music.triggerStinger('discover');
+                const ratio = Math.min(1, this.discoveredRoomIds.size / Math.max(1, this.rooms.length));
+                music.setTension(0.2 + ratio * 0.65);
+                this.refreshVisibilityAndLights(delta, true);
+                this.callbacks.onRoomEnter?.(disc.room, { firstDiscovery: true });
+            } else if (disc.enteredRoom) {
+                this.callbacks.onRoomEnter?.(disc.room, { firstDiscovery: false });
             }
+        }
+
+        // Check encounter triggers
+        this.checkEncounterProximity(movedThisFrame || this.isMoving);
+    }
+
+    checkEncounterProximity(isActivelyMoving = false) {
+        if (!this.player || this.isInputBlocked()) return;
+        const nowMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        if (nowMs < this._respawnGraceUntil) return;
+
+        // Clear cooldown entries once player walks outside trigger radius + 0.55
+        for (const [id, cd] of this.cooldownMap.entries()) {
+            const item = this.interactables.find((i) => i.enc.id === id);
+            if (!item) {
+                this.cooldownMap.delete(id);
+                continue;
+            }
+            const dist = Math.hypot(
+                this.player.position.x - item.enc.pos.x,
+                this.player.position.z - item.enc.pos.z
+            );
+            const r = Number.isFinite(item.enc.triggerRadius) ? item.enc.triggerRadius : 2.1;
+            const untilMs = typeof cd === 'number' ? cd : (cd?.untilMs || 0);
+            if (nowMs >= untilMs && dist > r + 0.55) {
+                this.cooldownMap.delete(id);
+            }
+        }
+
+        // Optional inner core step-on trap check when bypassed or non-disarmable
+        if (typeof this.callbacks.onTrapStep === 'function') {
+            for (const item of this.interactables) {
+                const enc = item.enc;
+                if (enc.kind !== 'trap' || enc.resolved || enc.trapState !== 'armed') continue;
+                if (this.activeEncounterId === enc.id) continue;
+                const dist = Math.hypot(
+                    this.player.position.x - enc.pos.x,
+                    this.player.position.z - enc.pos.z
+                );
+                const bypassedPrompt = this.cooldownMap.has(enc.id) || enc.disarmable === false;
+                if (dist <= 0.85 && bypassedPrompt) {
+                    const hasLos = this.navGrid.hasLineOfSight(this.player.position, enc.pos, {
+                        includeClosedDoors: true,
+                        unlockedDoorIds: this.unlockedDoorIds
+                    });
+                    if (hasLos) {
+                        enc.trapState = 'triggered';
+                        enc.resolved = true;
+                        updateTrapPropVisual(item.propEntry, 'triggered', 0, this.elapsedTime);
+                        if (item.beacon) item.beacon.visible = false;
+                        this.callbacks.onTrapStep(enc, enc.damage || 12);
+                        return;
+                    }
+                }
+            }
+        }
+
+        const triggerable = filterTriggerableEncounters({
+            encounters: this.encounters,
+            playerPos: this.player.position,
+            currentRoomId: this.currentRoom?.id || null,
+            navGrid: this.navGrid,
+            unlockedDoorIds: this.unlockedDoorIds,
+            activeEncounterId: this.activeEncounterId,
+            cooldownMap: this.cooldownMap,
+            nowMs,
+            isMoving: isActivelyMoving
+        });
+
+        if (triggerable.length > 0) {
+            const enc = triggerable[0];
+            this.activeEncounterId = enc.id;
+            this.isMoving = false;
+            this.path = [];
+            this.keysPressed.clear();
+            this.targetPos.copy(this.player.position);
+            this.onEncounterTrigger?.(enc);
         }
     }
 
-    checkEncounterProximity() {
-        for (const item of this.interactables) {
-            const enc = item.enc;
-            const encPos = new THREE.Vector3(enc.pos.x, 0, enc.pos.z);
-            const dist = this.player.position.distanceTo(encPos);
+    resolveEncounterVisual(encounterId, success, opts = {}) {
+        const item = this.interactables.find((i) => i.enc.id === encounterId);
+        const enc = item ? item.enc : this.encounters.find((e) => e.id === encounterId);
+        if (!enc) return;
 
-            // Trigger when close and not already active
-            if (dist < 2.3 && this.activeEncounterId !== enc.id && !enc.resolved) {
-                this.activeEncounterId = enc.id;
-                this.isMoving = false; // pause movement
-                this.onEncounterTrigger(enc);
-                break;
+        const res = applyEncounterResolution(enc, success, opts);
+        this.activeEncounterId = null;
+        const nowMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
+
+        if (enc.kind === 'door' || enc.retryable) {
+            if (res.unlockDoorId) {
+                this.unlockDoor(res.unlockDoorId, opts);
+                if (item?.beacon) item.beacon.visible = false;
+                this.refreshVisibilityAndLights(0, false);
+            } else {
+                if (!opts?.suppressSfx) sound.playDoorLocked();
+                this.callbacks.onEncounterFail?.(enc);
+                // Gentle South/back step (<= 0.45 clamped) + brief cooldown so retry works smoothly
+                if (this.player && this.navGrid) {
+                    const cur = { x: this.player.position.x, z: this.player.position.z };
+                    let dx = cur.x - enc.pos.x;
+                    let dz = cur.z - enc.pos.z;
+                    const len = Math.hypot(dx, dz);
+                    if (len < 1e-4) {
+                        dx = 0;
+                        dz = 1;
+                    } else {
+                        dx /= len;
+                        dz /= len;
+                    }
+                    const nudged = this.navGrid.clampWalkable(
+                        { x: cur.x + dx * 0.42, z: cur.z + dz * 0.42 },
+                        cur,
+                        this.unlockedDoorIds
+                    );
+                    this.player.position.set(nudged.x, 0, nudged.z);
+                    this.targetPos.set(nudged.x, 0, nudged.z);
+                }
+                this.isMoving = false;
+                this.path = [];
+                this.cooldownMap.set(enc.id, { untilMs: nowMs + 550, requireMoveOrExit: true });
             }
+            return;
+        }
+
+        if (enc.kind === 'trap') {
+            if (item?.propEntry) {
+                updateTrapPropVisual(item.propEntry, enc.trapState, 0, this.elapsedTime);
+            }
+            if (item?.beacon) item.beacon.visible = false;
+            if (success === false) {
+                this.callbacks.onEncounterFail?.(enc);
+            }
+            this.refreshVisibilityAndLights(0, false);
+            return;
+        }
+
+        if (enc.kind === 'exit') {
+            if (res.resolved) {
+                if (item?.propEntry) item.propEntry.opened = true;
+                if (item?.beacon) item.beacon.visible = false;
+                this.refreshVisibilityAndLights(0, false);
+                this.callbacks.onFloorVictory?.(enc);
+            } else {
+                this.callbacks.onEncounterFail?.(enc);
+                this.cooldownMap.set(enc.id, { untilMs: nowMs + 700, requireMoveOrExit: true });
+            }
+            return;
+        }
+
+        // Combat, Shrine & fallback encounters
+        if (res.resolved) {
+            if (enc.kind === 'combat' && item?.propEntry?.group) {
+                item.propEntry.group.visible = false;
+            }
+            if (enc.kind === 'shrine' && item?.propEntry) {
+                if (item.propEntry.lid) item.propEntry.lid.position.set(0.6, 0.79, 0.4);
+                if (item.propEntry.waterMat) item.propEntry.waterMat.color.setHex(0x1e3a4c);
+            }
+            if (item?.beacon) item.beacon.visible = false;
+            this.refreshVisibilityAndLights(0, false);
+        } else {
+            this.clearActiveEncounter();
+            this.callbacks.onEncounterFail?.(enc);
         }
     }
 
-    resolveEncounterVisual(encounterId, success) {
-        const item = this.interactables.find(i => i.enc.id === encounterId);
-        if (!item) return;
+    unlockDoor(doorId, opts = {}) {
+        if (!doorId) return;
+        this.unlockedDoorIds.add(doorId);
+        this.navGrid = buildNavGrid(this.floor, this.unlockedDoorIds);
 
-        item.enc.resolved = true;
+        const doorEntry = this.doorEntries.find((d) => d.doorId === doorId);
+        if (doorEntry) {
+            doorEntry.isOpen = true;
+            if (!this.renderer) {
+                updateDoorPropVisual(doorEntry, true, 1);
+            }
+        }
+
+        const item = this.interactables.find((i) => i.enc.doorId === doorId);
+        if (item) {
+            item.enc.resolved = true;
+            if (item.beacon) item.beacon.visible = false;
+        }
+
+        if (!opts?.suppressSfx) {
+            sound.playDoorOpen();
+        }
+        this.callbacks.onDoorUnlock?.(doorId);
+    }
+
+    respawnAtEntrance() {
+        const sp = this.floor?.spawnPoint || { x: 0, z: 21 };
+        if (this.player) {
+            this.player.position.set(sp.x, 0, sp.z);
+            this.player.rotation.y = 0;
+        }
+        this.targetPos.set(sp.x, 0, sp.z);
+        this.path = [];
+        this.isMoving = false;
+        this.keysPressed.clear();
         this.activeEncounterId = null;
 
-        // Visual change on the prop
-        if (encounterId === 'portcullis' && success) {
-            // Lift gate upwards
-            const gateMesh = item.group.getObjectByName('GateMesh');
-            if (gateMesh) gateMesh.position.y = 3.6;
-        } else if (encounterId === 'sarcophagus' && success) {
-            const lid = item.group.getObjectByName('LidMesh');
-            if (lid) lid.position.set(0.6, 0.79, 0.4);
-        } else if (encounterId === 'skeleton' && success) {
-            const skel = item.group.getObjectByName('SkeletonMesh');
-            if (skel) skel.visible = false;
-        } else if (encounterId === 'grand_chest' && success) {
-            const lid = item.group.getObjectByName('ChestLid');
-            if (lid) lid.rotation.x = -Math.PI / 3;
-        }
+        const nowMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        this._respawnGraceUntil = nowMs + 600;
 
-        // Hide or dim the beacon
-        const beacon = item.group.getObjectByName('Beacon');
-        if (beacon) beacon.visible = false;
+        this.discoveryState.currentRoomId = 'entrance';
+        this.discoveryState.lastRoomId = 'entrance';
+        this.currentRoom = this.rooms.find((r) => r.id === 'entrance') || null;
+
+        if (this.camera) {
+            this.camera.position.set(sp.x, 14, sp.z + 10);
+            this.camera.lookAt(sp.x, 1.0, sp.z);
+        }
+        if (this.moonLightTarget && this.moonLight) {
+            this.moonLightTarget.position.set(sp.x, 0, sp.z);
+            this.moonLight.position.set(sp.x + 10, 20, sp.z + 10);
+        }
+        this.updatePooledLights(this.elapsedTime);
+    }
+
+    clearActiveEncounter() {
+        if (this.activeEncounterId) {
+            const nowMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
+            this.cooldownMap.set(this.activeEncounterId, {
+                untilMs: nowMs + 1000,
+                requireMoveOrExit: true
+            });
+        }
+        this.activeEncounterId = null;
+        this.isMoving = false;
+        this.path = [];
+        if (this.player) {
+            this.targetPos.copy(this.player.position);
+        }
+    }
+
+    getCurrentRoom() {
+        if (!this.player || !this.navGrid) return this.currentRoom || null;
+        return this.navGrid.getRoomAt(this.player.position.x, this.player.position.z);
+    }
+
+    getDiscoveredRooms() {
+        return this.rooms.filter((r) => this.discoveredRoomIds.has(r.id));
+    }
+
+    getRunSummary() {
+        const cur = this.getCurrentRoom();
+        return {
+            currentRoomId: cur ? cur.id : null,
+            discoveredRooms: Array.from(this.discoveredRoomIds),
+            clearedEncounters: this.encounters.filter((e) => e.resolved).map((e) => e.id),
+            floorId: this.floor.id
+        };
+    }
+
+    setPaused(paused) {
+        this.paused = Boolean(paused);
+        if (this.paused) {
+            this.keysPressed.clear();
+            this.isMoving = false;
+            this.path = [];
+            if (this.player) {
+                this.targetPos.copy(this.player.position);
+            }
+        }
     }
 
     dispose() {
         this.disposed = true;
         if (this.rafId !== null) {
-            cancelAnimationFrame(this.rafId);
+            if (typeof cancelAnimationFrame === 'function') {
+                cancelAnimationFrame(this.rafId);
+            }
             this.rafId = null;
         }
-        if (this._onResize) {
-            window.removeEventListener('resize', this._onResize);
+        if (this._resizeObserver) {
+            this._resizeObserver.disconnect();
+            this._resizeObserver = null;
+        }
+        if (typeof window !== 'undefined') {
+            if (this._onResize) window.removeEventListener('resize', this._onResize);
+            if (this._onKeyDown) window.removeEventListener('keydown', this._onKeyDown);
+            if (this._onKeyUp) window.removeEventListener('keyup', this._onKeyUp);
+            if (this._onBlur) window.removeEventListener('blur', this._onBlur);
+        }
+        if (this.renderer?.domElement && this._onPointerDown) {
+            this.renderer.domElement.removeEventListener('pointerdown', this._onPointerDown);
+        }
+        if (this.scene) {
+            disposeObject3D(this.scene);
         }
         if (this.renderer) {
-            this.renderer.dispose();
+            this.renderer.dispose?.();
+            if (this.renderer.domElement && this.renderer.domElement.parentNode) {
+                this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
+            }
         }
+        if (typeof window !== 'undefined' && window.__dungeonWorld === this) {
+            delete window.__dungeonWorld;
+        }
+        this.interactables = [];
+        this.doorEntries = [];
+        this.walkableFloorMeshes = [];
+        this.clickableEncounterMeshes = [];
+        this.envLightPool = [];
+        this.keysPressed.clear();
     }
 
     animate() {
         if (this.disposed) return;
         this.rafId = requestAnimationFrame(() => this.animate());
 
-        const delta = this.clock.getDelta();
-        const time = this.clock.getElapsedTime();
+        const rawDelta = this.clock.getDelta();
+        const frameDelta = Math.min(Number.isFinite(rawDelta) ? rawDelta : 0.016, 0.40);
+        this.elapsedTime += frameDelta;
+        const time = this.elapsedTime;
+        const nowMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
 
-        // Update player walk / idle
-        this.updatePlayerLocomotion(delta);
+        // 1. Sub-step player locomotion (<= 0.045s steps) so real-time speed & trigger radii hold at any FPS
+        const subSteps = Math.max(1, Math.ceil(frameDelta / 0.045));
+        const subDelta = frameDelta / subSteps;
+        for (let s = 0; s < subSteps; s++) {
+            this.updatePlayerLocomotion(subDelta);
+            if (this.activeEncounterId || this.isInputBlocked()) break;
+        }
+        const delta = frameDelta;
 
-        // Smooth Camera Follow
-        if (this.player) {
+        // 2. Smooth camera follow & shadow-camera tracking across entire Floor 1
+        if (this.player && this.camera) {
             const targetCamX = this.player.position.x;
             const targetCamZ = this.player.position.z + 10;
-            this.camera.position.x += (targetCamX - this.camera.position.x) * 0.08;
-            this.camera.position.z += (targetCamZ - this.camera.position.z) * 0.08;
+            const followAlpha = 1 - Math.exp(-18 * delta);
+            this.camera.position.x += (targetCamX - this.camera.position.x) * followAlpha;
+            this.camera.position.z += (targetCamZ - this.camera.position.z) * followAlpha;
             this.camera.lookAt(this.player.position.x, 1.0, this.player.position.z);
+
+            if (this.moonLightTarget && this.moonLight) {
+                this.moonLightTarget.position.set(this.player.position.x, 0, this.player.position.z);
+                this.moonLight.position.set(this.player.position.x + 10, 20, this.player.position.z + 10);
+                this.moonLightTarget.updateMatrixWorld();
+            }
         }
 
-        // Flickering Torch Lights
-        this.torches.forEach((t, i) => {
-            const flicker = Math.sin(time * 8 + i * 2.5) * 0.15 + Math.cos(time * 15 + i) * 0.1;
-            t.light.intensity = t.baseIntensity + flicker;
-            t.flame.scale.y = 1.0 + flicker * 0.4;
-        });
-
-        // Beacon rotation & bobbing
-        this.interactables.forEach((item, i) => {
-            const beacon = item.group.getObjectByName('Beacon');
-            if (beacon && beacon.visible) {
-                beacon.rotation.y += delta * 1.8;
-                beacon.position.y = 2.4 + Math.sin(time * 3 + i) * 0.12;
+        // 3. Universal player torch flicker (gentle so idle peripheral RMS stays < 5.0)
+        if (this.playerTorchLight) {
+            const flicker = Math.sin(time * 7.5) * 0.25 + Math.cos(time * 13.0) * 0.12;
+            this.playerTorchLight.intensity = 22.0 + flicker;
+            if (this.playerTorchFlame) {
+                const s = 1.0 + flicker * 0.08;
+                this.playerTorchFlame.scale.set(1, s, 1);
             }
-        });
+        }
 
-        // Reticle fade
+        // 4. Shroud fade & pooled environmental lights
+        this.refreshVisibilityAndLights(delta, false);
+
+        for (let i = 0; i < this.torchEntries.length; i++) {
+            const t = this.torchEntries[i];
+            if (t.discovered && t.flame) {
+                const f = 1.0 + Math.sin(time * 7.0 + i * 1.9) * 0.12;
+                t.flame.scale.set(1, f, 1);
+            }
+        }
+
+        // 5. Door opening animation
+        for (const doorEntry of this.doorEntries) {
+            updateDoorPropVisual(doorEntry, doorEntry.isOpen, delta);
+        }
+
+        // 6. Monsters, traps, shrines, exit seal, and beacons
+        const blocked = this.isInputBlocked();
+        for (let i = 0; i < this.interactables.length; i++) {
+            const item = this.interactables[i];
+            const enc = item.enc;
+
+            if (item.beacon && item.beacon.visible) {
+                item.beacon.rotation.y += delta * 1.8;
+                item.beacon.position.y = 2.4 + Math.sin(time * 3.0 + i) * 0.10;
+            }
+
+            if (!item.group.visible) continue;
+
+            if (enc.kind === 'combat' && !enc.resolved && item.propEntry) {
+                if (!blocked && this.player) {
+                    const step = stepMonsterAggro(
+                        {
+                            pos: enc.pos,
+                            homePos: item.homePos,
+                            roomId: enc.roomId,
+                            aggroRadius: enc.aggroRadius,
+                            triggerRadius: enc.triggerRadius,
+                            rotationY: item.rotationY,
+                            resolved: enc.resolved
+                        },
+                        this.player.position,
+                        this.currentRoom?.id || null,
+                        item.roomBounds,
+                        this.navGrid,
+                        delta,
+                        this.unlockedDoorIds
+                    );
+                    if (step.isAggro && !item.isAggro && nowMs - item.lastGrowlMs > 4000) {
+                        sound.playMonsterGrowl();
+                        item.lastGrowlMs = nowMs;
+                    }
+                    item.isAggro = step.isAggro;
+                    item.rotationY = step.rotationY;
+                    enc.pos.x = step.pos.x;
+                    enc.pos.z = step.pos.z;
+                    item.group.position.set(step.pos.x, 0, step.pos.z);
+                    item.propEntry.group.rotation.y = step.rotationY;
+                }
+                updateOverworldMonster(item.propEntry, delta, time, item.isAggro);
+            } else if (enc.kind === 'trap' && item.propEntry) {
+                updateTrapPropVisual(item.propEntry, enc.trapState || 'armed', delta, time);
+            } else if (enc.kind === 'exit' && item.propEntry) {
+                if (item.propEntry.crownOrb) {
+                    item.propEntry.crownOrb.rotation.y += delta * 1.4;
+                    item.propEntry.crownOrb.position.y = 1.26 + Math.sin(time * 2.2) * 0.06;
+                }
+                if (item.propEntry.orbitRing) {
+                    item.propEntry.orbitRing.rotation.z += delta * 0.9;
+                }
+            } else if (enc.kind === 'shrine' && item.propEntry?.ring && item.propEntry.shrineType === 'monolith') {
+                item.propEntry.ring.rotation.z += delta * 1.1;
+            }
+        }
+
+        // 7. Crypt dust motes
+        if (this.dustMotes) {
+            this.dustMotes.update(delta, time);
+        }
+
+        // 8. Reticle fade
         if (this.clickReticle && this.clickReticle.material.opacity > 0) {
-            this.clickReticle.material.opacity -= delta * 1.5;
+            this.clickReticle.material.opacity = Math.max(0, this.clickReticle.material.opacity - delta * 1.5);
             this.clickReticle.scale.multiplyScalar(0.98);
         }
 
