@@ -110,8 +110,8 @@ export class CombatStage3D {
         this.active = false;
         this.clock = new THREE.Clock();
 
-        this.heroPos = new THREE.Vector3(-2.2, -0.35, 1.65);
-        this.enemyPos = new THREE.Vector3(2.45, 0.55, -1.35);
+        this.heroPos = new THREE.Vector3(-1.35, -0.32, 1.45);
+        this.enemyPos = new THREE.Vector3(1.55, 0.45, -1.15);
 
         this.heroScale = 1.22;
         this.enemyScale = 1.32;
@@ -143,8 +143,8 @@ export class CombatStage3D {
         this.scene.background = new THREE.Color(0x090d16);
         this.scene.fog = new THREE.FogExp2(0x090d16, 0.085);
 
-        this.camera = new THREE.PerspectiveCamera(36, width / height, 0.1, 50);
-        this.camera.position.set(0, 3.1, 6.2);
+        this.camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 50);
+        this.camera.position.set(0, 2.85, 6.4);
         this.camera.lookAt(0, 0.85, 0);
 
         this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
