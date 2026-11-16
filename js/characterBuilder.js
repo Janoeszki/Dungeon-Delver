@@ -193,6 +193,8 @@ export class CharacterBuilder {
             race = ancestry, // 'human', 'elf', 'dwarf', 'orc', 'goblin', 'catfolk'
             charClass = 'warrior', // 'warrior', 'mage'
             bodyType = 'a', // 'a' | 'b'
+            hairStyle = 1, // 0 (hairless/base) | 1 | 2 | 3
+            beardStyle = 0, // 0 (none) | 1 | 2 | 3
             showHelm = true,
             skinColor = '#ffd2b2',
             hairColor = '#4a2e1b',
@@ -202,6 +204,10 @@ export class CharacterBuilder {
 
         const effectiveAncestry = ancestry || race || 'human';
         const effectiveBodyType = String(bodyType).toLowerCase() === 'b' ? 'b' : 'a';
+        const parsedHair = Number(hairStyle);
+        const effectiveHairStyle = Number.isInteger(parsedHair) && parsedHair >= 0 && parsedHair <= 3 ? parsedHair : 1;
+        const parsedBeard = Number(beardStyle);
+        const effectiveBeardStyle = Number.isInteger(parsedBeard) && parsedBeard >= 0 && parsedBeard <= 3 ? parsedBeard : 0;
 
         this.setColors({ skinColor, hairColor, clothColor, armorColor });
 
@@ -224,7 +230,13 @@ export class CharacterBuilder {
         const cape = torsoGroup.getObjectByName('Cape') || null;
 
         // 2. Head & Face
-        const headGroup = this.buildHead(effectiveAncestry, hairColor, effectiveBodyType);
+        const headGroup = this.buildHead(
+            effectiveAncestry,
+            hairColor,
+            effectiveBodyType,
+            effectiveHairStyle,
+            effectiveBeardStyle
+        );
         headGroup.position.y = 1.05;
         bodyGroup.add(headGroup);
 
@@ -237,19 +249,22 @@ export class CharacterBuilder {
         }
 
         // 4. Ancestry-specific facial attachments
-        if (effectiveAncestry === 'dwarf') {
-            if (effectiveBodyType === 'a') {
-                const beard = this.buildDwarfBeard();
-                beard.position.set(0, -0.05, 0.21);
-                headGroup.add(beard);
-            }
-        } else if (effectiveAncestry === 'orc') {
+        if (effectiveAncestry === 'orc') {
             const orcFeatures = this.buildOrcFeatures(effectiveBodyType);
             headGroup.add(orcFeatures);
         } else if (effectiveAncestry === 'catfolk') {
             const catMuzzle = this.buildCatMuzzle();
             catMuzzle.position.set(0, 0.08, 0.25);
             headGroup.add(catMuzzle);
+        }
+
+        // Universal Modular Facial Hair / Beard
+        if (effectiveBeardStyle > 0) {
+            const facialHair = this.buildFacialHair(effectiveAncestry, effectiveBeardStyle, effectiveBodyType);
+            if (facialHair) {
+                facialHair.position.set(0, -0.05, 0.21);
+                headGroup.add(facialHair);
+            }
         }
 
         // 5. Ears (Elf, Dwarf, Orc, Goblin, Catfolk, Human)
@@ -538,7 +553,7 @@ export class CharacterBuilder {
         return capeGroup;
     }
 
-    buildHead(race, hairColor, bodyType = 'a') {
+    buildHead(race, hairColor, bodyType = 'a', hairStyle = 1, beardStyle = 0) {
         const headGroup = new THREE.Group();
         headGroup.name = 'HeadGroup';
         const isTypeB = bodyType === 'b';
@@ -615,9 +630,9 @@ export class CharacterBuilder {
             headGroup.add(brow);
         });
 
-        // Faceted Mouth (also visible on Orc and Dwarf in Type B)
-        const showMouth = (race !== 'catfolk' && race !== 'orc' && race !== 'dwarf') ||
-            (isTypeB && (race === 'orc' || race === 'dwarf'));
+        // Faceted Mouth (visible on clean-shaven Dwarves, Type B Orcs, Humans, Elves, Goblins)
+        const showMouth = (race !== 'catfolk' && race !== 'orc' && (race !== 'dwarf' || beardStyle === 0)) ||
+            (isTypeB && race === 'orc');
         if (showMouth) {
             const mouthGeo = this.createLoftedPrism([
                 { y: isTypeB ? -0.018 : -0.014, rx: isTypeB ? 0.072 : 0.068, rz: 0.02, twist: Math.PI / 4 },
@@ -629,15 +644,19 @@ export class CharacterBuilder {
         }
 
         // Faceted Hair Styles
-        const hair = this.buildHair(race, bodyType);
+        const hair = this.buildHair(race, bodyType, hairStyle);
         headGroup.add(hair);
 
         return headGroup;
     }
 
-    buildHair(race, bodyType = 'a') {
+    buildHair(race, bodyType = 'a', hairStyle = 1) {
         const hairGroup = new THREE.Group();
         hairGroup.name = 'Hair';
+        if (hairStyle === 0) {
+            return hairGroup;
+        }
+
         const isTypeB = bodyType === 'b';
         const hw = this.getHeadWidthMultiplier(race);
         const octTwist = Math.PI / 8;
@@ -652,10 +671,28 @@ export class CharacterBuilder {
         };
 
         if (race === 'elf') {
-            addCrownCap(0.47, 1.02);
+            if (hairStyle === 1) {
+                // Style I: Royal Plume & Circlet
+                addCrownCap(0.47, 1.02);
 
-            if (isTypeB) {
-                // High crown braid + back plume + longer layered front chest tresses
+                const plumeGeo = this.createLoftedPrism([
+                    { y: -0.34, rx: 0.13, rz: 0.07, offsetZ: -0.23 },
+                    { y: 0.05, rx: 0.24, rz: 0.12, offsetZ: -0.22 },
+                    { y: 0.38, rx: 0.26, rz: 0.14, offsetZ: -0.14 }
+                ], 6);
+                hairGroup.add(new THREE.Mesh(plumeGeo, this.materials.hair));
+
+                const lockGeo = this.makeFaceted(new THREE.ConeGeometry(0.055, 0.42, 4));
+                [-1, 1].forEach((side) => {
+                    const lock = new THREE.Mesh(lockGeo, this.materials.hair);
+                    lock.position.set(side * 0.24, 0.08, 0.12);
+                    lock.rotation.set(0.08 + Math.PI, 0, side * -0.08);
+                    hairGroup.add(lock);
+                });
+            } else if (hairStyle === 2) {
+                // Style II: Twin Chest Tresses & Crown Braid
+                addCrownCap(0.47, 1.02);
+
                 const crownBraidGeo = this.makeFaceted(new THREE.TorusGeometry(0.215 * hw, 0.045, 5, 8));
                 const crownBraid = new THREE.Mesh(crownBraidGeo, this.materials.hair);
                 crownBraid.rotation.set(Math.PI / 2.2, 0, octTwist);
@@ -682,23 +719,30 @@ export class CharacterBuilder {
                     hairGroup.add(cuff);
                 });
             } else {
-                // Long flowing tapered polygonal hair plume down the back
-                const plumeGeo = this.createLoftedPrism([
-                    { y: -0.34, rx: 0.13, rz: 0.07, offsetZ: -0.23 },
-                    { y: 0.05, rx: 0.24, rz: 0.12, offsetZ: -0.22 },
-                    { y: 0.38, rx: 0.26, rz: 0.14, offsetZ: -0.14 }
-                ], 6);
-                hairGroup.add(new THREE.Mesh(plumeGeo, this.materials.hair));
+                // Style III: Sylvan High Topknot
+                addCrownCap(0.48, 1.0);
 
-                // Tapered temple locks
-                const lockGeo = this.makeFaceted(new THREE.ConeGeometry(0.055, 0.42, 4));
-                [-1, 1].forEach((side) => {
-                    const lock = new THREE.Mesh(lockGeo, this.materials.hair);
-                    lock.position.set(side * 0.24, 0.08, 0.12);
-                    lock.rotation.set(0.08, 0, side * -0.08);
-                    lock.rotation.x += Math.PI;
-                    hairGroup.add(lock);
+                const topknotGeo = this.createLoftedPrism([
+                    { y: 0.44, rx: 0.075, rz: 0.075, offsetZ: -0.05 },
+                    { y: 0.56, rx: 0.115, rz: 0.115, offsetZ: -0.08 },
+                    { y: 0.72, rx: 0.08, rz: 0.08, offsetZ: -0.11 },
+                    { y: 0.80, rx: 0.02, rz: 0.02, offsetZ: -0.12 }
+                ], 6);
+                hairGroup.add(new THREE.Mesh(topknotGeo, this.materials.hair));
+
+                const pinGeo = this.makeFaceted(new THREE.CylinderGeometry(0.012, 0.012, 0.34, 4));
+                [-0.55, 0.55].forEach((angle) => {
+                    const pin = new THREE.Mesh(pinGeo, this.materials.armorGold);
+                    pin.position.set(0, 0.56, -0.08);
+                    pin.rotation.set(0.25, 0, Math.PI / 2 + angle);
+                    hairGroup.add(pin);
                 });
+
+                const trailGeo = this.makeFaceted(new THREE.ConeGeometry(0.085, 0.38, 6));
+                const trail = new THREE.Mesh(trailGeo, this.materials.hair);
+                trail.position.set(0, 0.16, -0.24);
+                trail.rotation.x = Math.PI - 0.18;
+                hairGroup.add(trail);
             }
 
             // Thin 8-sided Golden Elven Circlet
@@ -712,17 +756,25 @@ export class CharacterBuilder {
             gem.position.set(0, 0.345, 0.262);
             hairGroup.add(gem);
         } else if (race === 'dwarf') {
-            addCrownCap(0.49, 1.06);
+            if (hairStyle === 1) {
+                // Style I: Cropped Forge-Cut
+                addCrownCap(0.49, 1.06);
 
-            // Thick faceted back wedge
-            const backWedgeGeo = this.createLoftedPrism([
-                { y: 0.06, rx: 0.28 * hw, rz: 0.11, offsetZ: -0.21, twist: octTwist },
-                { y: 0.36, rx: 0.31 * hw, rz: 0.13, offsetZ: -0.17, twist: octTwist }
-            ], 6);
-            hairGroup.add(new THREE.Mesh(backWedgeGeo, this.materials.hair));
+                const backWedgeGeo = this.createLoftedPrism([
+                    { y: 0.06, rx: 0.28 * hw, rz: 0.11, offsetZ: -0.21, twist: octTwist },
+                    { y: 0.36, rx: 0.31 * hw, rz: 0.13, offsetZ: -0.17, twist: octTwist }
+                ], 6);
+                hairGroup.add(new THREE.Mesh(backWedgeGeo, this.materials.hair));
+            } else if (hairStyle === 2) {
+                // Style II: Twin Shoulder Braids & Crown Braid
+                addCrownCap(0.49, 1.06);
 
-            if (isTypeB) {
-                // Braided crown + twin thick front shoulder braids with gold clasps
+                const backWedgeGeo = this.createLoftedPrism([
+                    { y: 0.06, rx: 0.28 * hw, rz: 0.11, offsetZ: -0.21, twist: octTwist },
+                    { y: 0.36, rx: 0.31 * hw, rz: 0.13, offsetZ: -0.17, twist: octTwist }
+                ], 6);
+                hairGroup.add(new THREE.Mesh(backWedgeGeo, this.materials.hair));
+
                 const crownBraidGeo = this.makeFaceted(new THREE.TorusGeometry(0.24 * hw, 0.05, 5, 8));
                 const crownBraid = new THREE.Mesh(crownBraidGeo, this.materials.hair);
                 crownBraid.rotation.set(Math.PI / 2.1, 0, octTwist);
@@ -745,10 +797,63 @@ export class CharacterBuilder {
                     clasp.position.set(side * 0.22, -0.18, 0.185);
                     hairGroup.add(clasp);
                 });
+            } else {
+                // Style III: Slayer Fan Crest
+                const crestGeo = this.makeFaceted(new THREE.ConeGeometry(0.11, 0.34, 4));
+                [
+                    { y: 0.48, z: 0.14, rx: 0.38, s: 0.92 },
+                    { y: 0.56, z: 0.04, rx: 0.08, s: 1.15 },
+                    { y: 0.55, z: -0.07, rx: -0.25, s: 1.12 },
+                    { y: 0.47, z: -0.17, rx: -0.65, s: 0.98 },
+                    { y: 0.34, z: -0.25, rx: -1.15, s: 0.85 }
+                ].forEach((c) => {
+                    const spike = new THREE.Mesh(crestGeo, this.materials.hair);
+                    spike.position.set(0, c.y, c.z);
+                    spike.rotation.x = c.rx;
+                    spike.scale.setScalar(c.s);
+                    hairGroup.add(spike);
+                });
+
+                const tailCone = new THREE.Mesh(
+                    this.makeFaceted(new THREE.ConeGeometry(0.08, 0.30, 6)),
+                    this.materials.hair
+                );
+                tailCone.position.set(0, 0.14, -0.25);
+                tailCone.rotation.x = Math.PI - 0.25;
+                hairGroup.add(tailCone);
+
+                const goldTie = new THREE.Mesh(
+                    this.makeFaceted(new THREE.CylinderGeometry(0.075, 0.075, 0.05, 8)),
+                    this.materials.armorGold
+                );
+                goldTie.position.set(0, 0.24, -0.23);
+                goldTie.rotation.x = -0.25;
+                hairGroup.add(goldTie);
             }
         } else if (race === 'orc') {
-            if (isTypeB) {
-                // High swept war-mane + long braided ponytail + twin banded side-locks
+            if (hairStyle === 1) {
+                // Style I: Savage Spiked Mohawk
+                const bladeGeo = this.makeFaceted(new THREE.ConeGeometry(0.095, 0.26, 4));
+                [
+                    { y: 0.46, z: 0.13, rx: 0.35, s: 0.9 },
+                    { y: 0.50, z: 0.01, rx: -0.05, s: 1.1 },
+                    { y: 0.46, z: -0.11, rx: -0.45, s: 1.0 },
+                    { y: 0.37, z: -0.21, rx: -0.95, s: 0.85 }
+                ].forEach((b) => {
+                    const spike = new THREE.Mesh(bladeGeo, this.materials.hair);
+                    spike.position.set(0, b.y, b.z);
+                    spike.rotation.x = b.rx;
+                    spike.scale.setScalar(b.s);
+                    hairGroup.add(spike);
+                });
+
+                const knotGeo = this.makeFaceted(new THREE.ConeGeometry(0.09, 0.32, 5));
+                const knot = new THREE.Mesh(knotGeo, this.materials.hair);
+                knot.position.set(0, 0.44, -0.27);
+                knot.rotation.x = -2.15;
+                hairGroup.add(knot);
+            } else if (hairStyle === 2) {
+                // Style II: Warlord Ponytail & Banded Locks
                 addCrownCap(0.47, 1.0);
 
                 const ponytailGeo = this.createLoftedPrism([
@@ -777,31 +882,54 @@ export class CharacterBuilder {
                     hairGroup.add(band);
                 });
             } else {
-                // Multi-blade jagged polygonal mohawk crest
-                const bladeGeo = this.makeFaceted(new THREE.ConeGeometry(0.095, 0.26, 4));
-                [
-                    { y: 0.46, z: 0.13, rx: 0.35, s: 0.9 },
-                    { y: 0.50, z: 0.01, rx: -0.05, s: 1.1 },
-                    { y: 0.46, z: -0.11, rx: -0.45, s: 1.0 },
-                    { y: 0.37, z: -0.21, rx: -0.95, s: 0.85 }
-                ].forEach((b) => {
-                    const spike = new THREE.Mesh(bladeGeo, this.materials.hair);
-                    spike.position.set(0, b.y, b.z);
-                    spike.rotation.x = b.rx;
-                    spike.scale.setScalar(b.s);
-                    hairGroup.add(spike);
-                });
+                // Style III: Twin War-Braids & Topknot Bun
+                addCrownCap(0.46, 0.98);
 
-                // Bound war-tail cone at the back
-                const knotGeo = this.makeFaceted(new THREE.ConeGeometry(0.09, 0.32, 5));
-                const knot = new THREE.Mesh(knotGeo, this.materials.hair);
-                knot.position.set(0, 0.44, -0.27);
-                knot.rotation.x = -2.15;
-                hairGroup.add(knot);
+                const bun = new THREE.Mesh(new THREE.DodecahedronGeometry(0.115, 0), this.materials.hair);
+                bun.position.set(0, 0.51, -0.06);
+                hairGroup.add(bun);
+
+                const bunBand = new THREE.Mesh(
+                    this.makeFaceted(new THREE.CylinderGeometry(0.105, 0.105, 0.045, 6)),
+                    this.materials.armorGold
+                );
+                bunBand.position.set(0, 0.46, -0.05);
+                hairGroup.add(bunBand);
+
+                const warBraidGeo = this.createLoftedPrism([
+                    { y: -0.34, rx: 0.04, rz: 0.04 },
+                    { y: -0.05, rx: 0.07, rz: 0.07 },
+                    { y: 0.22, rx: 0.075, rz: 0.075 }
+                ], 6);
+                const claspGeo = this.makeFaceted(new THREE.CylinderGeometry(0.068, 0.068, 0.045, 6));
+                [-1, 1].forEach((side) => {
+                    const braid = new THREE.Mesh(warBraidGeo, this.materials.hair);
+                    braid.position.set(side * 0.26, 0.10, -0.10);
+                    braid.rotation.set(-0.20, 0, side * 0.12);
+                    hairGroup.add(braid);
+
+                    const clasp = new THREE.Mesh(claspGeo, this.materials.armorGold);
+                    clasp.position.set(side * 0.28, -0.10, -0.14);
+                    clasp.rotation.set(-0.20, 0, side * 0.12);
+                    hairGroup.add(clasp);
+                });
             }
         } else if (race === 'goblin') {
-            if (isTypeB) {
-                // Swept front tuft + twin high angled side-tails with gold rings
+            if (hairStyle === 1) {
+                // Style I: Scruffy Triple-Tuft
+                const tuftGeo = this.makeFaceted(new THREE.ConeGeometry(0.085, 0.22, 4));
+                [
+                    { x: 0, y: 0.49, z: 0.02, rx: 0.1, rz: 0 },
+                    { x: -0.11, y: 0.45, z: -0.04, rx: -0.2, rz: 0.45 },
+                    { x: 0.11, y: 0.45, z: -0.04, rx: -0.2, rz: -0.45 }
+                ].forEach((t) => {
+                    const tuft = new THREE.Mesh(tuftGeo, this.materials.hair);
+                    tuft.position.set(t.x, t.y, t.z);
+                    tuft.rotation.set(t.rx, 0, t.rz);
+                    hairGroup.add(tuft);
+                });
+            } else if (hairStyle === 2) {
+                // Style II: Twin High Side-Tails
                 const frontTuft = new THREE.Mesh(
                     this.makeFaceted(new THREE.ConeGeometry(0.075, 0.22, 4)),
                     this.materials.hair
@@ -824,47 +952,121 @@ export class CharacterBuilder {
                     hairGroup.add(ring);
                 });
             } else {
-                // 3 jagged angled tuft cones atop cranium
-                const tuftGeo = this.makeFaceted(new THREE.ConeGeometry(0.085, 0.22, 4));
+                // Style III: Swept Comb-Crest
+                const finGeo = this.makeFaceted(new THREE.ConeGeometry(0.068, 0.25, 4));
                 [
-                    { x: 0, y: 0.49, z: 0.02, rx: 0.1, rz: 0 },
-                    { x: -0.11, y: 0.45, z: -0.04, rx: -0.2, rz: 0.45 },
-                    { x: 0.11, y: 0.45, z: -0.04, rx: -0.2, rz: -0.45 }
-                ].forEach((t) => {
-                    const tuft = new THREE.Mesh(tuftGeo, this.materials.hair);
-                    tuft.position.set(t.x, t.y, t.z);
-                    tuft.rotation.set(t.rx, 0, t.rz);
-                    hairGroup.add(tuft);
+                    { y: 0.44, z: 0.16, rx: 0.65, s: 0.85 },
+                    { y: 0.50, z: 0.06, rx: 0.15, s: 1.05 },
+                    { y: 0.51, z: -0.04, rx: -0.25, s: 1.08 },
+                    { y: 0.46, z: -0.14, rx: -0.75, s: 0.95 },
+                    { y: 0.37, z: -0.23, rx: -1.25, s: 0.8 }
+                ].forEach((f) => {
+                    const spike = new THREE.Mesh(finGeo, this.materials.hair);
+                    spike.position.set(0, f.y, f.z);
+                    spike.rotation.x = f.rx;
+                    spike.scale.setScalar(f.s);
+                    hairGroup.add(spike);
                 });
             }
         } else if (race === 'catfolk') {
-            addCrownCap(0.45, 0.98);
+            if (hairStyle === 1) {
+                // Style I: Fur Crest & Cheek Ruffs
+                addCrownCap(0.45, 0.98);
 
-            // Angled cheek-ruff cones (longer lynx-style tufts for Type B)
-            const ruffGeo = this.makeFaceted(
-                new THREE.ConeGeometry(isTypeB ? 0.09 : 0.085, isTypeB ? 0.28 : 0.20, 4)
-            );
-            [-1, 1].forEach((side) => {
-                const ruff = new THREE.Mesh(ruffGeo, this.materials.hair);
-                ruff.position.set(side * (isTypeB ? 0.27 : 0.29), isTypeB ? 0.03 : 0.08, 0.06);
-                ruff.rotation.set(0.18, 0, -side * (isTypeB ? 1.48 : 1.15));
-                hairGroup.add(ruff);
-            });
+                const ruffGeo = this.makeFaceted(new THREE.ConeGeometry(0.085, 0.22, 4));
+                [-1, 1].forEach((side) => {
+                    const ruff = new THREE.Mesh(ruffGeo, this.materials.hair);
+                    ruff.position.set(side * 0.29, 0.08, 0.05);
+                    ruff.rotation.set(0.15, 0, -side * 1.18);
+                    hairGroup.add(ruff);
+                });
+            } else if (hairStyle === 2) {
+                // Style II: Primal Lion Mane
+                addCrownCap(0.47, 1.04);
 
-            if (isTypeB) {
-                const maneLockGeo = this.createLoftedPrism([
-                    { y: -0.18, rx: 0.06, rz: 0.05, offsetZ: -0.22 },
-                    { y: 0.14, rx: 0.12, rz: 0.09, offsetZ: -0.21 },
+                const maneGeo = this.createLoftedPrism([
+                    { y: -0.12, rx: 0.32 * hw, rz: 0.22, offsetZ: -0.07, twist: octTwist },
+                    { y: 0.16, rx: 0.39 * hw, rz: 0.27, offsetZ: -0.05, twist: octTwist },
+                    { y: 0.41, rx: 0.34 * hw, rz: 0.24, offsetZ: -0.04, twist: octTwist }
+                ], 8);
+                hairGroup.add(new THREE.Mesh(maneGeo, this.materials.hair));
+
+                // Radial mane spikes fanning out behind the cheeks & crown
+                const spikeGeo = this.makeFaceted(new THREE.ConeGeometry(0.095, 0.26, 4));
+                [
+                    { x: 0, y: 0.49, z: -0.05, rx: -0.2, rz: 0 },
+                    { x: -0.28, y: 0.40, z: -0.04, rx: -0.15, rz: 0.72 },
+                    { x: 0.28, y: 0.40, z: -0.04, rx: -0.15, rz: -0.72 },
+                    { x: -0.35, y: 0.16, z: -0.03, rx: -0.1, rz: 1.48 },
+                    { x: 0.35, y: 0.16, z: -0.03, rx: -0.1, rz: -1.48 },
+                    { x: -0.28, y: -0.06, z: -0.05, rx: -0.2, rz: 2.15 },
+                    { x: 0.28, y: -0.06, z: -0.05, rx: -0.2, rz: -2.15 }
+                ].forEach((m) => {
+                    const spike = new THREE.Mesh(spikeGeo, this.materials.hair);
+                    spike.position.set(m.x, m.y, m.z);
+                    spike.rotation.set(m.rx, 0, m.rz);
+                    hairGroup.add(spike);
+                });
+            } else {
+                // Style III: Lynx Tufts & Braided Mane-Tail
+                addCrownCap(0.45, 0.99);
+
+                const bangGeo = this.makeFaceted(new THREE.ConeGeometry(0.065, 0.18, 4));
+                [-1, 1].forEach((side) => {
+                    const bang = new THREE.Mesh(bangGeo, this.materials.hair);
+                    bang.position.set(side * 0.09, 0.36, 0.21);
+                    bang.rotation.set(1.0, 0, -side * 0.45);
+                    hairGroup.add(bang);
+                });
+
+                const lynxRuffGeo = this.makeFaceted(new THREE.ConeGeometry(0.09, 0.29, 4));
+                [-1, 1].forEach((side) => {
+                    const ruff = new THREE.Mesh(lynxRuffGeo, this.materials.hair);
+                    ruff.position.set(side * 0.27, 0.03, 0.06);
+                    ruff.rotation.set(0.18, 0, -side * 1.48);
+                    hairGroup.add(ruff);
+                });
+
+                const maneTailGeo = this.createLoftedPrism([
+                    { y: -0.24, rx: 0.055, rz: 0.05, offsetZ: -0.23 },
+                    { y: 0.10, rx: 0.12, rz: 0.09, offsetZ: -0.21 },
                     { y: 0.36, rx: 0.16, rz: 0.10, offsetZ: -0.16 }
                 ], 6);
-                hairGroup.add(new THREE.Mesh(maneLockGeo, this.materials.hair));
+                hairGroup.add(new THREE.Mesh(maneTailGeo, this.materials.hair));
+
+                const ring = new THREE.Mesh(
+                    this.makeFaceted(new THREE.CylinderGeometry(0.085, 0.085, 0.045, 6)),
+                    this.materials.armorGold
+                );
+                ring.position.set(0, -0.02, -0.22);
+                hairGroup.add(ring);
             }
         } else {
             // Human
             addCrownCap(0.47, 1.03);
 
-            if (isTypeB) {
-                // Swept side bangs + shoulder-length side locks + flowing high ponytail
+            if (hairStyle === 1) {
+                // Style I: Classic OSRS Spiky Adventurer
+                const spikeGeo = this.makeFaceted(new THREE.ConeGeometry(0.085, 0.22, 4));
+                [
+                    { x: -0.12, y: 0.40, z: 0.21, rx: 0.95, rz: 0.35 },
+                    { x: 0.0, y: 0.42, z: 0.23, rx: 1.05, rz: -0.1 },
+                    { x: 0.13, y: 0.40, z: 0.20, rx: 0.95, rz: -0.4 },
+                    { x: 0.0, y: 0.50, z: 0.04, rx: 0.35, rz: 0.0 }
+                ].forEach((s) => {
+                    const spike = new THREE.Mesh(spikeGeo, this.materials.hair);
+                    spike.position.set(s.x, s.y, s.z);
+                    spike.rotation.set(s.rx, 0, s.rz);
+                    hairGroup.add(spike);
+                });
+
+                const backGeo = this.createLoftedPrism([
+                    { y: 0.08, rx: 0.24 * hw, rz: 0.09, offsetZ: -0.20, twist: octTwist },
+                    { y: 0.36, rx: 0.29 * hw, rz: 0.12, offsetZ: -0.17, twist: octTwist }
+                ], 6);
+                hairGroup.add(new THREE.Mesh(backGeo, this.materials.hair));
+            } else if (hairStyle === 2) {
+                // Style II: High Ponytail & Swept Bangs
                 const bangGeo = this.makeFaceted(new THREE.ConeGeometry(0.085, 0.26, 4));
                 [
                     { x: -0.11, y: 0.37, z: 0.22, rx: 1.05, rz: 0.55 },
@@ -899,27 +1101,39 @@ export class CharacterBuilder {
                 hairTie.rotation.x = 0.25;
                 hairGroup.add(hairTie);
             } else {
-                // Classic OSRS spiky adventurer hairstyle
-                const spikeGeo = this.makeFaceted(new THREE.ConeGeometry(0.085, 0.22, 4));
-                [
-                    { x: -0.12, y: 0.40, z: 0.21, rx: 0.95, rz: 0.35 },
-                    { x: 0.0, y: 0.42, z: 0.23, rx: 1.05, rz: -0.1 },
-                    { x: 0.13, y: 0.40, z: 0.20, rx: 0.95, rz: -0.4 },
-                    { x: 0.0, y: 0.50, z: 0.04, rx: 0.35, rz: 0.0 }
-                ].forEach((s) => {
-                    const spike = new THREE.Mesh(spikeGeo, this.materials.hair);
-                    spike.position.set(s.x, s.y, s.z);
-                    spike.rotation.set(s.rx, 0, s.rz);
-                    hairGroup.add(spike);
+                // Style III: Flowing Shoulder Mane
+                const waveGeo = this.makeFaceted(new THREE.ConeGeometry(0.09, 0.28, 4));
+                [-1, 1].forEach((side) => {
+                    const wave = new THREE.Mesh(waveGeo, this.materials.hair);
+                    wave.position.set(side * 0.14, 0.35, 0.21);
+                    wave.rotation.set(0.85, 0, -side * 0.55);
+                    hairGroup.add(wave);
                 });
 
-                // Faceted back hair wedge
-                const backGeo = this.createLoftedPrism([
-                    { y: 0.08, rx: 0.24 * hw, rz: 0.09, offsetZ: -0.20, twist: octTwist },
-                    { y: 0.36, rx: 0.29 * hw, rz: 0.12, offsetZ: -0.17, twist: octTwist }
+                const maneBackGeo = this.createLoftedPrism([
+                    { y: -0.26, rx: 0.26 * hw, rz: 0.10, offsetZ: -0.22, twist: octTwist },
+                    { y: 0.10, rx: 0.29 * hw, rz: 0.12, offsetZ: -0.20, twist: octTwist },
+                    { y: 0.38, rx: 0.30 * hw, rz: 0.13, offsetZ: -0.16, twist: octTwist }
                 ], 6);
-                hairGroup.add(new THREE.Mesh(backGeo, this.materials.hair));
+                hairGroup.add(new THREE.Mesh(maneBackGeo, this.materials.hair));
+
+                const shoulderDropGeo = this.createLoftedPrism([
+                    { y: -0.24, rx: 0.055, rz: 0.06 },
+                    { y: 0.06, rx: 0.085, rz: 0.09 },
+                    { y: 0.34, rx: 0.09, rz: 0.10 }
+                ], 6);
+                [-1, 1].forEach((side) => {
+                    const drop = new THREE.Mesh(shoulderDropGeo, this.materials.hair);
+                    drop.position.set(side * 0.245, 0, 0.02);
+                    drop.rotation.z = side * -0.08;
+                    hairGroup.add(drop);
+                });
             }
+        }
+
+        // Preserve slight hair styling hook awareness for bodyType if needed later
+        if (isTypeB && hairGroup.children.length > 0) {
+            hairGroup.userData.bodyType = 'b';
         }
 
         return hairGroup;
@@ -967,7 +1181,7 @@ export class CharacterBuilder {
                 earsGroup.add(ear);
             });
         } else if (race === 'catfolk') {
-            // Perched triangular cat ears with inner-ear facets
+            // Perched triangular cat ears with inner-ear facets (body fur color for base compatibility)
             const outerGeo = this.makeFaceted(new THREE.ConeGeometry(0.135, 0.26, 4));
             const innerGeo = this.makeFaceted(new THREE.ConeGeometry(0.085, 0.19, 4));
             [-1, 1].forEach((side) => {
@@ -975,7 +1189,7 @@ export class CharacterBuilder {
                 ear.position.set(side * 0.19, 0.48, 0.04);
                 ear.rotation.set(-0.08, -side * 0.22, -side * 0.26);
 
-                const outer = new THREE.Mesh(outerGeo, this.materials.hair);
+                const outer = new THREE.Mesh(outerGeo, this.materials.skin);
                 const inner = new THREE.Mesh(innerGeo, this.materials.innerEar);
                 inner.position.set(0, -0.01, 0.032);
                 ear.add(outer, inner);
@@ -1132,43 +1346,154 @@ export class CharacterBuilder {
         return tailGroup;
     }
 
-    buildDwarfBeard() {
-        const beardGroup = new THREE.Group();
-        beardGroup.name = 'DwarfBeard';
+    buildFacialHair(race, beardStyle = 0, bodyType = 'a') {
+        if (!beardStyle || beardStyle <= 0) return null;
 
-        // Twin swept 5-sided mustache wings
-        const stacheGeo = this.makeFaceted(new THREE.ConeGeometry(0.075, 0.25, 5));
+        const beardGroup = new THREE.Group();
+        beardGroup.name = 'FacialHair';
+        const isCatfolk = race === 'catfolk';
+        const zOff = (race === 'orc') ? 0.03 : 0;
+
+        if (isCatfolk) {
+            if (beardStyle === 1) {
+                // Style I: Twin swept 3-spike feline muttonchop whisker-ruffs
+                const spikeGeo = this.makeFaceted(new THREE.ConeGeometry(0.048, 0.17, 4));
+                [-1, 1].forEach((side) => {
+                    [
+                        { y: 0.08, z: -0.03, rx: 0.12, rz: 1.38 },
+                        { y: 0.03, z: -0.02, rx: 0.18, rz: 1.65 },
+                        { y: -0.02, z: -0.03, rx: 0.24, rz: 1.92 }
+                    ].forEach((s) => {
+                        const ruff = new THREE.Mesh(spikeGeo, this.materials.beard);
+                        ruff.position.set(side * 0.21, s.y, s.z);
+                        ruff.rotation.set(s.rx, 0, -side * s.rz);
+                        beardGroup.add(ruff);
+                    });
+                });
+            } else if (beardStyle === 2) {
+                // Style II: Sculpted sabre chin-mane wedge + twin flared cheek-jaw tufts
+                const chinGeo = this.createLoftedPrism([
+                    { y: -0.22, rx: 0.015, rz: 0.02, offsetZ: 0.04 },
+                    { y: -0.08, rx: 0.10, rz: 0.07, offsetZ: 0.04 },
+                    { y: 0.03, rx: 0.125, rz: 0.08, offsetZ: 0.03 }
+                ], 6);
+                beardGroup.add(new THREE.Mesh(chinGeo, this.materials.beard));
+
+                const cheekGeo = this.makeFaceted(new THREE.ConeGeometry(0.06, 0.20, 4));
+                [-1, 1].forEach((side) => {
+                    const cheek = new THREE.Mesh(cheekGeo, this.materials.beard);
+                    cheek.position.set(side * 0.20, 0.03, -0.02);
+                    cheek.rotation.set(0.22, 0, -side * 1.45);
+                    beardGroup.add(cheek);
+                });
+            } else {
+                // Style III: Broad lower-jaw lion chin-mane + long braided chin tuft with gold ring
+                const jawManeGeo = this.createLoftedPrism([
+                    { y: -0.12, rx: 0.18, rz: 0.09, offsetZ: 0.02, twist: Math.PI / 6 },
+                    { y: 0.04, rx: 0.23, rz: 0.11, offsetZ: 0.01, twist: Math.PI / 6 }
+                ], 6);
+                beardGroup.add(new THREE.Mesh(jawManeGeo, this.materials.beard));
+
+                const chinBraidGeo = this.createLoftedPrism([
+                    { y: -0.34, rx: 0.02, rz: 0.02, offsetZ: 0.04 },
+                    { y: -0.22, rx: 0.068, rz: 0.068, offsetZ: 0.04 },
+                    { y: -0.08, rx: 0.085, rz: 0.08, offsetZ: 0.03 }
+                ], 6);
+                beardGroup.add(new THREE.Mesh(chinBraidGeo, this.materials.beard));
+
+                const ring = new THREE.Mesh(
+                    this.makeFaceted(new THREE.CylinderGeometry(0.072, 0.072, 0.048, 8)),
+                    this.materials.armorGold
+                );
+                ring.position.set(0, -0.22, 0.04);
+                beardGroup.add(ring);
+            }
+            return beardGroup;
+        }
+
+        // Human / Elf / Dwarf / Orc / Goblin facial hair
+        const stacheGeo = this.makeFaceted(new THREE.ConeGeometry(0.068, 0.24, 5));
         [-1, 1].forEach((side) => {
             const wing = new THREE.Mesh(stacheGeo, this.materials.beard);
-            wing.position.set(side * 0.11, 0.09, 0.05);
+            wing.position.set(side * 0.11, 0.09, 0.05 + zOff);
             wing.rotation.set(0.15, 0, -side * 1.32);
             beardGroup.add(wing);
         });
 
-        // Broad faceted upper beard wedge
-        const upperGeo = this.createLoftedPrism([
-            { y: -0.14, rx: 0.22, rz: 0.11, offsetZ: 0.01, twist: Math.PI / 6 },
-            { y: 0.08, rx: 0.26, rz: 0.12, offsetZ: 0.02, twist: Math.PI / 6 }
-        ], 6);
-        beardGroup.add(new THREE.Mesh(upperGeo, this.materials.beard));
+        if (beardStyle === 1) {
+            // Style I: Handlebar mustache + small faceted chin soul-patch
+            const patchGeo = this.createLoftedPrism([
+                { y: -0.06, rx: 0.025, rz: 0.02, offsetZ: 0.04 + zOff, twist: Math.PI / 4 },
+                { y: 0.02, rx: 0.055, rz: 0.035, offsetZ: 0.04 + zOff, twist: Math.PI / 4 }
+            ], 4);
+            beardGroup.add(new THREE.Mesh(patchGeo, this.materials.beard));
+        } else if (beardStyle === 2) {
+            // Style II: Sculpted jawline beard wedge tapering to a pointed goatee
+            const jawGeo = this.createLoftedPrism([
+                { y: -0.08, rx: 0.18, rz: 0.095, offsetZ: 0.02 + zOff, twist: Math.PI / 6 },
+                { y: 0.06, rx: 0.235, rz: 0.11, offsetZ: 0.015 + zOff, twist: Math.PI / 6 }
+            ], 6);
+            beardGroup.add(new THREE.Mesh(jawGeo, this.materials.beard));
 
-        // Twin braided lower beard cones + 8-sided gold beard rings
-        const braidGeo = this.makeFaceted(new THREE.ConeGeometry(0.095, 0.32, 6));
-        const ringGeo = this.makeFaceted(new THREE.CylinderGeometry(0.082, 0.082, 0.055, 8));
-        [-1, 1].forEach((side) => {
-            const braid = new THREE.Mesh(braidGeo, this.materials.beard);
-            braid.position.set(side * 0.10, -0.26, 0.02);
-            braid.rotation.set(0.05, 0, side * 0.08);
-            braid.rotation.x += Math.PI;
-            beardGroup.add(braid);
+            const goateeGeo = this.createLoftedPrism([
+                { y: -0.26, rx: 0.015, rz: 0.015, offsetZ: 0.04 + zOff },
+                { y: -0.14, rx: 0.09, rz: 0.075, offsetZ: 0.035 + zOff },
+                { y: -0.04, rx: 0.125, rz: 0.09, offsetZ: 0.03 + zOff }
+            ], 6);
+            beardGroup.add(new THREE.Mesh(goateeGeo, this.materials.beard));
+        } else if (race === 'dwarf') {
+            // Style III (Dwarf): Broad upper beard + twin braided cones with gold rings
+            const upperGeo = this.createLoftedPrism([
+                { y: -0.14, rx: 0.22, rz: 0.11, offsetZ: 0.01, twist: Math.PI / 6 },
+                { y: 0.08, rx: 0.26, rz: 0.12, offsetZ: 0.02, twist: Math.PI / 6 }
+            ], 6);
+            beardGroup.add(new THREE.Mesh(upperGeo, this.materials.beard));
 
-            const ring = new THREE.Mesh(ringGeo, this.materials.armorGold);
-            ring.position.set(side * 0.105, -0.22, 0.025);
-            ring.rotation.z = side * 0.08;
-            beardGroup.add(ring);
-        });
+            const braidGeo = this.makeFaceted(new THREE.ConeGeometry(0.095, 0.32, 6));
+            const ringGeo = this.makeFaceted(new THREE.CylinderGeometry(0.082, 0.082, 0.055, 8));
+            [-1, 1].forEach((side) => {
+                const braid = new THREE.Mesh(braidGeo, this.materials.beard);
+                braid.position.set(side * 0.10, -0.26, 0.02);
+                braid.rotation.set(0.05 + Math.PI, 0, side * 0.08);
+                beardGroup.add(braid);
+
+                const ring = new THREE.Mesh(ringGeo, this.materials.armorGold);
+                ring.position.set(side * 0.105, -0.22, 0.025);
+                ring.rotation.z = side * 0.08;
+                beardGroup.add(ring);
+            });
+        } else {
+            // Style III (Full Wizard / Warlord Beard): Broad upper wedge + long tapered 6-sided beard + gold clasp
+            const upperGeo = this.createLoftedPrism([
+                { y: -0.12, rx: 0.21, rz: 0.105, offsetZ: 0.015 + zOff, twist: Math.PI / 6 },
+                { y: 0.07, rx: 0.245, rz: 0.115, offsetZ: 0.02 + zOff, twist: Math.PI / 6 }
+            ], 6);
+            beardGroup.add(new THREE.Mesh(upperGeo, this.materials.beard));
+
+            const longGeo = this.createLoftedPrism([
+                { y: -0.44, rx: 0.015, rz: 0.015, offsetZ: 0.05 + zOff },
+                { y: -0.28, rx: 0.085, rz: 0.075, offsetZ: 0.04 + zOff },
+                { y: -0.10, rx: 0.16, rz: 0.095, offsetZ: 0.025 + zOff }
+            ], 6);
+            beardGroup.add(new THREE.Mesh(longGeo, this.materials.beard));
+
+            const clasp = new THREE.Mesh(
+                this.makeFaceted(new THREE.CylinderGeometry(0.088, 0.088, 0.05, 8)),
+                this.materials.armorGold
+            );
+            clasp.position.set(0, -0.28, 0.04 + zOff);
+            beardGroup.add(clasp);
+        }
+
+        if (bodyType === 'b') {
+            beardGroup.scale.set(0.92, 0.96, 0.92);
+        }
 
         return beardGroup;
+    }
+
+    buildDwarfBeard() {
+        return this.buildFacialHair('dwarf', 3, 'a');
     }
 
     buildHeadgear(charClass, race) {

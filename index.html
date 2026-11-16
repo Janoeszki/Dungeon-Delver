@@ -202,6 +202,7 @@
 
         .grid-select { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
         .grid-select-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+        .grid-select-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 
         .select-card {
             background: #141b29;
@@ -1294,6 +1295,26 @@
                         </div>
                     </div>
 
+                    <div class="form-group">
+                        <label class="form-label">Hair / Mane Style</label>
+                        <div class="grid-select-4">
+                            <div class="select-card" data-hair-style="0"><span class="title">Base</span></div>
+                            <div class="select-card active" data-hair-style="1"><span class="title">Style I</span></div>
+                            <div class="select-card" data-hair-style="2"><span class="title">Style II</span></div>
+                            <div class="select-card" data-hair-style="3"><span class="title">Style III</span></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Beard / Facial Hair</label>
+                        <div class="grid-select-4">
+                            <div class="select-card active" data-beard-style="0"><span class="title">None</span></div>
+                            <div class="select-card" data-beard-style="1"><span class="title">Style I</span></div>
+                            <div class="select-card" data-beard-style="2"><span class="title">Style II</span></div>
+                            <div class="select-card" data-beard-style="3"><span class="title">Style III</span></div>
+                        </div>
+                    </div>
+
                     <label class="checkbox-row">
                         <span class="form-label" style="margin: 0;">Equip Helmet / Headgear</span>
                         <input type="checkbox" id="checkHelm" checked />
@@ -1792,6 +1813,10 @@
                     configUpdate.hairColor = ancestryInfo.defaultHair;
                     setActiveColorDot('hairPalette', ancestryInfo.defaultHair);
                 }
+                if (ancestryKey === 'dwarf' && creatorApp.config.bodyType === 'a' && Number(creatorApp.config.beardStyle) === 0) {
+                    configUpdate.beardStyle = 3;
+                    document.querySelectorAll('[data-beard-style]').forEach(c => c.classList.toggle('active', c.dataset.beardStyle === '3'));
+                }
                 creatorApp.updateConfig(configUpdate);
             });
         });
@@ -1811,6 +1836,28 @@
                 document.querySelectorAll('[data-body-type]').forEach(c => c.classList.remove('active'));
                 card.classList.add('active');
                 creatorApp.updateConfig({ bodyType: card.dataset.bodyType });
+            });
+        });
+
+        // Hair Style Cards (automatically unequip helm so hairstyle change is visible)
+        document.querySelectorAll('[data-hair-style]').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('[data-hair-style]').forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+                document.getElementById('checkHelm').checked = false;
+                creatorApp.updateConfig({
+                    hairStyle: Number(card.dataset.hairStyle),
+                    showHelm: false
+                });
+            });
+        });
+
+        // Beard Style Cards
+        document.querySelectorAll('[data-beard-style]').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('[data-beard-style]').forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+                creatorApp.updateConfig({ beardStyle: Number(card.dataset.beardStyle) });
             });
         });
 
@@ -1863,6 +1910,10 @@
             const randomancestry = ancestrys[Math.floor(Math.random() * ancestrys.length)];
             const randomClass = classes[Math.floor(Math.random() * classes.length)];
             const randomBodyType = bodyTypes[Math.floor(Math.random() * bodyTypes.length)];
+            const randomHairStyle = Math.floor(Math.random() * 4);
+            const randomBeardStyle = randomBodyType === 'b'
+                ? (Math.random() < 0.85 ? 0 : 1 + Math.floor(Math.random() * 3))
+                : Math.floor(Math.random() * 4);
             const namePool = HERO_NAMES[randomancestry] || HERO_NAMES.human;
             const randomName = namePool[Math.floor(Math.random() * namePool.length)];
 
@@ -1882,6 +1933,8 @@
             document.querySelectorAll('[data-ancestry]').forEach(c => c.classList.toggle('active', c.dataset.ancestry === randomancestry));
             document.querySelectorAll('[data-class]').forEach(c => c.classList.toggle('active', c.dataset.class === randomClass));
             document.querySelectorAll('[data-body-type]').forEach(c => c.classList.toggle('active', c.dataset.bodyType === randomBodyType));
+            document.querySelectorAll('[data-hair-style]').forEach(c => c.classList.toggle('active', Number(c.dataset.hairStyle) === randomHairStyle));
+            document.querySelectorAll('[data-beard-style]').forEach(c => c.classList.toggle('active', Number(c.dataset.beardStyle) === randomBeardStyle));
 
             setActiveColorDot('skinPalette', defaultSkin);
             setActiveColorDot('hairPalette', defaultHair);
@@ -1892,6 +1945,8 @@
                 ancestry: randomancestry,
                 charClass: randomClass,
                 bodyType: randomBodyType,
+                hairStyle: randomHairStyle,
+                beardStyle: randomBeardStyle,
                 skinColor: defaultSkin,
                 hairColor: defaultHair,
                 armorColor: armor,
