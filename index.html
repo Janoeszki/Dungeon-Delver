@@ -1528,6 +1528,380 @@
             .music-player-hud { width: 100%; justify-content: space-between; }
             .realm-badge { display: none; }
         }
+
+        /* ========================================= */
+        /* AFTER-DUNGEON-DELVE SHOP & PROGRESSION UI */
+        /* ========================================= */
+        .select-card {
+            position: relative;
+        }
+
+        .select-card.locked-ancestry {
+            border-color: #475569;
+            background: #0f1420;
+            opacity: 0.78;
+        }
+
+        .select-card.locked-ancestry:hover {
+            border-color: var(--gold-primary);
+            opacity: 0.95;
+        }
+
+        .ancestry-lock-tag {
+            font-size: 0.85rem;
+            color: #fbbf24;
+            background: rgba(124, 88, 32, 0.35);
+            border: 1px solid rgba(245, 166, 35, 0.55);
+            border-radius: 3px;
+            padding: 0 4px;
+            line-height: 1.1;
+        }
+
+        .ancestry-boost-tag {
+            font-size: 0.85rem;
+            color: #4ade80;
+            background: rgba(22, 101, 52, 0.4);
+            border: 1px solid rgba(74, 222, 128, 0.6);
+            border-radius: 3px;
+            padding: 0 4px;
+            line-height: 1.1;
+        }
+
+        .bank-vault-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(15, 23, 42, 0.92);
+            border: 1px solid var(--gold-border);
+            border-radius: 4px;
+            padding: 4px 10px;
+            font-size: 1.12rem;
+            color: var(--gold-bright);
+        }
+
+        .forge-progression-box {
+            background: #0d1320;
+            border: 1px solid var(--gold-border);
+            border-left: 3px solid var(--cyan-accent);
+            padding: 8px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 1.02rem;
+            line-height: 1.25;
+        }
+
+        .shop-overlay {
+            z-index: 150;
+        }
+
+        .shop-modal-card {
+            background: linear-gradient(180deg, #101726 0%, #0a0e18 100%);
+            border: 3px solid var(--gold-bright);
+            border-radius: 8px;
+            width: 95vw;
+            max-width: 1320px;
+            height: 90vh;
+            max-height: 860px;
+            padding: 16px 20px;
+            box-shadow: 0 0 55px rgba(245, 166, 35, 0.45), inset 0 0 28px rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow: hidden;
+        }
+
+        .shop-header-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            border-bottom: 2px solid var(--gold-border);
+            padding-bottom: 8px;
+        }
+
+        .shop-bank-strip {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .shop-currency-badge {
+            background: #090d16;
+            border: 2px solid var(--gold-border);
+            border-radius: 4px;
+            padding: 4px 12px;
+            font-size: 1.3rem;
+            color: var(--gold-bright);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .shop-currency-badge.exp {
+            border-color: #0284c7;
+            color: var(--cyan-accent);
+        }
+
+        .shop-haul-banner {
+            background: rgba(20, 29, 47, 0.9);
+            border: 1px solid var(--panel-border);
+            border-left: 4px solid var(--gold-bright);
+            padding: 6px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+            font-size: 1.15rem;
+        }
+
+        .shop-feedback-banner {
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid var(--cyan-accent);
+            color: #e0f2fe;
+            padding: 5px 12px;
+            font-size: 1.15rem;
+            border-radius: 4px;
+            min-height: 30px;
+            display: flex;
+            align-items: center;
+        }
+
+        .shop-feedback-banner.success {
+            border-color: #22c55e;
+            color: #4ade80;
+            background: rgba(20, 83, 45, 0.28);
+        }
+
+        .shop-feedback-banner.error {
+            border-color: #ef4444;
+            color: #f87171;
+            background: rgba(127, 29, 29, 0.28);
+        }
+
+        .shop-tabs-row {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .shop-tab-btn {
+            background: #161f33;
+            border: 2px solid var(--panel-border);
+            color: var(--text-light);
+            font-family: 'VT323', monospace;
+            font-size: 1.2rem;
+            padding: 5px 12px;
+            cursor: pointer;
+            transition: all 0.12s;
+        }
+
+        .shop-tab-btn:hover,
+        .shop-tab-btn.active {
+            background: #253452;
+            border-color: var(--gold-bright);
+            color: var(--gold-bright);
+        }
+
+        .shop-content-scroll {
+            flex: 1;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            padding-right: 4px;
+        }
+
+        @media (max-width: 960px) {
+            .shop-content-scroll {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .shop-section-card {
+            background: rgba(13, 18, 30, 0.95);
+            border: 2px solid var(--panel-border);
+            border-radius: 6px;
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .shop-section-card.full-span {
+            grid-column: 1 / -1;
+        }
+
+        .shop-section-title {
+            font-family: 'Cinzel', serif;
+            font-size: 1.15rem;
+            color: var(--gold-bright);
+            border-bottom: 1px solid var(--panel-border);
+            padding-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .shop-items-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .shop-item-row {
+            background: #131b2e;
+            border: 1px solid #2d3a54;
+            border-radius: 4px;
+            padding: 8px 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .shop-item-row.equipped {
+            border-color: var(--gold-bright);
+            background: rgba(37, 45, 72, 0.9);
+            box-shadow: 0 0 10px rgba(245, 166, 35, 0.25);
+        }
+
+        .shop-item-row.owned {
+            border-color: #38bdf8;
+        }
+
+        .shop-item-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            flex: 1;
+        }
+
+        .shop-item-name {
+            font-size: 1.2rem;
+            color: var(--gold-bright);
+            font-weight: bold;
+        }
+
+        .shop-item-desc {
+            font-size: 1.05rem;
+            color: var(--text-muted);
+            line-height: 1.2;
+        }
+
+        .shop-buy-btn {
+            background: #1e293b;
+            border: 2px solid var(--gold-primary);
+            color: var(--gold-bright);
+            font-family: 'VT323', monospace;
+            font-size: 1.15rem;
+            padding: 6px 12px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.12s;
+        }
+
+        .shop-buy-btn:hover:not(:disabled) {
+            background: var(--gold-primary);
+            color: #0b0f19;
+            font-weight: bold;
+        }
+
+        .shop-buy-btn.equipped-btn {
+            background: rgba(34, 197, 94, 0.2);
+            border-color: #22c55e;
+            color: #4ade80;
+            cursor: default;
+        }
+
+        .shop-buy-btn.equip-btn {
+            border-color: var(--cyan-accent);
+            color: var(--cyan-accent);
+        }
+
+        .shop-buy-btn:disabled {
+            opacity: 0.48;
+            cursor: not-allowed;
+            border-color: #475569;
+            color: #94a3b8;
+        }
+
+        .shop-ancestry-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .shop-ancestry-pill {
+            background: #141c2f;
+            border: 1px solid var(--panel-border);
+            color: var(--text-light);
+            font-family: 'VT323', monospace;
+            font-size: 1.12rem;
+            padding: 4px 10px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .shop-ancestry-pill.active {
+            border-color: var(--gold-bright);
+            background: #263554;
+            color: var(--gold-bright);
+            font-weight: bold;
+        }
+
+        .shop-ancestry-pill.locked {
+            opacity: 0.55;
+            border-style: dashed;
+        }
+
+        .shop-stat-upgrade-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+
+        @media (max-width: 820px) {
+            .shop-stat-upgrade-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .shop-stat-card {
+            background: #131b2e;
+            border: 1px solid #2e3c56;
+            border-radius: 4px;
+            padding: 8px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .shop-floor1-preview {
+            background: #0a0f1a;
+            border: 1px solid var(--cyan-accent);
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-size: 1.12rem;
+            color: var(--text-light);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .shop-footer-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            border-top: 2px solid var(--gold-border);
+            padding-top: 8px;
+        }
     </style>
 </head>
 <body>
@@ -1540,6 +1914,8 @@
             <span>| Chronicles of Phusza</span>
         </div>
         <div class="top-actions">
+            <span id="headerBankBadge" class="bank-vault-pill" title="Persistent HTTPCookie Bank">🍪 Vault: <strong id="headerBankGold">0</strong>g | <strong id="headerBankExp">0</strong> EXP</span>
+            <button id="btnOpenShopHeader" class="retro-btn">🏪 SHOP</button>
             <button id="btnReturnTitle" class="retro-btn">🏰 TITLE</button>
             <button id="btnMusicToggle" class="retro-btn">🎵 MUSIC: ON</button>
             <button id="btnSoundToggle" class="retro-btn">🔊 SFX: ON</button>
@@ -1562,6 +1938,7 @@
                         <span>💠</span>
                         <strong>REALM OF PHUSZA</strong>
                         <span>• 3D D20 DUNGEON RPG</span>
+                        <button id="btnStartShop" class="hud-mini-btn" style="margin-left:8px;">🏪 SHOP (<span id="startBankGold">0</span>g / <span id="startBankExp">0</span> EXP)</button>
                     </div>
 
                     <div class="music-player-hud">
@@ -1645,13 +2022,16 @@
 
                     <div class="form-group">
                         <label class="form-label">Ancestry</label>
-                        <div class="grid-select-3">
-                            <div class="select-card active" data-ancestry="human"><span class="icon">🧑</span><span class="title">Human</span></div>
-                            <div class="select-card" data-ancestry="elf"><span class="icon">🧝</span><span class="title">Elf</span></div>
-                            <div class="select-card" data-ancestry="dwarf"><span class="icon">🧔</span><span class="title">Dwarf</span></div>
-                            <div class="select-card" data-ancestry="orc"><span class="icon">👹</span><span class="title">Orc</span></div>
-                            <div class="select-card" data-ancestry="goblin"><span class="icon">👺</span><span class="title">Goblin</span></div>
-                            <div class="select-card" data-ancestry="catfolk"><span class="icon">🐱</span><span class="title">Catfolk</span></div>
+                        <div class="grid-select-3" id="ancestrySelectGrid">
+                            <div class="select-card active" data-ancestry="human"><span class="icon">🧑</span><span class="title">Human</span><span class="ancestry-boost-tag" data-boost-badge="human" style="display:none;"></span></div>
+                            <div class="select-card" data-ancestry="elf"><span class="icon">🧝</span><span class="title">Elf</span><span class="ancestry-boost-tag" data-boost-badge="elf" style="display:none;"></span></div>
+                            <div class="select-card" data-ancestry="dwarf"><span class="icon">🧔</span><span class="title">Dwarf</span><span class="ancestry-boost-tag" data-boost-badge="dwarf" style="display:none;"></span></div>
+                            <div class="select-card" data-ancestry="orc"><span class="icon">👹</span><span class="title">Orc</span><span class="ancestry-boost-tag" data-boost-badge="orc" style="display:none;"></span></div>
+                            <div class="select-card" data-ancestry="goblin"><span class="icon">👺</span><span class="title">Goblin</span><span class="ancestry-boost-tag" data-boost-badge="goblin" style="display:none;"></span></div>
+                            <div class="select-card" data-ancestry="catfolk"><span class="icon">🐱</span><span class="title">Catfolk</span><span class="ancestry-boost-tag" data-boost-badge="catfolk" style="display:none;"></span></div>
+                            <div class="select-card locked-ancestry" data-ancestry="dragonborn"><span class="icon">🐉</span><span class="title">Dragonborn</span><span class="ancestry-lock-tag" data-lock-badge="dragonborn">🔒 80g</span><span class="ancestry-boost-tag" data-boost-badge="dragonborn" style="display:none;"></span></div>
+                            <div class="select-card locked-ancestry" data-ancestry="tiefling"><span class="icon">😈</span><span class="title">Tiefling</span><span class="ancestry-lock-tag" data-lock-badge="tiefling">🔒 110g</span><span class="ancestry-boost-tag" data-boost-badge="tiefling" style="display:none;"></span></div>
+                            <div class="select-card locked-ancestry" data-ancestry="golem"><span class="icon">🗿</span><span class="title">Runeforged</span><span class="ancestry-lock-tag" data-lock-badge="golem">🔒 140g</span><span class="ancestry-boost-tag" data-boost-badge="golem" style="display:none;"></span></div>
                         </div>
                     </div>
 
@@ -1798,6 +2178,20 @@
                         <span class="trait-desc" id="classAbilityDesc">Whirlwind Slash: Sweeping circular melee strike dealing massive damage.</span>
                     </div>
 
+                    <div class="forge-progression-box" id="forgeProgressionBox">
+                        <div style="display:flex; justify-content:space-between; color:var(--gold-bright);">
+                            <span>🍪 HTTPCookie Vault:</span>
+                            <span>🪙 <strong id="forgeBankGold">0</strong>g | ⭐ <strong id="forgeBankExp">0</strong> EXP</span>
+                        </div>
+                        <div id="forgeAncestryBoostSummary" style="color:var(--text-muted);">⭐ Human EXP Boosts: +0 (Upgrade with EXP in Shop)</div>
+                        <div id="forgeLoadoutSummary" style="color:var(--text-light);">
+                            <div>⚔️ Weapon: <strong style="color:#ffcf40;">Iron Arming Blade / Initiate Staff</strong></div>
+                            <div>🛡️ Armor: <strong style="color:#38bdf8;">Iron Vanguard Mail</strong></div>
+                            <div>✨ Spells (0): <strong style="color:#c084fc;">None</strong></div>
+                        </div>
+                        <button class="retro-btn" id="btnOpenShopForge" style="justify-content:center; width:100%; margin-top:4px;">🏪 AFTER-DELVE SHOP &amp; UPGRADES</button>
+                    </div>
+
                     <button class="primary-action-btn" id="btnEnterDungeon">
                         ⚔️ ENTER THE CRYPT ⚔️
                     </button>
@@ -1835,7 +2229,9 @@
                 <div class="adventure-inventory-card">
                     <span>🪙 <strong id="advGold">0</strong> Gold</span>
                     <span>⭐ <strong id="advXp">0</strong> XP</span>
+                    <span id="advBankBadge" style="color:#fbbf24; font-size:1.1rem;" title="HTTPCookie Bank Vault">🏦 Vault: <strong id="advBankGold">0</strong>g / <strong id="advBankExp">0</strong> XP</span>
                     <span id="advItemSlot" style="color:#a78bfa; font-size:1.15rem;">🎒 Gear: Basic</span>
+                    <button id="btnOpenShopAdventure" class="hud-mini-btn" title="Open After-Delve Shop">🏪 SHOP</button>
                 </div>
             </div>
 
@@ -1873,12 +2269,127 @@
             <div class="trait-box" id="victorySummaryBox" style="gap:6px; font-size:1.2rem;">
                 <div style="color:var(--gold-bright); font-family:'Cinzel', serif;">EXPEDITION SUMMARY</div>
                 <div id="victoryStatsLine">XP Earned: 0 | Gold Plundered: 0</div>
+                <div id="victoryBankLine" style="color:#4ade80; font-size:1.15rem;">🍪 HTTPCookie Vault Total: 0 Gold | 0 EXP</div>
                 <div id="victoryRoomsLine" style="color:var(--cyan-accent); font-size:1.1rem;">Rooms Explored: 7 / 7</div>
             </div>
+
+            <button class="primary-action-btn" id="btnVictoryShop" style="width:100%; padding:10px; font-size:1.35rem;">
+                🏪 AFTER-DELVE SHOP (SPEND GOLD &amp; EXP)
+            </button>
 
             <div class="title-secondary-row" style="margin-top:4px;">
                 <button class="result-dismiss-btn" id="btnPlayAgain" style="display:block;">⚔️ PLAY AGAIN (NEW DELVE)</button>
                 <button class="start-cta-secondary" id="btnVictoryTitle" style="font-size:1.35rem; padding:10px;">🏰 RETURN TO TITLE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AFTER-DUNGEON-DELVE SHOP MODAL -->
+    <div class="encounter-overlay shop-overlay" id="shopModal">
+        <div class="shop-modal-card" id="shopModalCard">
+            <div class="shop-header-bar">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <span style="font-size:2.1rem;">🏪</span>
+                    <div>
+                        <h2 class="encounter-title" id="shopTitle">AFTER-DUNGEON-DELVE EMPORIUM</h2>
+                        <span id="shopCookieBadge" style="color:var(--cyan-accent); font-size:1.05rem;">🍪 HTTPCookie Persistent Vault (dd_progression • dd_gold • dd_exp)</span>
+                    </div>
+                </div>
+                <div class="shop-bank-strip">
+                    <div class="shop-currency-badge" title="Total Accumulated Gold (Persisted via HTTPCookie)">
+                        <span>🪙 GOLD:</span>
+                        <strong id="shopGoldBalance">0</strong>
+                    </div>
+                    <div class="shop-currency-badge exp" title="Total Accumulated EXP (Persisted via HTTPCookie)">
+                        <span>⭐ EXP:</span>
+                        <strong id="shopExpBalance">0</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="shop-haul-banner" id="shopDelveHaulBanner">
+                <div>
+                    🏆 <strong>Latest Delve Haul:</strong>
+                    +<span id="shopLastDelveGold" style="color:var(--gold-bright);">0</span> Gold &amp;
+                    +<span id="shopLastDelveExp" style="color:var(--cyan-accent);">0</span> EXP
+                    (<span id="shopDelvesCount">0</span> Delves Completed)
+                </div>
+                <div id="shopActiveLoadoutText" style="color:#c084fc;">
+                    ⚔️ Iron Arming Blade | 🛡️ Iron Vanguard Mail
+                </div>
+            </div>
+
+            <div class="shop-feedback-banner" id="shopFeedbackBanner">
+                Spend your plundered Gold on better Armor, Weapons, Spells &amp; Ancestries, or spend EXP to permanently boost an Ancestry's Floor 1 stats!
+            </div>
+
+            <div class="shop-tabs-row" id="shopTabsRow">
+                <button class="shop-tab-btn active" id="shopTabAll" data-shop-tab="all">🌟 ALL SECTIONS</button>
+                <button class="shop-tab-btn" id="shopTabArmor" data-shop-tab="armor">🛡️ BETTER ARMOR</button>
+                <button class="shop-tab-btn" id="shopTabWeapons" data-shop-tab="weapons">⚔️ BETTER WEAPONS</button>
+                <button class="shop-tab-btn" id="shopTabSpells" data-shop-tab="spells">✨ NEW SPELLS</button>
+                <button class="shop-tab-btn" id="shopTabAncestries" data-shop-tab="ancestries">🐉 NEW ANCESTRIES</button>
+                <button class="shop-tab-btn" id="shopTabStats" data-shop-tab="stats">📈 ANCESTRY STAT UPGRADES (EXP)</button>
+            </div>
+
+            <div class="shop-content-scroll" id="shopContentGrid">
+                <!-- 1. Better Armor -->
+                <div class="shop-section-card" id="shopSectionArmor" data-shop-section="armor">
+                    <div class="shop-section-title">
+                        <span>🛡️ BETTER ARMOR (GOLD)</span>
+                        <span style="font-size:1rem; color:var(--text-muted);">Boosts AC, Max HP/MP &amp; Mitigation</span>
+                    </div>
+                    <div class="shop-items-list" id="shopArmorList"></div>
+                </div>
+
+                <!-- 2. Better Weapons -->
+                <div class="shop-section-card" id="shopSectionWeapons" data-shop-section="weapons">
+                    <div class="shop-section-title">
+                        <span>⚔️ BETTER WEAPONS (GOLD)</span>
+                        <span style="font-size:1rem; color:var(--text-muted);">Boosts Attack Hit, Damage, STR/INT &amp; Crit</span>
+                    </div>
+                    <div class="shop-items-list" id="shopWeaponsList"></div>
+                </div>
+
+                <!-- 3. New Spells -->
+                <div class="shop-section-card" id="shopSectionSpells" data-shop-section="spells">
+                    <div class="shop-section-title">
+                        <span>✨ NEW ARCANE SPELLS (GOLD)</span>
+                        <span style="font-size:1rem; color:var(--text-muted);">Usable in Tactical Dungeon Combat</span>
+                    </div>
+                    <div class="shop-items-list" id="shopSpellsList"></div>
+                </div>
+
+                <!-- 4. New Ancestries -->
+                <div class="shop-section-card" id="shopSectionAncestries" data-shop-section="ancestries">
+                    <div class="shop-section-title">
+                        <span>🐉 UNLOCK NEW ANCESTRIES (GOLD)</span>
+                        <span style="font-size:1rem; color:var(--text-muted);">Playable Bloodlines in Character Forge</span>
+                    </div>
+                    <div class="shop-items-list" id="shopAncestriesList"></div>
+                </div>
+
+                <!-- 5. Per-Ancestry Stat Increases (EXP) -->
+                <div class="shop-section-card full-span" id="shopSectionStats" data-shop-section="stats">
+                    <div class="shop-section-title">
+                        <span>📈 ANCESTRY STAT INCREASES (SPEND EXP)</span>
+                        <span style="font-size:1rem; color:var(--cyan-accent);">Permanent Stat Boosts Applying in Floor 1 &amp; Beyond</span>
+                    </div>
+                    <div style="font-size:1.1rem; color:var(--text-muted);">
+                        Select an unlocked Ancestry to train with accumulated EXP (Cost: 40 EXP + 20 EXP per level):
+                    </div>
+                    <div class="shop-ancestry-pills" id="shopStatAncestryTabs"></div>
+                    <div class="shop-floor1-preview" id="shopFloor1StatPreview"></div>
+                    <div class="shop-stat-upgrade-grid" id="shopStatUpgradeGrid"></div>
+                </div>
+            </div>
+
+            <div class="shop-footer-bar">
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <button class="primary-action-btn" id="btnShopNewDelve" style="padding:8px 18px; font-size:1.3rem;">⚔️ LAUNCH FLOOR 1 DELVE</button>
+                    <button class="retro-btn" id="btnShopToForge">🏕️ CHARACTER FORGE</button>
+                </div>
+                <button class="result-dismiss-btn" id="btnCloseShop" style="display:block; padding:8px 18px;">✖ CLOSE SHOP</button>
             </div>
         </div>
     </div>
@@ -1995,6 +2506,7 @@
                     <!-- Top Tabs -->
                     <div class="combat-menu-tabs">
                         <button class="combat-tab-btn active" id="btnTabAttack">⚔️ ATTACK</button>
+                        <button class="combat-tab-btn" id="btnTabSpells">✨ SPELLS</button>
                         <button class="combat-tab-btn" id="btnTabDefend">🛡️ DEFEND</button>
                         <button class="combat-tab-btn" id="btnTabItems">🎒 ITEMS</button>
                         <button class="combat-tab-btn" id="btnTabFlee">🏃 FLEE</button>
@@ -2052,9 +2564,20 @@
         import { DungeonWorldApp } from './js/dungeonWorld.js';
         import { sound } from './js/audio.js';
         import { music } from './js/music.js';
-        import { ANCESTRY_DATA, calculateStats } from './js/stats.js';
+        import { ANCESTRY_DATA, CLASS_DATA, calculateStats } from './js/stats.js';
         import { rollD20, getStatModifier, formatModifier, animateDiceRoll } from './js/dice.js';
-        import { MONSTERS, CONSUMABLE_ITEMS, rollDiceFormula, chooseMonsterAction, CombatStage3D } from './js/combat.js';
+        import { MONSTERS, CONSUMABLE_ITEMS, SPELLS, rollDiceFormula, chooseMonsterAction, resolvePlayerSpell, CombatStage3D } from './js/combat.js';
+        import {
+            HTTPCookie,
+            progression,
+            SHOP_ARMOR,
+            SHOP_WEAPONS,
+            SHOP_SPELLS,
+            SHOP_ANCESTRIES,
+            STARTER_ANCESTRIES,
+            ALL_ANCESTRIES,
+            ANCESTRY_STAT_UPGRADE_CONFIG
+        } from './js/progression.js';
 
         // DOM Screen & Header References
         const mainHeader = document.getElementById('mainHeader');
@@ -2068,9 +2591,12 @@
         const adventureVignette = document.getElementById('adventureVignette');
         const victoryModal = document.getElementById('victoryModal');
         const victoryStatsLine = document.getElementById('victoryStatsLine');
+        const victoryBankLine = document.getElementById('victoryBankLine');
         const victoryRoomsLine = document.getElementById('victoryRoomsLine');
+        const btnVictoryShop = document.getElementById('btnVictoryShop');
         const btnPlayAgain = document.getElementById('btnPlayAgain');
         const btnVictoryTitle = document.getElementById('btnVictoryTitle');
+        const shopModal = document.getElementById('shopModal');
 
         // State & Mode
         let currentMode = 'start'; // 'start' | 'creator' | 'adventure'
@@ -2080,6 +2606,8 @@
         let pendingVictoryModal = false;
         let pendingLethalRespawn = false;
         let damageFlashTimer = null;
+        let currentShopTab = 'all';
+        let selectedShopAncestry = 'human';
 
         // Player Live Adventure Stats
         let playerStats = {
@@ -2089,6 +2617,8 @@
             maxMp: 42,
             gold: 0,
             xp: 0,
+            bankedGold: 0,
+            bankedXp: 0,
             inventory: [],
             consumables: ['Lesser Healing Potion', 'Mana Draught'] // Starting combat consumables
         };
@@ -2096,6 +2626,82 @@
         // Initialize Title 3D Backdrop & inactive Character Forge
         titleScene = new TitleSceneApp(viewportStart);
         creatorApp = new CharacterCreatorApp(viewportCreator, { active: false });
+
+        function bankCurrentDelveRewards(outcome = 'mid_run') {
+            const unbankedGold = Math.max(0, playerStats.gold - (playerStats.bankedGold || 0));
+            const unbankedXp = Math.max(0, playerStats.xp - (playerStats.bankedXp || 0));
+            if (unbankedGold > 0 || unbankedXp > 0 || outcome !== 'mid_run') {
+                progression.awardDelveRewards({
+                    gold: unbankedGold,
+                    exp: unbankedXp,
+                    floor: 1,
+                    outcome
+                });
+                playerStats.bankedGold = playerStats.gold;
+                playerStats.bankedXp = playerStats.xp;
+                progression.state.lastDelveSummary = {
+                    gold: playerStats.gold,
+                    exp: playerStats.xp,
+                    floor: 1,
+                    outcome: outcome || 'victory'
+                };
+                progression.save();
+            }
+            updateProgressionBadges();
+        }
+
+        function updateProgressionBadges() {
+            const state = progression.getState();
+            const setTxt = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = String(val);
+            };
+            setTxt('headerBankGold', state.gold);
+            setTxt('headerBankExp', state.exp);
+            setTxt('startBankGold', state.gold);
+            setTxt('startBankExp', state.exp);
+            setTxt('forgeBankGold', state.gold);
+            setTxt('forgeBankExp', state.exp);
+            setTxt('advBankGold', state.gold);
+            setTxt('advBankExp', state.exp);
+            setTxt('shopGoldBalance', state.gold);
+            setTxt('shopExpBalance', state.exp);
+        }
+
+        function syncAncestryCardsUI() {
+            document.querySelectorAll('[data-ancestry]').forEach((card) => {
+                const ancKey = card.dataset.ancestry;
+                const unlocked = progression.isAncestryUnlocked(ancKey);
+                card.classList.toggle('locked-ancestry', !unlocked);
+
+                const lockBadge = card.querySelector(`[data-lock-badge="${ancKey}"]`);
+                if (lockBadge) {
+                    lockBadge.style.display = unlocked ? 'none' : 'inline-block';
+                }
+
+                const boostBadge = card.querySelector(`[data-boost-badge="${ancKey}"]`);
+                if (boostBadge) {
+                    const b = progression.getAncestryStatBoosts(ancKey);
+                    const total = (b.str || 0) + (b.agi || 0) + (b.int || 0) + (b.vit || 0);
+                    if (total > 0) {
+                        boostBadge.style.display = 'inline-block';
+                        boostBadge.textContent = `⭐+${total}`;
+                    } else {
+                        boostBadge.style.display = 'none';
+                    }
+                }
+            });
+        }
+
+        progression.onChange(() => {
+            updateProgressionBadges();
+            syncAncestryCardsUI();
+            if (shopModal && shopModal.style.display === 'flex') {
+                renderShopUI();
+            }
+        });
+        updateProgressionBadges();
+        syncAncestryCardsUI();
 
         function formatRoomBanner(room) {
             if (!room || !room.name) return 'Floor 1 — Entrance: Cracked Threshold';
@@ -2138,8 +2744,12 @@
 
         function openVictoryModal() {
             sound.playFanfare();
+            bankCurrentDelveRewards('victory');
             if (victoryStatsLine) {
                 victoryStatsLine.textContent = `XP Earned: ${playerStats.xp} | Gold Plundered: ${playerStats.gold}`;
+            }
+            if (victoryBankLine) {
+                victoryBankLine.textContent = `🍪 HTTPCookie Vault Total: ${progression.getGold()} Gold | ${progression.getExp()} EXP`;
             }
             if (victoryRoomsLine) {
                 const summary = adventureApp && typeof adventureApp.getRunSummary === 'function'
@@ -2151,6 +2761,14 @@
             if (victoryModal) {
                 victoryModal.style.display = 'flex';
             }
+        }
+
+        if (btnVictoryShop) {
+            btnVictoryShop.addEventListener('click', () => {
+                sound.playSelect();
+                if (victoryModal) victoryModal.style.display = 'none';
+                openShopModal('all');
+            });
         }
 
         if (btnPlayAgain) {
@@ -2357,8 +2975,12 @@
 
             if (e.key === 'm' || e.key === 'M') {
                 handleMusicButtonClick();
-            } else if (e.key === 'Escape' && loreModal.style.display === 'flex') {
-                loreModal.style.display = 'none';
+            } else if (e.key === 'Escape') {
+                if (shopModal && shopModal.style.display === 'flex') {
+                    closeShopModal();
+                } else if (loreModal.style.display === 'flex') {
+                    loreModal.style.display = 'none';
+                }
             }
         });
 
@@ -2384,28 +3006,40 @@
             });
         }
 
+        function selectAncestryInForge(ancestryKey) {
+            if (!ANCESTRY_DATA[ancestryKey]) return false;
+            if (!progression.isAncestryUnlocked(ancestryKey)) {
+                openShopModal('ancestries');
+                const cost = ANCESTRY_DATA[ancestryKey].unlockCost || 80;
+                setShopFeedback(`🔒 ${ANCESTRY_DATA[ancestryKey].name} is locked! Unlock it below for ${cost} Gold to forge this hero.`, 'info');
+                return false;
+            }
+
+            selectedShopAncestry = ancestryKey;
+            document.querySelectorAll('[data-ancestry]').forEach(c => c.classList.toggle('active', c.dataset.ancestry === ancestryKey));
+
+            const ancestryInfo = ANCESTRY_DATA[ancestryKey];
+            const configUpdate = { ancestry: ancestryKey };
+            if (ancestryInfo && ancestryInfo.defaultSkin) {
+                configUpdate.skinColor = ancestryInfo.defaultSkin;
+                setActiveColorDot('skinPalette', ancestryInfo.defaultSkin);
+            }
+            if (ancestryInfo && ancestryInfo.defaultHair) {
+                configUpdate.hairColor = ancestryInfo.defaultHair;
+                setActiveColorDot('hairPalette', ancestryInfo.defaultHair);
+            }
+            if (ancestryKey === 'dwarf' && creatorApp.config.bodyType === 'a' && Number(creatorApp.config.beardStyle) === 0) {
+                configUpdate.beardStyle = 3;
+                document.querySelectorAll('[data-beard-style]').forEach(c => c.classList.toggle('active', c.dataset.beardStyle === '3'));
+            }
+            creatorApp.updateConfig(configUpdate);
+            return true;
+        }
+
         // Ancestry Cards
         document.querySelectorAll('[data-ancestry]').forEach(card => {
             card.addEventListener('click', () => {
-                const ancestryKey = card.dataset.ancestry;
-                document.querySelectorAll('[data-ancestry]').forEach(c => c.classList.remove('active'));
-                card.classList.add('active');
-
-                const ancestryInfo = ANCESTRY_DATA[ancestryKey];
-                const configUpdate = { ancestry: ancestryKey };
-                if (ancestryInfo && ancestryInfo.defaultSkin) {
-                    configUpdate.skinColor = ancestryInfo.defaultSkin;
-                    setActiveColorDot('skinPalette', ancestryInfo.defaultSkin);
-                }
-                if (ancestryInfo && ancestryInfo.defaultHair) {
-                    configUpdate.hairColor = ancestryInfo.defaultHair;
-                    setActiveColorDot('hairPalette', ancestryInfo.defaultHair);
-                }
-                if (ancestryKey === 'dwarf' && creatorApp.config.bodyType === 'a' && Number(creatorApp.config.beardStyle) === 0) {
-                    configUpdate.beardStyle = 3;
-                    document.querySelectorAll('[data-beard-style]').forEach(c => c.classList.toggle('active', c.dataset.beardStyle === '3'));
-                }
-                creatorApp.updateConfig(configUpdate);
+                selectAncestryInForge(card.dataset.ancestry);
             });
         });
 
@@ -2487,15 +3121,18 @@
             dwarf: ['Bromdur', 'Thorik', 'Dain', 'Hulda', 'Gimrok'],
             orc: ['Gorgok', 'Kragh', 'Azgash', 'Morga', 'Thrumk'],
             goblin: ['Grik', 'Snazz', 'Skitter', 'Nox', 'Frazzle'],
-            catfolk: ['Miko', 'Whisper', 'Shadowclaw', 'Kaelen', 'Nyx']
+            catfolk: ['Miko', 'Whisper', 'Shadowclaw', 'Kaelen', 'Nyx'],
+            dragonborn: ['Balanar', 'Ignis', 'Vaelith', 'Pyraxx', 'Drakon'],
+            tiefling: ['Morthos', 'Kallista', 'Zariel', 'Nemeia', 'Malakor'],
+            golem: ['Aegis-VII', 'Talos', 'Obsidian', 'Runecore', 'Bastion']
         };
 
         function randomizeHero({ silent = false } = {}) {
             if (!silent) sound.playRandomize();
-            const ancestrys = ['human', 'elf', 'dwarf', 'orc', 'goblin', 'catfolk'];
+            const ancestrys = progression.getUnlockedAncestries();
             const classes = ['warrior', 'mage'];
             const bodyTypes = ['a', 'b'];
-            const randomancestry = ancestrys[Math.floor(Math.random() * ancestrys.length)];
+            const randomancestry = ancestrys[Math.floor(Math.random() * ancestrys.length)] || 'human';
             const randomClass = classes[Math.floor(Math.random() * classes.length)];
             const randomBodyType = bodyTypes[Math.floor(Math.random() * bodyTypes.length)];
             const randomHairStyle = Math.floor(Math.random() * 4);
@@ -2548,6 +3185,480 @@
         });
 
         // ==========================================
+        // AFTER-DUNGEON-DELVE SHOP CONTROLLER
+        // ==========================================
+        const shopFeedbackBanner = document.getElementById('shopFeedbackBanner');
+        const shopArmorList = document.getElementById('shopArmorList');
+        const shopWeaponsList = document.getElementById('shopWeaponsList');
+        const shopSpellsList = document.getElementById('shopSpellsList');
+        const shopAncestriesList = document.getElementById('shopAncestriesList');
+        const shopStatAncestryTabs = document.getElementById('shopStatAncestryTabs');
+        const shopFloor1StatPreview = document.getElementById('shopFloor1StatPreview');
+        const shopStatUpgradeGrid = document.getElementById('shopStatUpgradeGrid');
+
+        function setShopFeedback(msg, kind = 'info') {
+            if (!shopFeedbackBanner) return;
+            shopFeedbackBanner.textContent = msg;
+            shopFeedbackBanner.className = 'shop-feedback-banner';
+            if (kind === 'success') shopFeedbackBanner.classList.add('success');
+            if (kind === 'error') shopFeedbackBanner.classList.add('error');
+        }
+
+        function applyLiveProgressionToAdventure() {
+            if (currentMode !== 'adventure') return;
+            const conf = creatorApp.config;
+            const stats = calculateStats(conf.ancestry, conf.charClass, progression);
+            const hpDelta = Math.max(0, stats.maxHp - playerStats.maxHp);
+            const mpDelta = Math.max(0, stats.maxMp - playerStats.maxMp);
+            playerStats.maxHp = stats.maxHp;
+            playerStats.currentHp = Math.min(playerStats.maxHp, playerStats.currentHp + hpDelta);
+            playerStats.maxMp = stats.maxMp;
+            playerStats.currentMp = Math.min(playerStats.maxMp, playerStats.currentMp + mpDelta);
+            updateAdventureHUD();
+        }
+
+        function switchShopTab(tabKey = 'all') {
+            currentShopTab = tabKey || 'all';
+            document.querySelectorAll('[data-shop-tab]').forEach((btn) => {
+                btn.classList.toggle('active', btn.dataset.shopTab === currentShopTab);
+            });
+            document.querySelectorAll('[data-shop-section]').forEach((sec) => {
+                const secName = sec.dataset.shopSection;
+                if (currentShopTab === 'all' || secName === currentShopTab) {
+                    sec.style.display = 'flex';
+                } else {
+                    sec.style.display = 'none';
+                }
+            });
+        }
+
+        document.querySelectorAll('[data-shop-tab]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                sound.playSelect();
+                switchShopTab(btn.dataset.shopTab);
+            });
+        });
+
+        function renderShopUI() {
+            const state = progression.getState();
+            updateProgressionBadges();
+            syncAncestryCardsUI();
+
+            const lastGoldEl = document.getElementById('shopLastDelveGold');
+            const lastExpEl = document.getElementById('shopLastDelveExp');
+            const delvesCountEl = document.getElementById('shopDelvesCount');
+            const loadoutEl = document.getElementById('shopActiveLoadoutText');
+
+            if (lastGoldEl) lastGoldEl.textContent = String(state.lastDelveSummary?.gold ?? playerStats.gold ?? 0);
+            if (lastExpEl) lastExpEl.textContent = String(state.lastDelveSummary?.exp ?? playerStats.xp ?? 0);
+            if (delvesCountEl) delvesCountEl.textContent = String(state.delvesCompleted || 0);
+            if (loadoutEl) {
+                const eqWpn = progression.getEquippedWeapon();
+                const eqArm = progression.getEquippedArmor();
+                loadoutEl.textContent = `⚔️ ${eqWpn.name} | 🛡️ ${eqArm.name} | ✨ Spells: ${state.ownedSpells.length}`;
+            }
+
+            // 1. Better Armor
+            if (shopArmorList) {
+                shopArmorList.innerHTML = '';
+                Object.values(SHOP_ARMOR).forEach((item) => {
+                    const isOwned = state.ownedArmor.includes(item.id);
+                    const isEquipped = state.equippedArmor === item.id;
+                    const row = document.createElement('div');
+                    row.className = `shop-item-row${isEquipped ? ' equipped' : (isOwned ? ' owned' : '')}`;
+                    row.dataset.shopArmor = item.id;
+
+                    const info = document.createElement('div');
+                    info.className = 'shop-item-info';
+                    info.innerHTML = `
+                        <div class="shop-item-name">${item.icon} ${item.name} <span style="font-size:0.95rem; color:var(--cyan-accent);">[Tier ${item.tier}]</span></div>
+                        <div class="shop-item-desc">${item.desc}</div>
+                    `;
+
+                    const btn = document.createElement('button');
+                    btn.id = `btnArmor_${item.id}`;
+                    btn.dataset.buyArmor = item.id;
+
+                    if (isEquipped) {
+                        btn.className = 'shop-buy-btn equipped-btn';
+                        btn.textContent = '✅ EQUIPPED';
+                    } else if (isOwned) {
+                        btn.className = 'shop-buy-btn equip-btn';
+                        btn.textContent = '🛡️ EQUIP';
+                        btn.addEventListener('click', () => {
+                            const res = progression.equipArmor(item.id);
+                            if (res.ok) {
+                                sound.playSelect();
+                                if (item.armorColor) creatorApp.updateConfig({ armorColor: item.armorColor }, 'silent');
+                                creatorApp.updateStatsUI();
+                                applyLiveProgressionToAdventure();
+                                setShopFeedback(`🛡️ Equipped ${item.name}!`, 'success');
+                                renderShopUI();
+                            }
+                        });
+                    } else {
+                        btn.className = 'shop-buy-btn';
+                        btn.disabled = state.gold < item.cost;
+                        btn.textContent = `🪙 BUY (${item.cost}g)`;
+                        btn.addEventListener('click', () => {
+                            const res = progression.buyArmor(item.id);
+                            if (res.ok) {
+                                sound.playFanfare();
+                                if (item.armorColor) creatorApp.updateConfig({ armorColor: item.armorColor }, 'silent');
+                                creatorApp.updateStatsUI();
+                                applyLiveProgressionToAdventure();
+                                setShopFeedback(`✨ Purchased & equipped ${item.name}! (${item.desc})`, 'success');
+                                renderShopUI();
+                            } else {
+                                sound.playFailure();
+                                setShopFeedback(`⚠️ Need ${item.cost} Gold to purchase ${item.name}.`, 'error');
+                            }
+                        });
+                    }
+
+                    row.appendChild(info);
+                    row.appendChild(btn);
+                    shopArmorList.appendChild(row);
+                });
+            }
+
+            // 2. Better Weapons
+            if (shopWeaponsList) {
+                shopWeaponsList.innerHTML = '';
+                Object.values(SHOP_WEAPONS).forEach((item) => {
+                    const isOwned = state.ownedWeapons.includes(item.id);
+                    const isEquipped = state.equippedWeapon === item.id;
+                    const row = document.createElement('div');
+                    row.className = `shop-item-row${isEquipped ? ' equipped' : (isOwned ? ' owned' : '')}`;
+                    row.dataset.shopWeapon = item.id;
+
+                    const info = document.createElement('div');
+                    info.className = 'shop-item-info';
+                    info.innerHTML = `
+                        <div class="shop-item-name">${item.icon} ${item.name} <span style="font-size:0.95rem; color:var(--cyan-accent);">[Tier ${item.tier}]</span></div>
+                        <div class="shop-item-desc">${item.desc}</div>
+                    `;
+
+                    const btn = document.createElement('button');
+                    btn.id = `btnWeapon_${item.id}`;
+                    btn.dataset.buyWeapon = item.id;
+
+                    if (isEquipped) {
+                        btn.className = 'shop-buy-btn equipped-btn';
+                        btn.textContent = '✅ EQUIPPED';
+                    } else if (isOwned) {
+                        btn.className = 'shop-buy-btn equip-btn';
+                        btn.textContent = '⚔️ EQUIP';
+                        btn.addEventListener('click', () => {
+                            const res = progression.equipWeapon(item.id);
+                            if (res.ok) {
+                                sound.playSelect();
+                                creatorApp.updateStatsUI();
+                                applyLiveProgressionToAdventure();
+                                setShopFeedback(`⚔️ Equipped ${item.name}!`, 'success');
+                                renderShopUI();
+                            }
+                        });
+                    } else {
+                        btn.className = 'shop-buy-btn';
+                        btn.disabled = state.gold < item.cost;
+                        btn.textContent = `🪙 BUY (${item.cost}g)`;
+                        btn.addEventListener('click', () => {
+                            const res = progression.buyWeapon(item.id);
+                            if (res.ok) {
+                                sound.playFanfare();
+                                creatorApp.updateStatsUI();
+                                applyLiveProgressionToAdventure();
+                                setShopFeedback(`✨ Purchased & equipped ${item.name}! (${item.desc})`, 'success');
+                                renderShopUI();
+                            } else {
+                                sound.playFailure();
+                                setShopFeedback(`⚠️ Need ${item.cost} Gold to purchase ${item.name}.`, 'error');
+                            }
+                        });
+                    }
+
+                    row.appendChild(info);
+                    row.appendChild(btn);
+                    shopWeaponsList.appendChild(row);
+                });
+            }
+
+            // 3. New Spells
+            if (shopSpellsList) {
+                shopSpellsList.innerHTML = '';
+                Object.values(SHOP_SPELLS).forEach((item) => {
+                    const isOwned = state.ownedSpells.includes(item.id);
+                    const row = document.createElement('div');
+                    row.className = `shop-item-row${isOwned ? ' equipped' : ''}`;
+                    row.dataset.shopSpell = item.id;
+
+                    const info = document.createElement('div');
+                    info.className = 'shop-item-info';
+                    info.innerHTML = `
+                        <div class="shop-item-name">${item.icon} ${item.name} <span style="font-size:0.95rem; color:#c084fc;">[${item.mpCost} MP]</span></div>
+                        <div class="shop-item-desc">${item.desc}</div>
+                    `;
+
+                    const btn = document.createElement('button');
+                    btn.id = `btnSpell_${item.id}`;
+                    btn.dataset.buySpell = item.id;
+
+                    if (isOwned) {
+                        btn.className = 'shop-buy-btn equipped-btn';
+                        btn.textContent = '✨ LEARNED';
+                    } else {
+                        btn.className = 'shop-buy-btn';
+                        btn.disabled = state.gold < item.cost;
+                        btn.textContent = `🪙 LEARN (${item.cost}g)`;
+                        btn.addEventListener('click', () => {
+                            const res = progression.buySpell(item.id);
+                            if (res.ok) {
+                                sound.playSpellCast();
+                                creatorApp.updateStatsUI();
+                                setShopFeedback(`✨ Learned arcane spell: ${item.name}! Cast it in any combat encounter.`, 'success');
+                                renderShopUI();
+                            } else {
+                                sound.playFailure();
+                                setShopFeedback(`⚠️ Need ${item.cost} Gold to learn ${item.name}.`, 'error');
+                            }
+                        });
+                    }
+
+                    row.appendChild(info);
+                    row.appendChild(btn);
+                    shopSpellsList.appendChild(row);
+                });
+            }
+
+            // 4. New Ancestries
+            if (shopAncestriesList) {
+                shopAncestriesList.innerHTML = '';
+                Object.values(SHOP_ANCESTRIES).forEach((item) => {
+                    const isUnlocked = progression.isAncestryUnlocked(item.id);
+                    const isActiveAncestry = (creatorApp?.config?.ancestry === item.id);
+                    const row = document.createElement('div');
+                    row.className = `shop-item-row${isActiveAncestry ? ' equipped' : (isUnlocked ? ' owned' : '')}`;
+                    row.dataset.shopAncestry = item.id;
+
+                    const info = document.createElement('div');
+                    info.className = 'shop-item-info';
+                    info.innerHTML = `
+                        <div class="shop-item-name">${item.icon} ${item.name}</div>
+                        <div class="shop-item-desc">${item.perk}</div>
+                    `;
+
+                    const btn = document.createElement('button');
+                    btn.id = `btnAncestry_${item.id}`;
+                    btn.dataset.buyAncestry = item.id;
+
+                    if (isUnlocked) {
+                        btn.className = isActiveAncestry ? 'shop-buy-btn equipped-btn' : 'shop-buy-btn equip-btn';
+                        btn.textContent = isActiveAncestry ? '✅ SELECTED' : '🐉 SELECT HERO';
+                        btn.addEventListener('click', () => {
+                            selectAncestryInForge(item.id);
+                            setShopFeedback(`🐉 Selected ${item.name} as your active Ancestry!`, 'success');
+                            renderShopUI();
+                        });
+                    } else {
+                        btn.className = 'shop-buy-btn';
+                        btn.disabled = state.gold < item.cost;
+                        btn.textContent = `🪙 UNLOCK (${item.cost}g)`;
+                        btn.addEventListener('click', () => {
+                            const res = progression.buyAncestry(item.id);
+                            if (res.ok) {
+                                sound.playFanfare();
+                                syncAncestryCardsUI();
+                                selectAncestryInForge(item.id);
+                                setShopFeedback(`🐉 Unlocked ${item.name} Ancestry & selected it in Character Forge!`, 'success');
+                                renderShopUI();
+                            } else {
+                                sound.playFailure();
+                                setShopFeedback(`⚠️ Need ${item.cost} Gold to unlock ${item.name}.`, 'error');
+                            }
+                        });
+                    }
+
+                    row.appendChild(info);
+                    row.appendChild(btn);
+                    shopAncestriesList.appendChild(row);
+                });
+            }
+
+            // 5. Per-Ancestry Stat Increases bought with EXP
+            if (!ALL_ANCESTRIES.includes(selectedShopAncestry)) {
+                selectedShopAncestry = creatorApp?.config?.ancestry || 'human';
+            }
+
+            if (shopStatAncestryTabs) {
+                shopStatAncestryTabs.innerHTML = '';
+                ALL_ANCESTRIES.forEach((ancKey) => {
+                    const ancObj = ANCESTRY_DATA[ancKey];
+                    if (!ancObj) return;
+                    const unlocked = progression.isAncestryUnlocked(ancKey);
+                    const boosts = progression.getAncestryStatBoosts(ancKey);
+                    const total = (boosts.str || 0) + (boosts.agi || 0) + (boosts.int || 0) + (boosts.vit || 0);
+
+                    const pill = document.createElement('button');
+                    pill.className = `shop-ancestry-pill${selectedShopAncestry === ancKey ? ' active' : ''}${!unlocked ? ' locked' : ''}`;
+                    pill.dataset.statAncestry = ancKey;
+                    pill.textContent = `${ancObj.icon} ${ancObj.name}${!unlocked ? ' 🔒' : (total > 0 ? ` (+${total})` : '')}`;
+                    pill.addEventListener('click', () => {
+                        sound.playSelect();
+                        selectedShopAncestry = ancKey;
+                        if (unlocked) {
+                            selectAncestryInForge(ancKey);
+                        }
+                        renderShopUI();
+                    });
+                    shopStatAncestryTabs.appendChild(pill);
+                });
+            }
+
+            const targetAncObj = ANCESTRY_DATA[selectedShopAncestry] || ANCESTRY_DATA.human;
+            const targetUnlocked = progression.isAncestryUnlocked(selectedShopAncestry);
+            const targetBoosts = progression.getAncestryStatBoosts(selectedShopAncestry);
+            const wStats = calculateStats(selectedShopAncestry, 'warrior', progression);
+            const mStats = calculateStats(selectedShopAncestry, 'mage', progression);
+
+            if (shopFloor1StatPreview) {
+                shopFloor1StatPreview.innerHTML = `
+                    <div>
+                        <strong style="color:var(--gold-bright);">${targetAncObj.icon} ${targetAncObj.name} Floor 1 Starting Stats (with EXP Boosts &amp; Gear):</strong>
+                    </div>
+                    <div>
+                        ⚔️ <strong>Warrior:</strong> ${wStats.maxHp} HP / ${wStats.maxMp} MP • STR ${wStats.str} • VIT ${wStats.vit} • AGI ${wStats.agi} • INT ${wStats.int}
+                    </div>
+                    <div>
+                        🔮 <strong>Mage:</strong> ${mStats.maxHp} HP / ${mStats.maxMp} MP • INT ${mStats.int} • AGI ${mStats.agi} • VIT ${mStats.vit} • STR ${mStats.str}
+                    </div>
+                `;
+            }
+
+            if (shopStatUpgradeGrid) {
+                shopStatUpgradeGrid.innerHTML = '';
+                const statMeta = [
+                    { key: 'str', label: '🗡️ Strength (STR)', desc: '+Melee Damage/Hit & STR D20 Checks' },
+                    { key: 'vit', label: '🛡️ Vitality (VIT)', desc: '+14 Warrior HP / +9 Mage HP & VIT Checks' },
+                    { key: 'agi', label: '🏹 Agility (AGI)', desc: '+Armor Class, Initiative & AGI D20 Checks' },
+                    { key: 'int', label: '📜 Intelligence (INT)', desc: '+15 Mage MP / +6 War MP, Spell DMG & INT Checks' }
+                ];
+
+                statMeta.forEach((meta) => {
+                    const lvl = targetBoosts[meta.key] || 0;
+                    const maxLvl = ANCESTRY_STAT_UPGRADE_CONFIG.maxBoostPerStat;
+                    const cost = progression.getStatUpgradeCost(selectedShopAncestry, meta.key);
+                    const baseBonus = targetAncObj.bonuses[meta.key] || 0;
+
+                    const card = document.createElement('div');
+                    card.className = 'shop-stat-card';
+                    card.dataset.statCard = meta.key;
+
+                    const info = document.createElement('div');
+                    info.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; font-size:1.18rem; color:var(--gold-bright);">
+                            <strong>${meta.label}</strong>
+                            <span style="color:#4ade80;">EXP Boost: +${lvl} / +${maxLvl}</span>
+                        </div>
+                        <div style="font-size:1rem; color:var(--text-muted);">${meta.desc}</div>
+                        <div style="font-size:1.05rem; color:var(--cyan-accent);">
+                            Ancestry Mod: ${baseBonus >= 0 ? '+' : ''}${baseBonus} → Effective: ${baseBonus + lvl >= 0 ? '+' : ''}${baseBonus + lvl}
+                        </div>
+                    `;
+
+                    const btn = document.createElement('button');
+                    btn.id = `btnUpgradeStat_${meta.key}`;
+                    btn.dataset.upgradeStat = meta.key;
+                    btn.dataset.upgradeAncestry = selectedShopAncestry;
+                    btn.className = 'shop-buy-btn';
+
+                    if (!targetUnlocked) {
+                        btn.disabled = true;
+                        btn.textContent = '🔒 UNLOCK ANCESTRY FIRST';
+                    } else if (lvl >= maxLvl) {
+                        btn.disabled = true;
+                        btn.className = 'shop-buy-btn equipped-btn';
+                        btn.textContent = '🌟 MAX BOOST (+10)';
+                    } else {
+                        btn.disabled = state.exp < cost;
+                        btn.textContent = `⭐ BOOST +1 ${meta.key.toUpperCase()} (${cost} EXP)`;
+                        btn.addEventListener('click', () => {
+                            const res = progression.buyAncestryStatBoost(selectedShopAncestry, meta.key);
+                            if (res.ok) {
+                                sound.playSuccess();
+                                creatorApp.updateStatsUI();
+                                applyLiveProgressionToAdventure();
+                                setShopFeedback(`⚡ Upgraded ${targetAncObj.name} ${meta.key.toUpperCase()} to +${res.newLevel} (-${res.cost} EXP)! Applies in Floor 1 & beyond!`, 'success');
+                                renderShopUI();
+                            } else {
+                                sound.playFailure();
+                                setShopFeedback(`⚠️ Need ${cost} EXP to boost ${targetAncObj.name} ${meta.key.toUpperCase()}.`, 'error');
+                            }
+                        });
+                    }
+
+                    card.appendChild(info);
+                    card.appendChild(btn);
+                    shopStatUpgradeGrid.appendChild(card);
+                });
+            }
+        }
+
+        function openShopModal(initialCategory = 'all') {
+            selectedShopAncestry = creatorApp?.config?.ancestry || 'human';
+            switchShopTab(initialCategory);
+            renderShopUI();
+            if (shopModal) {
+                shopModal.style.display = 'flex';
+            }
+        }
+
+        function closeShopModal() {
+            if (shopModal) {
+                shopModal.style.display = 'none';
+            }
+            creatorApp.updateStatsUI();
+            applyLiveProgressionToAdventure();
+        }
+
+        document.getElementById('btnOpenShopHeader')?.addEventListener('click', () => {
+            sound.playSelect();
+            openShopModal('all');
+        });
+        document.getElementById('btnStartShop')?.addEventListener('click', () => {
+            sound.playSelect();
+            openShopModal('all');
+        });
+        document.getElementById('btnOpenShopForge')?.addEventListener('click', () => {
+            sound.playSelect();
+            openShopModal('all');
+        });
+        document.getElementById('btnOpenShopAdventure')?.addEventListener('click', () => {
+            sound.playSelect();
+            openShopModal('all');
+        });
+        document.getElementById('btnCloseShop')?.addEventListener('click', () => {
+            sound.playSelect();
+            closeShopModal();
+        });
+        document.getElementById('btnShopNewDelve')?.addEventListener('click', () => {
+            sound.playFanfare();
+            closeShopModal();
+            switchToAdventure();
+        });
+        document.getElementById('btnShopToForge')?.addEventListener('click', () => {
+            sound.playSelect();
+            closeShopModal();
+            switchToCreator();
+        });
+        shopModal?.addEventListener('click', (e) => {
+            if (e.target === shopModal) {
+                sound.playSelect();
+                closeShopModal();
+            }
+        });
+
+        // ==========================================
         // SCREEN NAVIGATION & ADVENTURE LAUNCH
         // ==========================================
         const btnEnterDungeon = document.getElementById('btnEnterDungeon');
@@ -2562,6 +3673,7 @@
             if (combatModal) combatModal.style.display = 'none';
             if (victoryModal) victoryModal.style.display = 'none';
             if (loreModal) loreModal.style.display = 'none';
+            if (shopModal) shopModal.style.display = 'none';
             if (combatStage3D) combatStage3D.stop();
             combatState = null;
             currentEncounter = null;
@@ -2570,6 +3682,9 @@
         }
 
         function switchToTitle() {
+            if (currentMode === 'adventure' && (playerStats.gold > playerStats.bankedGold || playerStats.xp > playerStats.bankedXp)) {
+                bankCurrentDelveRewards('retreat');
+            }
             currentMode = 'start';
             hideAllModals();
             mainHeader.style.display = 'none';
@@ -2584,10 +3699,14 @@
                 viewportAdventure.innerHTML = '';
             }
             titleScene.setActive(true);
+            updateProgressionBadges();
             music.playTrack('title', { reset: false });
         }
 
         function switchToAdventure() {
+            if (currentMode === 'adventure' && (playerStats.gold > playerStats.bankedGold || playerStats.xp > playerStats.bankedXp)) {
+                bankCurrentDelveRewards('retreat');
+            }
             currentMode = 'adventure';
             hideAllModals();
             mainHeader.style.display = 'flex';
@@ -2601,15 +3720,17 @@
             creatorApp.setActive(false);
             music.playTrack('crypt', { reset: true });
 
-            // Full Run Reset
+            // Full Run Reset (applying persistent Progression weapon/armor/ancestry stat boosts!)
             const conf = creatorApp.config;
-            const stats = calculateStats(conf.ancestry, conf.charClass);
+            const stats = calculateStats(conf.ancestry, conf.charClass, progression);
             playerStats.maxHp = stats.maxHp;
             playerStats.currentHp = stats.maxHp;
             playerStats.maxMp = stats.maxMp;
             playerStats.currentMp = stats.maxMp;
             playerStats.gold = 0;
             playerStats.xp = 0;
+            playerStats.bankedGold = 0;
+            playerStats.bankedXp = 0;
             playerStats.inventory = [];
             playerStats.consumables = ['Lesser Healing Potion', 'Mana Draught'];
 
@@ -2621,6 +3742,7 @@
             document.getElementById('advHeroName').textContent = conf.name;
             document.getElementById('advHeroClass').textContent = `${stats.ancestry.name} ${stats.charClass.name}`;
             updateAdventureHUD();
+            updateProgressionBadges();
 
             // Dispose previous adventure instance & rebuild for updated hero
             if (adventureApp) {
@@ -2666,6 +3788,9 @@
         }
 
         function switchToCreator() {
+            if (currentMode === 'adventure' && (playerStats.gold > playerStats.bankedGold || playerStats.xp > playerStats.bankedXp)) {
+                bankCurrentDelveRewards('retreat');
+            }
             currentMode = 'creator';
             hideAllModals();
             mainHeader.style.display = 'flex';
@@ -2681,8 +3806,11 @@
                 adventureApp = null;
                 viewportAdventure.innerHTML = '';
             }
+            syncAncestryCardsUI();
+            creatorApp.updateStatsUI();
             creatorApp.setActive(true);
             creatorApp.resize();
+            updateProgressionBadges();
             music.playTrack('title', { reset: false });
         }
 
@@ -2757,7 +3885,7 @@
             encOptionsList.innerHTML = '';
 
             const conf = creatorApp.config;
-            const stats = calculateStats(conf.ancestry, conf.charClass);
+            const stats = calculateStats(conf.ancestry, conf.charClass, progression);
 
             enc.options.forEach(opt => {
                 const statVal = stats[opt.stat] || 10;
@@ -2860,6 +3988,9 @@
                         if (opt.reward) {
                             if (opt.reward.gold) playerStats.gold += opt.reward.gold;
                             if (opt.reward.xp) playerStats.xp += opt.reward.xp;
+                            if (opt.reward.gold || opt.reward.xp) {
+                                bankCurrentDelveRewards('mid_run');
+                            }
                             if (opt.reward.item) {
                                 playerStats.inventory.push(opt.reward.item);
                                 applyPassiveItemBonuses(opt.reward.item);
@@ -2957,6 +4088,7 @@
         const btnDismissCombat = document.getElementById('btnDismissCombat');
 
         const btnTabAttack = document.getElementById('btnTabAttack');
+        const btnTabSpells = document.getElementById('btnTabSpells');
         const btnTabDefend = document.getElementById('btnTabDefend');
         const btnTabItems = document.getElementById('btnTabItems');
         const btnTabFlee = document.getElementById('btnTabFlee');
@@ -2968,12 +4100,13 @@
         function startCombatEncounter(enc) {
             const monsterTemplate = MONSTERS[enc.monsterId] || MONSTERS.skeleton;
             const conf = creatorApp.config;
-            const stats = calculateStats(conf.ancestry, conf.charClass);
+            const stats = calculateStats(conf.ancestry, conf.charClass, progression);
 
-            // Compute player AC: base 10 + AGI mod + (Warrior shield/armor bonus = +4, Mage ward = +2)
+            // Compute player AC: base 10 + AGI mod + Class bonus + Equipped Armor AC bonus
             const agiMod = getStatModifier(stats.agi);
             const classAcBonus = conf.charClass === 'warrior' ? 4 : 2;
-            const basePlayerAc = 10 + agiMod + classAcBonus;
+            const armorAcBonus = stats.acBonus || 0;
+            const basePlayerAc = 10 + agiMod + classAcBonus + armorAcBonus;
 
             combatState = {
                 encounterId: enc.id,
@@ -2981,7 +4114,8 @@
                 monster: {
                     ...monsterTemplate,
                     currentHp: monsterTemplate.maxHp,
-                    isDefending: false
+                    isDefending: false,
+                    chillPenalty: 0
                 },
                 player: {
                     name: conf.name,
@@ -3080,20 +4214,38 @@
             if (!combatState) return;
             combatState.currentTab = tabKey;
 
-            [btnTabAttack, btnTabDefend, btnTabItems, btnTabFlee].forEach(btn => btn.classList.remove('active'));
+            [btnTabAttack, btnTabSpells, btnTabDefend, btnTabItems, btnTabFlee].forEach(btn => {
+                if (btn) btn.classList.remove('active');
+            });
 
-            if (tabKey === 'attack') btnTabAttack.classList.add('active');
-            if (tabKey === 'defend') btnTabDefend.classList.add('active');
-            if (tabKey === 'items') btnTabItems.classList.add('active');
-            if (tabKey === 'flee') btnTabFlee.classList.add('active');
+            if (tabKey === 'attack' && btnTabAttack) btnTabAttack.classList.add('active');
+            if (tabKey === 'spells' && btnTabSpells) btnTabSpells.classList.add('active');
+            if (tabKey === 'defend' && btnTabDefend) btnTabDefend.classList.add('active');
+            if (tabKey === 'items' && btnTabItems) btnTabItems.classList.add('active');
+            if (tabKey === 'flee' && btnTabFlee) btnTabFlee.classList.add('active');
 
             renderCombatSubmenu();
         }
 
         btnTabAttack.addEventListener('click', () => { sound.playSelect(); switchCombatTab('attack'); });
+        if (btnTabSpells) btnTabSpells.addEventListener('click', () => { sound.playSelect(); switchCombatTab('spells'); });
         btnTabDefend.addEventListener('click', () => { sound.playSelect(); switchCombatTab('defend'); });
         btnTabItems.addEventListener('click', () => { sound.playSelect(); switchCombatTab('items'); });
         btnTabFlee.addEventListener('click', () => { sound.playSelect(); switchCombatTab('flee'); });
+
+        function appendOwnedSpellButtons(container) {
+            const ownedSpells = progression.getOwnedSpells();
+            ownedSpells.forEach((spell) => {
+                const spellBtn = document.createElement('button');
+                spellBtn.className = 'combat-action-btn';
+                spellBtn.dataset.spellId = spell.id;
+                spellBtn.disabled = playerStats.currentMp < spell.mpCost;
+                spellBtn.innerHTML = `<span>${spell.icon} ${spell.name}</span> <span class="combat-action-cost">${spell.mpCost} MP | Spell</span>`;
+                spellBtn.addEventListener('click', () => executePlayerSpell(spell.id));
+                container.appendChild(spellBtn);
+            });
+            return ownedSpells.length;
+        }
 
         function renderCombatSubmenu() {
             combatSubmenu.innerHTML = '';
@@ -3106,21 +4258,22 @@
             const strMod = getStatModifier(stats.str);
             const agiMod = getStatModifier(stats.agi);
             const intMod = getStatModifier(stats.int);
+            const wpnHit = stats.attackBonus || 0;
 
             if (combatState.currentTab === 'attack') {
-                // 1. Basic Strike
+                // 1. Basic Strike (always index 0)
                 const basicBtn = document.createElement('button');
                 basicBtn.className = 'combat-action-btn';
                 if (charClass === 'warrior') {
-                    basicBtn.innerHTML = `<span>⚔️ Weapon Strike</span> <span class="combat-action-cost">+${strMod} vs AC</span>`;
+                    basicBtn.innerHTML = `<span>⚔️ Weapon Strike</span> <span class="combat-action-cost">+${strMod + wpnHit} vs AC</span>`;
                     basicBtn.addEventListener('click', () => executePlayerAttack('basic_melee'));
                 } else {
-                    basicBtn.innerHTML = `<span>🪄 Arcane Bolt</span> <span class="combat-action-cost">+${intMod} vs AC</span>`;
+                    basicBtn.innerHTML = `<span>🪄 Arcane Bolt</span> <span class="combat-action-cost">+${intMod + wpnHit} vs AC</span>`;
                     basicBtn.addEventListener('click', () => executePlayerAttack('basic_magic'));
                 }
                 combatSubmenu.appendChild(basicBtn);
 
-                // 2. Class Special Technique (Costs MP)
+                // 2. Class Special Technique (always index 1)
                 const specialBtn = document.createElement('button');
                 specialBtn.className = 'combat-action-btn';
                 if (charClass === 'warrior') {
@@ -3137,6 +4290,15 @@
                     specialBtn.addEventListener('click', () => executePlayerAttack('special_firebolt', mpCost));
                 }
                 combatSubmenu.appendChild(specialBtn);
+
+                // 3. Any learned Shop Spells (index 2+)
+                appendOwnedSpellButtons(combatSubmenu);
+
+            } else if (combatState.currentTab === 'spells') {
+                const count = appendOwnedSpellButtons(combatSubmenu);
+                if (count === 0) {
+                    combatSubmenu.innerHTML = `<span style="color:var(--text-muted); font-size:1.2rem; padding:6px;">No grimoire spells learned yet! Unlock Frost Nova, Arcane Missile Volley, Crimson Soul Drain, or Phusza Storm Strike in the After-Delve Shop.</span>`;
+                }
 
             } else if (combatState.currentTab === 'defend') {
                 const defendBtn = document.createElement('button');
@@ -3206,40 +4368,45 @@
             }
 
             const { stats, charClass } = combatState.player;
-            const statBonus = charClass === 'warrior' ? getStatModifier(stats.str) : getStatModifier(stats.int);
+            const baseStatBonus = charClass === 'warrior' ? getStatModifier(stats.str) : getStatModifier(stats.int);
+            const weaponAtkBonus = stats.attackBonus || 0;
+            const weaponDmgBonus = stats.damageBonus || 0;
+            const critThreshold = stats.critThreshold || 20;
+            const statBonus = baseStatBonus + weaponAtkBonus;
             const targetAc = combatState.monster.ac;
 
             if (combatStage3D) combatStage3D.playHeroAttack(type);
 
             rollCombatD20(statBonus, (d20) => {
                 if (!combatState) return;
-                const isHit = (!d20.isNat1 && (d20.isNat20 || d20.total >= targetAc));
+                const isCrit = d20.rawRoll >= critThreshold;
+                const isHit = (!d20.isNat1 && (isCrit || d20.total >= targetAc));
 
                 if (isHit) {
-                    if (combatStage3D) combatStage3D.playMonsterHit(d20.isNat20);
+                    if (combatStage3D) combatStage3D.playMonsterHit(isCrit);
                     let dmgTotal = 0;
                     let formulaDesc = '';
 
                     if (type === 'basic_melee') {
                         sound.playSlash();
-                        const dmg = rollDiceFormula(d20.isNat20 ? 2 : 1, 8, Math.max(1, statBonus));
+                        const dmg = rollDiceFormula(isCrit ? 2 : 1, 8, Math.max(1, baseStatBonus) + weaponDmgBonus);
                         dmgTotal = dmg.total;
-                        formulaDesc = `${dmg.rolls.join('+')} + ${statBonus}`;
+                        formulaDesc = `${dmg.rolls.join('+')} + ${Math.max(1, baseStatBonus) + weaponDmgBonus}`;
                     } else if (type === 'basic_magic') {
                         sound.playSpellCast();
-                        const dmg = rollDiceFormula(d20.isNat20 ? 2 : 1, 8, Math.max(1, statBonus));
+                        const dmg = rollDiceFormula(isCrit ? 2 : 1, 8, Math.max(1, baseStatBonus) + weaponDmgBonus);
                         dmgTotal = dmg.total;
-                        formulaDesc = `${dmg.rolls.join('+')} + ${statBonus}`;
+                        formulaDesc = `${dmg.rolls.join('+')} + ${Math.max(1, baseStatBonus) + weaponDmgBonus}`;
                     } else if (type === 'special_cleave') {
                         sound.playSlash();
-                        const dmg = rollDiceFormula(d20.isNat20 ? 4 : 2, 8, statBonus * 2);
+                        const dmg = rollDiceFormula(isCrit ? 4 : 2, 8, baseStatBonus * 2 + weaponDmgBonus);
                         dmgTotal = dmg.total;
-                        formulaDesc = `${dmg.rolls.join('+')} + ${statBonus * 2}`;
+                        formulaDesc = `${dmg.rolls.join('+')} + ${baseStatBonus * 2 + weaponDmgBonus}`;
                     } else if (type === 'special_firebolt') {
                         sound.playSpellCast();
-                        const dmg = rollDiceFormula(d20.isNat20 ? 4 : 2, 10, statBonus * 2);
+                        const dmg = rollDiceFormula(isCrit ? 4 : 2, 10, baseStatBonus * 2 + weaponDmgBonus);
                         dmgTotal = dmg.total;
-                        formulaDesc = `${dmg.rolls.join('+')} + ${statBonus * 2}`;
+                        formulaDesc = `${dmg.rolls.join('+')} + ${baseStatBonus * 2 + weaponDmgBonus}`;
                     }
 
                     combatState.monster.currentHp = Math.max(0, combatState.monster.currentHp - dmgTotal);
@@ -3248,7 +4415,7 @@
                     void enemyCard.offsetWidth;
                     enemyCard.classList.add('combat-anim-shake', 'combat-anim-flash');
 
-                    if (d20.isNat20) {
+                    if (isCrit) {
                         addCombatLog(`🌟 CRITICAL HIT! D20 (${d20.rawRoll}) + ${statBonus} = ${d20.total} vs AC ${targetAc}! Smashed for ${dmgTotal} DAMAGE (${formulaDesc})!`, 'crit');
                     } else {
                         addCombatLog(`⚔️ HIT! D20 (${d20.rawRoll}) + ${statBonus} = ${d20.total} vs AC ${targetAc}! Dealt ${dmgTotal} damage (${formulaDesc})!`, 'dmg');
@@ -3265,6 +4432,71 @@
 
                 updateCombatHUD();
 
+                setTimeout(() => {
+                    checkCombatEndOrPassTurn();
+                }, 900);
+            });
+        }
+
+        function executePlayerSpell(spellId) {
+            if (!combatState || combatState.busy) return;
+            const spellRes = resolvePlayerSpell(
+                spellId,
+                { ...combatState.player.stats, currentMp: playerStats.currentMp },
+                combatState.monster
+            );
+            if (!spellRes.ok) return;
+
+            combatState.busy = true;
+            renderCombatSubmenu();
+
+            playerStats.currentMp = Math.max(0, playerStats.currentMp - spellRes.mpCost);
+            updateCombatHUD();
+
+            const { stats } = combatState.player;
+            const atkMod = getStatModifier(stats.int) + (stats.attackBonus || 0);
+            const targetAc = combatState.monster.ac;
+
+            if (combatStage3D) combatStage3D.playHeroAttack(spellId);
+            sound.playSpellCast();
+
+            rollCombatD20(atkMod, (d20) => {
+                if (!combatState) return;
+                const isCrit = d20.isNat20;
+                const isHit = spellRes.autoHit || (!d20.isNat1 && (isCrit || d20.total >= targetAc));
+
+                if (isHit) {
+                    if (combatStage3D) combatStage3D.playMonsterHit(isCrit);
+                    const finalDmg = isCrit ? Math.round(spellRes.damage * 1.5) : spellRes.damage;
+                    combatState.monster.currentHp = Math.max(0, combatState.monster.currentHp - finalDmg);
+
+                    const enemyCard = document.getElementById('combatEnemyCard');
+                    enemyCard.classList.remove('combat-anim-shake', 'combat-anim-flash');
+                    void enemyCard.offsetWidth;
+                    enemyCard.classList.add('combat-anim-shake', 'combat-anim-flash');
+
+                    addCombatLog(
+                        `${spellRes.spell.icon} ${spellRes.spell.name} strikes ${combatState.monster.name} for ${finalDmg} DAMAGE (${spellRes.formulaDesc})!`,
+                        isCrit ? 'crit' : 'dmg'
+                    );
+
+                    if (spellRes.healAmount > 0) {
+                        const healAmt = isCrit ? Math.round(spellRes.healAmount * 1.5) : spellRes.healAmount;
+                        playerStats.currentHp = Math.min(playerStats.maxHp, playerStats.currentHp + healAmt);
+                        if (combatStage3D) combatStage3D.playHeroHeal('heal_hp');
+                        addCombatLog(`🩸 ${spellRes.spell.name} siphoned +${healAmt} HP to you!`, 'heal');
+                    }
+
+                    if (spellRes.chillPenalty > 0) {
+                        combatState.monster.chillPenalty = spellRes.chillPenalty;
+                        addCombatLog(`❄️ ${combatState.monster.name} is Chilled (-${spellRes.chillPenalty} Attack next turn)!`, 'guard');
+                    }
+                } else {
+                    sound.playHit();
+                    addCombatLog(`🛡️ ${spellRes.spell.name} resisted! D20 (${d20.rawRoll}) + ${atkMod} = ${d20.total} vs AC ${targetAc}.`, 'info');
+                }
+
+                updateCombatHUD();
                 setTimeout(() => {
                     checkCombatEndOrPassTurn();
                 }, 900);
@@ -3389,8 +4621,11 @@
 
             const mon = combatState.monster;
             const action = chooseMonsterAction(mon, combatState.round);
-            const atkBonus = action.attackBonus;
+            const chillPenalty = mon.chillPenalty || 0;
+            mon.chillPenalty = 0;
+            const atkBonus = Math.max(0, action.attackBonus - chillPenalty);
             const playerAc = combatState.player.effectiveAc;
+            const armorReduction = combatState.player.stats.damageReduction || 0;
 
             if (action.isSpecial) {
                 sound.playMonsterGrowl();
@@ -3410,7 +4645,7 @@
                     if (combatStage3D) combatStage3D.playHeroHit(combatState.player.isDefending);
                     const dice = action.damageDice || mon.damageDice;
                     let dmgResult = rollDiceFormula(d20.isNat20 ? dice.count * 2 : dice.count, dice.sides, dice.mod);
-                    let finalDmg = dmgResult.total;
+                    let finalDmg = Math.max(1, dmgResult.total - armorReduction);
 
                     // Half damage if player was in Defend Guard stance
                     if (combatState.player.isDefending) {
@@ -3464,6 +4699,7 @@
             const mon = combatState.monster;
             playerStats.xp += mon.xpReward;
             playerStats.gold += mon.goldReward;
+            bankCurrentDelveRewards('mid_run');
 
             let lootAwarded = [];
             if (mon.loot) {
@@ -3496,6 +4732,7 @@
             sound.playFailure();
             combatState.turn = 'ended';
             combatState.outcome = 'defeat';
+            bankCurrentDelveRewards('defeat');
             updateCombatHUD();
 
             addCombatLog(`💀 DEFEATED! Your vision fades as the crypt claims your bones...`, 'dmg');

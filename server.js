@@ -2,6 +2,11 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import {
+    HTTPCookie,
+    createDefaultProgressionState,
+    sanitizeProgressionState
+} from './js/progression.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,8 +27,86 @@ const MIME_TYPES = {
     '.mp3': 'audio/mpeg'
 };
 
-const server = http.createServer((req, res) => {
-    let reqUrl = req.url.split('?')[0];
+export function handleRequest(req, res) {
+    let reqUrl = (req.url || '/').split('?')[0];
+
+    if (reqUrl === '/api/progression') {
+        const cookieHeader = req.headers?.cookie || '';
+
+        if (req.method === 'GET') {
+            const state = HTTPCookie.loadProgression(cookieHeader);
+            const setCookies = HTTPCookie.toSetCookieHeaders(state);
+            res.writeHead(200, {
+                'Content-Type': 'application/json; charset=utf-8',
+                'Cache-Control': 'no-cache',
+                'Set-Cookie': setCookies
+            });
+            res.end(JSON.stringify({ ok: true, state }));
+            return;
+        }
+
+        if (req.method === 'POST') {
+            let bodyStr = '';
+            req.on('data', (chunk) => {
+                bodyStr += chunk.toString('utf8');
+                if (bodyStr.length > 65536) {
+                    req.destroy();
+                }
+            });
+            req.on('end', () => {
+                let parsedBody = {};
+                if (bodyStr.trim()) {
+                    try {
+                        parsedBody = JSON.parse(bodyStr);
+                    } catch {
+                        res.writeHead(400, {
+                            'Content-Type': 'application/json; charset=utf-8',
+                            'Cache-Control': 'no-cache'
+                        });
+                        res.end(JSON.stringify({ ok: false, error: 'Invalid JSON body' }));
+                        return;
+                    }
+                }
+
+                let nextState;
+                if (parsedBody && parsedBody.action === 'reset') {
+                    nextState = createDefaultProgressionState();
+                } else {
+                    const current = HTTPCookie.loadProgression(cookieHeader);
+                    const incoming = (parsedBody && typeof parsedBody.state === 'object' && parsedBody.state !== null)
+                        ? parsedBody.state
+                        : parsedBody;
+                    nextState = sanitizeProgressionState({ ...current, ...incoming });
+                }
+
+                const setCookies = HTTPCookie.toSetCookieHeaders(nextState);
+                res.writeHead(200, {
+                    'Content-Type': 'application/json; charset=utf-8',
+                    'Cache-Control': 'no-cache',
+                    'Set-Cookie': setCookies
+                });
+                res.end(JSON.stringify({ ok: true, state: nextState }));
+            });
+            return;
+        }
+
+        if (req.method === 'DELETE') {
+            const resetState = createDefaultProgressionState();
+            const setCookies = HTTPCookie.toSetCookieHeaders(resetState);
+            res.writeHead(200, {
+                'Content-Type': 'application/json; charset=utf-8',
+                'Cache-Control': 'no-cache',
+                'Set-Cookie': setCookies
+            });
+            res.end(JSON.stringify({ ok: true, state: resetState }));
+            return;
+        }
+
+        res.writeHead(405, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ ok: false, error: 'Method Not Allowed' }));
+        return;
+    }
+
     if (reqUrl === '/') reqUrl = '/index.html';
 
     const safePath = path.normalize(decodeURIComponent(reqUrl)).replace(/^(\.\.[\/\\])+/, '');
@@ -47,9 +130,11 @@ const server = http.createServer((req, res) => {
         const stream = fs.createReadStream(filePath);
         stream.pipe(res);
     });
-});
+}
 
-function startServer(port) {
+export const server = http.createServer(handleRequest);
+
+export function startServer(port = DEFAULT_PORT) {
     server.once('error', (err) => {
         if (err.code === 'EADDRINUSE') {
             console.log(`Port ${port} in use, trying ${port + 1}...`);
@@ -67,4 +152,7 @@ function startServer(port) {
     });
 }
 
-startServer(DEFAULT_PORT);
+const isMainModule = process.argv[1] && path.resolve(process.argv[1]) === __filename;
+if (isMainModule) {
+    startServer(DEFAULT_PORT);
+}
