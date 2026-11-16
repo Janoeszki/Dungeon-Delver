@@ -691,10 +691,19 @@ export class DungeonWorldApp {
                 if (anim.torso) anim.torso.position.y = Math.abs(swing) * 0.06;
                 if (anim.cape) anim.cape.rotation.x = 0.28 + Math.abs(swing) * 0.12;
 
-                // Feline tail run-bob
+                // Feline tail run-bob & traveling wave
                 if (anim.tail) {
-                    anim.tail.rotation.x = -0.4 + Math.abs(swing) * 0.15;
-                    anim.tail.rotation.y = Math.sin(this.walkCycle * 0.5) * 0.35;
+                    anim.tail.rotation.x = -0.18 + Math.abs(swing) * 0.12;
+                    anim.tail.rotation.y = Math.sin(this.walkCycle * 0.5) * 0.25;
+                    const segs = anim.tail.userData.segments;
+                    if (segs) {
+                        for (let i = 0; i < segs.length; i++) {
+                            const seg = segs[i];
+                            const base = seg.userData.baseRot;
+                            seg.rotation.z = base.z + Math.sin(this.walkCycle * 0.8 - i * 0.65) * 0.12;
+                            seg.rotation.x = base.x + Math.cos(this.walkCycle - i * 0.5) * 0.08;
+                        }
+                    }
                 }
             }
 

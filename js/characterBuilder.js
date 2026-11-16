@@ -263,7 +263,7 @@ export class CharacterBuilder {
         let tail = null;
         if (effectiveAncestry === 'catfolk') {
             tail = this.buildCatTail();
-            tail.position.set(0, 0.22, -0.20);
+            tail.position.set(0, 0.25, -0.16);
             bodyGroup.add(tail);
         }
 
@@ -402,7 +402,7 @@ export class CharacterBuilder {
             });
 
             // Faceted OSRS Adventurer Cape
-            const cape = this.buildCape(w, 0.34 * w);
+            const cape = this.buildCape(w, 0.34 * w, race === 'catfolk');
             torso.add(cape);
         } else {
             // Mage Shoulder Mantle & Raised Back Arcane Collar
@@ -447,29 +447,38 @@ export class CharacterBuilder {
             torso.add(runeClasp);
 
             // Flowing Mage Back Cape / Stole
-            const cape = this.buildCape(w * 0.85, 0.26 * w);
+            const cape = this.buildCape(w * 0.85, 0.26 * w, race === 'catfolk');
             torso.add(cape);
         }
 
         return torso;
     }
 
-    buildCape(topFactor, bottomWidth) {
+    buildCape(topFactor, bottomWidth, isShortMantle = false) {
         const capeGroup = new THREE.Group();
         capeGroup.name = 'Cape';
         capeGroup.position.set(0, 0.85, -0.19);
 
+        const midY = isShortMantle ? -0.19 : -0.42;
+        const midWidth = isShortMantle ? bottomWidth * 0.82 : bottomWidth * 0.86;
+        const midZ = isShortMantle ? -0.05 : -0.09;
+        const endY = isShortMantle ? -0.38 : -0.82;
+        const endWidth = isShortMantle ? bottomWidth * 0.90 : bottomWidth;
+        const endZ = isShortMantle ? -0.08 : -0.15;
+        const tipY = isShortMantle ? -0.46 : -0.96;
+        const tipZ = isShortMantle ? -0.10 : -0.17;
+
         const bodyGeo = this.createLoftedPrism([
-            { y: -0.82, rx: bottomWidth, rz: 0.024, offsetZ: -0.15, twist: Math.PI / 4 },
-            { y: -0.42, rx: bottomWidth * 0.86, rz: 0.028, offsetZ: -0.09, twist: Math.PI / 4 },
+            { y: endY, rx: endWidth, rz: 0.024, offsetZ: endZ, twist: Math.PI / 4 },
+            { y: midY, rx: midWidth, rz: 0.028, offsetZ: midZ, twist: Math.PI / 4 },
             { y: 0.0, rx: 0.24 * topFactor, rz: 0.032, offsetZ: -0.02, twist: Math.PI / 4 }
         ], 4);
         capeGroup.add(new THREE.Mesh(bodyGeo, this.materials.cape));
 
         // Pointed OSRS Heraldic Cape Tail
         const tipGeo = this.createLoftedPrism([
-            { y: -0.96, rx: 0.03, rz: 0.015, offsetZ: -0.17, twist: Math.PI / 4 },
-            { y: -0.82, rx: bottomWidth, rz: 0.024, offsetZ: -0.15, twist: Math.PI / 4 }
+            { y: tipY, rx: 0.03, rz: 0.015, offsetZ: tipZ, twist: Math.PI / 4 },
+            { y: endY, rx: endWidth, rz: 0.024, offsetZ: endZ, twist: Math.PI / 4 }
         ], 4);
         capeGroup.add(new THREE.Mesh(tipGeo, this.materials.cape));
 
@@ -853,27 +862,50 @@ export class CharacterBuilder {
     buildCatTail() {
         const tailGroup = new THREE.Group();
         tailGroup.name = 'CatTail';
+        tailGroup.rotation.y = 0.26;
 
-        // 4-segment articulated hexagonal curved tail
-        const segments = [
-            { rTop: 0.052, rBot: 0.06, len: 0.24, y: -0.06, z: -0.08, rx: -0.75 },
-            { rTop: 0.046, rBot: 0.052, len: 0.24, y: 0.04, z: -0.22, rx: 0.15 },
-            { rTop: 0.04, rBot: 0.046, len: 0.24, y: 0.22, z: -0.26, rx: 0.48 }
+        // Chained 5-segment articulated S-curve hierarchy (fur base + contrasting brush tip)
+        const segmentSpecs = [
+            { len: 0.18, rBot: 0.058, rTop: 0.050, rx: -1.72, rz: -0.08, mat: this.materials.skin },
+            { len: 0.20, rBot: 0.050, rTop: 0.044, rx: 0.56, rz: -0.08, mat: this.materials.skin },
+            { len: 0.20, rBot: 0.044, rTop: 0.040, rx: 0.66, rz: -0.05, mat: this.materials.skin },
+            { len: 0.14, rBot: 0.040, rTop: 0.045, rx: 0.18, rz: 0.06, mat: this.materials.hair },
+            { len: 0.15, rBot: 0.045, rTop: 0.004, rx: -0.52, rz: 0.08, mat: this.materials.hair, isTip: true }
         ];
-        segments.forEach((seg) => {
-            const geo = this.makeFaceted(new THREE.CylinderGeometry(seg.rTop, seg.rBot, seg.len, 6));
-            const mesh = new THREE.Mesh(geo, this.materials.hair);
-            mesh.position.set(0, seg.y, seg.z);
-            mesh.rotation.x = seg.rx;
-            tailGroup.add(mesh);
+
+        const segments = [];
+        let parent = tailGroup;
+        let prevLen = 0;
+
+        segmentSpecs.forEach((spec) => {
+            const segGroup = new THREE.Group();
+            segGroup.position.set(0, prevLen, 0);
+            segGroup.rotation.set(spec.rx, 0, spec.rz);
+            segGroup.userData.baseRot = { x: spec.rx, y: 0, z: spec.rz };
+
+            const rings = spec.isTip
+                ? [
+                    { y: -spec.rBot * 0.45, rx: spec.rBot * 0.72, rz: spec.rBot * 0.72 },
+                    { y: 0, rx: spec.rBot, rz: spec.rBot },
+                    { y: spec.len * 0.35, rx: spec.rBot * 1.08, rz: spec.rBot * 1.08 },
+                    { y: spec.len, rx: spec.rTop, rz: spec.rTop }
+                ]
+                : [
+                    { y: -spec.rBot * 0.45, rx: spec.rBot * 0.72, rz: spec.rBot * 0.72 },
+                    { y: 0, rx: spec.rBot, rz: spec.rBot },
+                    { y: spec.len, rx: spec.rTop, rz: spec.rTop }
+                ];
+
+            const geo = this.createLoftedPrism(rings, 6);
+            segGroup.add(new THREE.Mesh(geo, spec.mat));
+
+            parent.add(segGroup);
+            segments.push(segGroup);
+            parent = segGroup;
+            prevLen = spec.len;
         });
 
-        const tipGeo = this.makeFaceted(new THREE.ConeGeometry(0.045, 0.16, 6));
-        const tip = new THREE.Mesh(tipGeo, this.materials.hair);
-        tip.position.set(0, 0.36, -0.20);
-        tip.rotation.x = 0.65;
-        tailGroup.add(tip);
-
+        tailGroup.userData.segments = segments;
         return tailGroup;
     }
 
@@ -1454,10 +1486,20 @@ export class CharacterBuilder {
         if (anim.leftArm) anim.leftArm.rotation.x = Math.sin(t * 1.8) * 0.05;
         if (anim.rightArm) anim.rightArm.rotation.x = -Math.sin(t * 1.8) * 0.05;
 
-        // Cat tail sway
+        // Cat tail S-wave sway
         if (anim.tail) {
-            anim.tail.rotation.y = Math.sin(t * 2.8) * 0.25;
-            anim.tail.rotation.z = Math.cos(t * 2.0) * 0.12;
+            anim.tail.rotation.x = Math.sin(t * 1.6) * 0.05;
+            anim.tail.rotation.y = 0.26 + Math.sin(t * 2.2) * 0.18;
+            anim.tail.rotation.z = Math.cos(t * 1.8) * 0.06;
+            const segs = anim.tail.userData.segments;
+            if (segs) {
+                for (let i = 0; i < segs.length; i++) {
+                    const seg = segs[i];
+                    const base = seg.userData.baseRot;
+                    seg.rotation.z = base.z + Math.sin(t * 3.0 - i * 0.6) * 0.09;
+                    seg.rotation.x = base.x + Math.cos(t * 2.4 - i * 0.5) * 0.06;
+                }
+            }
         }
 
         // Mage staff crystal & off-hand orb spin
