@@ -2,6 +2,7 @@ import * as THREE from '../vendor/three.module.js';
 import { CharacterBuilder } from './characterBuilder.js';
 import { sound } from './audio.js';
 import { calculateStats, ANCESTRY_DATA, CLASS_DATA } from './stats.js';
+import { progression } from './progression.js';
 
 export class CharacterCreatorApp {
     constructor(canvasContainer, options = {}) {
@@ -48,6 +49,9 @@ export class CharacterCreatorApp {
         this.createParticles();
         this.setupEventListeners();
         this.rebuildCharacter();
+        this._unsubProgression = progression.onChange(() => {
+            this.updateStatsUI();
+        });
         if (this.active) {
             this.animate();
         }
@@ -198,7 +202,8 @@ export class CharacterCreatorApp {
     }
 
     updateStatsUI() {
-        const stats = calculateStats(this.config.ancestry || this.config.race, this.config.charClass);
+        const ancestryKey = this.config.ancestry || this.config.race || 'human';
+        const stats = calculateStats(ancestryKey, this.config.charClass, progression);
 
         const elName = document.getElementById('heroNameBadge');
         if (elName) elName.textContent = this.config.name || 'Hero';
@@ -221,13 +226,44 @@ export class CharacterCreatorApp {
         if (elAbilityTitle) elAbilityTitle.textContent = `${stats.charClass.icon} ${stats.charClass.name} Signature`;
         if (elAbilityDesc) elAbilityDesc.textContent = stats.charClass.signature;
 
-        // Stat Bars & Numbers
-        this.setStatDisplay('statHp', stats.maxHp, 250);
-        this.setStatDisplay('statMp', stats.maxMp, 200);
-        this.setStatDisplay('statStr', stats.str, 25);
-        this.setStatDisplay('statAgi', stats.agi, 25);
-        this.setStatDisplay('statInt', stats.int, 25);
-        this.setStatDisplay('statVit', stats.vit, 25);
+        // Stat Bars & Numbers (reflecting EXP-boosted Ancestry stats + Equipped Weapon/Armor)
+        this.setStatDisplay('statHp', stats.maxHp, 350);
+        this.setStatDisplay('statMp', stats.maxMp, 400);
+        this.setStatDisplay('statStr', stats.str, 30);
+        this.setStatDisplay('statAgi', stats.agi, 30);
+        this.setStatDisplay('statInt', stats.int, 30);
+        this.setStatDisplay('statVit', stats.vit, 30);
+
+        // Optional EXP Stat Boost & Loadout Badges in Character Forge
+        const boosts = stats.statBoosts || { str: 0, agi: 0, int: 0, vit: 0 };
+        const totalBoosts = (boosts.str || 0) + (boosts.agi || 0) + (boosts.int || 0) + (boosts.vit || 0);
+        const elBoostSummary = document.getElementById('forgeAncestryBoostSummary');
+        if (elBoostSummary) {
+            if (totalBoosts > 0) {
+                const parts = [];
+                if (boosts.str > 0) parts.push(`+${boosts.str} STR`);
+                if (boosts.vit > 0) parts.push(`+${boosts.vit} VIT`);
+                if (boosts.agi > 0) parts.push(`+${boosts.agi} AGI`);
+                if (boosts.int > 0) parts.push(`+${boosts.int} INT`);
+                elBoostSummary.textContent = `⭐ ${ancestryObj.name} EXP Boosts Active: ${parts.join(', ')}`;
+                elBoostSummary.style.color = '#4ade80';
+            } else {
+                elBoostSummary.textContent = `⭐ ${ancestryObj.name} EXP Boosts: +0 (Upgrade with EXP in Shop)`;
+                elBoostSummary.style.color = '#94a3b8';
+            }
+        }
+
+        const elLoadoutSummary = document.getElementById('forgeLoadoutSummary');
+        if (elLoadoutSummary) {
+            const wpn = stats.equippedWeapon;
+            const arm = stats.equippedArmor;
+            const spells = progression.getOwnedSpells();
+            const spellText = spells.length > 0 ? spells.map((s) => s.name).join(', ') : 'None';
+            elLoadoutSummary.innerHTML =
+                `<div>⚔️ Weapon: <strong style="color:#ffcf40;">${wpn.name}</strong></div>` +
+                `<div>🛡️ Armor: <strong style="color:#38bdf8;">${arm.name}</strong></div>` +
+                `<div>✨ Spells (${spells.length}): <strong style="color:#c084fc;">${spellText}</strong></div>`;
+        }
     }
 
     setStatDisplay(elementId, value, max) {

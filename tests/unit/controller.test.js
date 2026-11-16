@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const indexHtmlPath = path.resolve(__dirname, '../../index.html');
 const indexHtml = fs.readFileSync(indexHtmlPath, 'utf8');
+const creatorJsPath = path.resolve(__dirname, '../../js/characterCreator.js');
+const creatorJs = fs.readFileSync(creatorJsPath, 'utf8');
 
 describe('M5 — index.html Controller & Markup Contracts', () => {
     it('contains all required Floor 1 DOM IDs and overlays', () => {
@@ -21,12 +23,32 @@ describe('M5 — index.html Controller & Markup Contracts', () => {
             'victoryStory',
             'victorySummaryBox',
             'victoryStatsLine',
+            'victoryBankLine',
             'victoryRoomsLine',
+            'btnVictoryShop',
             'btnPlayAgain',
             'btnVictoryTitle',
+            'shopModal',
+            'shopGoldBalance',
+            'shopExpBalance',
+            'shopArmorList',
+            'shopWeaponsList',
+            'shopSpellsList',
+            'shopAncestriesList',
+            'shopStatAncestryTabs',
+            'shopFloor1StatPreview',
+            'shopStatUpgradeGrid',
+            'btnOpenShopHeader',
+            'btnOpenShopForge',
+            'btnOpenShopAdventure',
+            'btnStartShop',
+            'btnCloseShop',
+            'btnShopNewDelve',
+            'btnShopToForge',
             'encounterModal',
             'btnDismissEncounter',
             'combatModal',
+            'btnTabSpells',
             'btnDismissCombat',
             'advLog',
             'advHpFill',
@@ -35,12 +57,40 @@ describe('M5 — index.html Controller & Markup Contracts', () => {
             'advMpText',
             'advGold',
             'advXp',
+            'advBankGold',
+            'advBankExp',
             'advItemSlot'
         ];
 
         for (const id of requiredIds) {
             assert.match(indexHtml, new RegExp(`id=["']${id}["']`), `Missing required DOM element #${id}`);
         }
+    });
+
+    it('contains all 9 ancestries (6 starter + 3 shop unlockable) in Character Forge markup', () => {
+        const ancestries = [
+            'human', 'elf', 'dwarf', 'orc', 'goblin', 'catfolk',
+            'dragonborn', 'tiefling', 'golem'
+        ];
+        for (const anc of ancestries) {
+            assert.match(
+                indexHtml,
+                new RegExp(`data-ancestry=["']${anc}["']`),
+                `Missing data-ancestry="${anc}" card in Character Forge`
+            );
+        }
+    });
+
+    it('wires HTTPCookie progression, shop purchase actions, and Floor 1 / Combat progression stats', () => {
+        assert.match(indexHtml, /HTTPCookie/);
+        assert.match(indexHtml, /progression\.buyArmor\s*\(/);
+        assert.match(indexHtml, /progression\.buyWeapon\s*\(/);
+        assert.match(indexHtml, /progression\.buySpell\s*\(/);
+        assert.match(indexHtml, /progression\.buyAncestry\s*\(/);
+        assert.match(indexHtml, /progression\.buyAncestryStatBoost\s*\(/);
+        assert.match(indexHtml, /resolvePlayerSpell\s*\(/);
+        assert.match(indexHtml, /calculateStats\s*\(\s*conf\.ancestry\s*,\s*conf\.charClass\s*,\s*progression\s*\)/);
+        assert.match(creatorJs, /calculateStats\s*\(\s*ancestryKey\s*,\s*this\.config\.charClass\s*,\s*progression\s*\)/);
     });
 
     it('contains horror CSS classes (.log-msg.dread, .adventure-room-banner, .adventure-vignette, .low-hp-crimson, .damage-flash)', () => {

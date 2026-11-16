@@ -154,6 +154,9 @@ export class CharacterBuilder {
         if (race === 'dwarf') return 1.04;
         if (race === 'elf') return 0.94;
         if (race === 'catfolk') return 0.98;
+        if (race === 'dragonborn') return 1.06;
+        if (race === 'tiefling') return 0.97;
+        if (race === 'golem') return 1.14;
         return 1.0;
     }
 
@@ -163,6 +166,9 @@ export class CharacterBuilder {
         if (race === 'goblin') return 0.85;
         if (race === 'elf') return 0.92;
         if (race === 'catfolk') return 0.94;
+        if (race === 'dragonborn') return 1.15;
+        if (race === 'tiefling') return 0.96;
+        if (race === 'golem') return 1.28;
         return 1.0;
     }
 
@@ -256,6 +262,15 @@ export class CharacterBuilder {
             const catMuzzle = this.buildCatMuzzle();
             catMuzzle.position.set(0, 0.08, 0.25);
             headGroup.add(catMuzzle);
+        } else if (effectiveAncestry === 'dragonborn') {
+            const dragonFeatures = this.buildDragonbornFeatures(effectiveBodyType);
+            headGroup.add(dragonFeatures);
+        } else if (effectiveAncestry === 'tiefling') {
+            const tieflingFeatures = this.buildTieflingFeatures(effectiveBodyType);
+            headGroup.add(tieflingFeatures);
+        } else if (effectiveAncestry === 'golem') {
+            const golemFeatures = this.buildGolemFeatures(effectiveBodyType);
+            headGroup.add(golemFeatures);
         }
 
         // Universal Modular Facial Hair / Beard
@@ -278,9 +293,9 @@ export class CharacterBuilder {
         bodyGroup.add(limbs.leftLeg);
         bodyGroup.add(limbs.rightLeg);
 
-        // 7. Catfolk Tail
+        // 7. Tail (Catfolk, Dragonborn, Tiefling)
         let tail = null;
-        if (effectiveAncestry === 'catfolk') {
+        if (effectiveAncestry === 'catfolk' || effectiveAncestry === 'dragonborn' || effectiveAncestry === 'tiefling') {
             tail = this.buildCatTail();
             tail.position.set(0, 0.25, -0.16);
             bodyGroup.add(tail);
@@ -1262,6 +1277,74 @@ export class CharacterBuilder {
         return group;
     }
 
+    buildDragonbornFeatures(bodyType = 'a') {
+        const group = new THREE.Group();
+        group.name = 'DragonbornFeatures';
+        const isTypeB = bodyType === 'b';
+
+        // Sculpted draconic snout
+        const snoutGeo = this.createLoftedPrism([
+            { y: -0.04, rx: isTypeB ? 0.14 : 0.16, rz: 0.12, offsetZ: 0.24, twist: Math.PI / 6 },
+            { y: 0.08, rx: isTypeB ? 0.11 : 0.13, rz: 0.10, offsetZ: 0.30, twist: Math.PI / 6 }
+        ], 6);
+        group.add(new THREE.Mesh(snoutGeo, this.materials.skin));
+
+        // Swept back draconic horns
+        const hornGeo = this.makeFaceted(new THREE.ConeGeometry(0.055, 0.28, 5));
+        [-1, 1].forEach((side) => {
+            const horn = new THREE.Mesh(hornGeo, this.materials.armorGold);
+            horn.position.set(side * 0.20, 0.38, -0.04);
+            horn.rotation.set(-0.65, 0, -side * 0.38);
+            group.add(horn);
+        });
+
+        return group;
+    }
+
+    buildTieflingFeatures() {
+        const group = new THREE.Group();
+        group.name = 'TieflingFeatures';
+
+        // Curved infernal rams/swept horns
+        const baseGeo = this.makeFaceted(new THREE.CylinderGeometry(0.045, 0.065, 0.16, 5));
+        const tipGeo = this.makeFaceted(new THREE.ConeGeometry(0.046, 0.22, 5));
+        [-1, 1].forEach((side) => {
+            const horn = new THREE.Group();
+            horn.position.set(side * 0.18, 0.39, 0.08);
+            horn.rotation.set(0.32, 0, -side * 0.52);
+
+            const base = new THREE.Mesh(baseGeo, this.materials.tusks);
+            base.position.y = 0.06;
+            const tip = new THREE.Mesh(tipGeo, this.materials.tusks);
+            tip.position.set(-side * 0.02, 0.21, -0.03);
+            tip.rotation.set(-0.48, 0, side * 0.25);
+
+            horn.add(base, tip);
+            group.add(horn);
+        });
+
+        return group;
+    }
+
+    buildGolemFeatures() {
+        const group = new THREE.Group();
+        group.name = 'GolemFeatures';
+
+        // Glowing Phusza rune core on forehead
+        const runeGem = new THREE.Mesh(new THREE.OctahedronGeometry(0.055, 0), this.materials.magicCrystal);
+        runeGem.position.set(0, 0.31, 0.27);
+        group.add(runeGem);
+
+        // Stone crest plates
+        const crestGeo = this.createLoftedPrism([
+            { y: 0.34, rx: 0.07, rz: 0.20, offsetZ: -0.02 },
+            { y: 0.48, rx: 0.05, rz: 0.22, offsetZ: -0.04 }
+        ], 4);
+        group.add(new THREE.Mesh(crestGeo, this.materials.armorMetal));
+
+        return group;
+    }
+
     buildCatMuzzle() {
         const muzzleGroup = new THREE.Group();
         muzzleGroup.name = 'CatMuzzle';
@@ -2003,6 +2086,15 @@ export class CharacterBuilder {
         } else if (race === 'catfolk') {
             // Agile, tall, sleek feline
             modelRoot.scale.set(0.92, 1.08, 0.92);
+        } else if (race === 'dragonborn') {
+            // Regal, tall draconic warrior
+            modelRoot.scale.set(1.16, 1.14, 1.14);
+        } else if (race === 'tiefling') {
+            // Lithe, horned infernal spellblade
+            modelRoot.scale.set(0.96, 1.06, 0.96);
+        } else if (race === 'golem') {
+            // Massive runeforged construct
+            modelRoot.scale.set(1.32, 1.20, 1.28);
         } else {
             // Human: balanced standard
             modelRoot.scale.set(1.0, 1.0, 1.0);

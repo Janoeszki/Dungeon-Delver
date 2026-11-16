@@ -1,5 +1,9 @@
 import * as THREE from '../vendor/three.module.js';
 import { CharacterBuilder } from './characterBuilder.js';
+import { SHOP_SPELLS } from './progression.js';
+
+export { SHOP_SPELLS };
+export const SPELLS = SHOP_SPELLS;
 
 /**
  * Combat System & Monster Definitions for Dungeon Delver
@@ -233,6 +237,69 @@ export function chooseMonsterAction(monster, turnCount = 1, rng = null) {
         damageDice: { ...baseDice },
         multiplier,
         turnCount: safeTurn
+    };
+}
+
+/**
+ * Resolves a player-cast shop spell against a monster, computing damage, MP cost,
+ * lifesteal healing, chill penalties, and auto-hit semantics.
+ */
+export function resolvePlayerSpell(spellId, playerStatsObj = {}, monsterObj = {}) {
+    const spell = SHOP_SPELLS[spellId];
+    if (!spell) {
+        return { ok: false, reason: 'invalid_spell' };
+    }
+
+    if (
+        playerStatsObj &&
+        typeof playerStatsObj.currentMp === 'number' &&
+        Number.isFinite(playerStatsObj.currentMp) &&
+        playerStatsObj.currentMp < spell.mpCost
+    ) {
+        return {
+            ok: false,
+            reason: 'insufficient_mp',
+            spell,
+            mpCost: spell.mpCost
+        };
+    }
+
+    const rawInt = Number(playerStatsObj?.int ?? playerStatsObj?.stats?.int ?? 10);
+    const safeInt = Number.isFinite(rawInt) ? rawInt : 10;
+    const intMod = Math.floor((safeInt - 10) / 2);
+
+    const rawWeaponDmg = Number(playerStatsObj?.damageBonus ?? playerStatsObj?.stats?.damageBonus ?? 0);
+    const weaponBonus = Number.isFinite(rawWeaponDmg) ? Math.max(0, Math.floor(rawWeaponDmg)) : 0;
+
+    const diceRoll = rollDiceFormula(spell.dice.count, spell.dice.sides, spell.dice.mod);
+    const statBonus = spell.id === 'chronos_thunder'
+        ? Math.max(2, intMod * 2)
+        : Math.max(1, intMod);
+
+    const damage = Math.max(1, diceRoll.total + statBonus + weaponBonus);
+    const healAmount = spell.lifestealRatio
+        ? Math.max(1, Math.floor(damage * spell.lifestealRatio))
+        : 0;
+    const chillPenalty = spell.effect === 'chill' ? (spell.chillPenalty || 2) : 0;
+    const autoHit = Boolean(spell.autoHit);
+    const targetAc = Number.isFinite(monsterObj?.ac) ? monsterObj.ac : 12;
+
+    return {
+        ok: true,
+        spellId: spell.id,
+        spell,
+        mpCost: spell.mpCost,
+        damage,
+        diceRoll,
+        intMod,
+        statBonus,
+        weaponBonus,
+        healAmount,
+        chillPenalty,
+        autoHit,
+        targetAc,
+        effect: spell.effect || (healAmount > 0 ? 'lifesteal' : null),
+        formulaDesc: `${diceRoll.rolls.join('+')}+${spell.dice.mod} + ${statBonus}${weaponBonus > 0 ? ` + ${weaponBonus}` : ''}`
     };
 }
 
@@ -1362,10 +1429,19 @@ export class CombatStage3D {
     }
 
     playHeroAttack(type) {
-        const isMagic = type === 'basic_magic' || type === 'special_firebolt' || type === 'holy_water';
-        if (isMagic) {
+        const isSpell = Boolean(
+            type === 'basic_magic' ||
+            type === 'special_firebolt' ||
+            type === 'holy_water' ||
+            (typeof type === 'string' && (type.startsWith('spell_') || Object.hasOwn(SHOP_SPELLS, type)))
+        );
+        if (isSpell) {
             this.heroAnim = { kind: 'cast', t: 0, dur: 0.55 };
-            const color = type === 'special_firebolt' ? 0xf97316 : (type === 'holy_water' ? 0xfacc15 : 0x38bdf8);
+            let color = 0x38bdf8;
+            if (type === 'special_firebolt') color = 0xf97316;
+            else if (type === 'holy_water' || type === 'chronos_thunder' || type === 'spell_chronos_thunder') color = 0xfacc15;
+            else if (type === 'arcane_bolt_barrage' || type === 'spell_arcane_bolt_barrage') color = 0xc084fc;
+            else if (type === 'vampiric_drain' || type === 'spell_vampiric_drain') color = 0xef4444;
             this.spawnProjectile(this.heroPos, this.enemyPos, color);
         } else {
             this.heroAnim = {
