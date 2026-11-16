@@ -633,8 +633,8 @@
             background: #0d121c;
             border: 3px solid var(--gold-bright);
             border-radius: 8px;
-            width: 760px;
-            max-width: 95vw;
+            width: 820px;
+            max-width: 96vw;
             padding: 18px 22px;
             box-shadow: 0 0 50px rgba(245, 166, 35, 0.4), inset 0 0 30px rgba(0,0,0,0.8);
             display: flex;
@@ -643,22 +643,53 @@
         }
 
         .combat-stage {
-            display: grid;
-            grid-template-columns: 1fr auto 1fr;
-            align-items: center;
-            gap: 16px;
-            background: rgba(18, 24, 38, 0.9);
-            padding: 16px 20px;
+            height: 280px;
+            padding: 0;
+            position: relative;
+            display: block;
+            overflow: hidden;
+            background: #070a12;
             border: 2px solid var(--panel-border);
             border-radius: 6px;
-            position: relative;
-            overflow: hidden;
+        }
+
+        .combat-viewport-3d {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
         }
 
         .combatant-card {
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 4px;
+            backdrop-filter: blur(4px);
+            border-radius: 6px;
+            padding: 8px 12px;
+        }
+
+        #combatEnemyCard {
+            position: absolute;
+            top: 12px;
+            left: 14px;
+            width: 270px;
+            z-index: 2;
+            background: rgba(11, 15, 25, 0.88);
+            border: 2px solid #ef4444;
+            border-left: 5px solid #ef4444;
+        }
+
+        #combatHeroCard {
+            position: absolute;
+            bottom: 12px;
+            right: 14px;
+            width: 280px;
+            z-index: 2;
+            background: rgba(11, 15, 25, 0.88);
+            border: 2px solid var(--gold-bright);
+            border-right: 5px solid var(--gold-bright);
         }
 
         .combatant-name {
@@ -708,11 +739,17 @@
         }
 
         .combat-vs-divider {
+            position: absolute;
+            top: 12px;
+            right: 14px;
+            z-index: 2;
+            background: rgba(11, 15, 25, 0.82);
+            border: 1px solid var(--gold-border);
+            border-radius: 6px;
+            padding: 6px 12px;
             display: flex;
-            flex-direction: column;
             align-items: center;
-            justify-content: center;
-            padding: 0 10px;
+            gap: 10px;
         }
 
         .combat-turn-badge {
@@ -1725,7 +1762,9 @@
 
             <!-- Combat Stage: Hero vs Monster -->
             <div class="combat-stage" id="combatStage">
-                <!-- Hero Side -->
+                <div class="combat-viewport-3d" id="combatViewport3D"></div>
+
+                <!-- Hero Side (Bottom-Right Pokémon Plate) -->
                 <div class="combatant-card" id="combatHeroCard">
                     <div class="combatant-name" id="combatHeroName">🛡️ Hero</div>
                     <div class="combatant-stats-line">
@@ -1742,21 +1781,23 @@
                     <div class="combat-bar" style="height:12px;">
                         <div class="combat-bar-fill combat-mp-player" id="combatHeroMpBar"></div>
                     </div>
-                    <div style="font-size:1.1rem; color:var(--cyan-accent); margin-top:4px;" id="combatHeroBuffs">
+                    <div style="font-size:1.05rem; color:var(--cyan-accent); margin-top:2px;" id="combatHeroBuffs">
                         AC: <span id="combatHeroAc">14</span> | Stance: Normal
                     </div>
                 </div>
 
-                <!-- VS Center & Dice Tray -->
+                <!-- Top-Right Dice & Round Tray -->
                 <div class="combat-vs-divider">
-                    <span style="font-family:'Cinzel', serif; font-size:2rem; color:var(--gold-bright); text-shadow:0 0 10px rgba(245,166,35,0.6);">VS</span>
-                    <span id="combatRoundText" style="font-size:1.15rem; color:var(--text-muted);">Round 1</span>
-                    <div class="d20-icosahedron" id="combatD20" style="width:48px; height:48px; font-size:1.5rem; margin-top:8px;">
+                    <div style="display:flex; flex-direction:column; align-items:flex-end;">
+                        <span style="font-family:'Cinzel', serif; font-size:1.15rem; color:var(--gold-bright);">D20 ROLL</span>
+                        <span id="combatRoundText" style="font-size:1.05rem; color:var(--text-muted);">Round 1</span>
+                    </div>
+                    <div class="d20-icosahedron" id="combatD20" style="width:42px; height:42px; font-size:1.35rem;">
                         <span class="d20-num" id="combatD20Val">20</span>
                     </div>
                 </div>
 
-                <!-- Monster Side -->
+                <!-- Monster Side (Top-Left Pokémon Plate) -->
                 <div class="combatant-card" id="combatEnemyCard">
                     <div class="combatant-name" id="combatMonsterName">💀 Skeletal Vanguard</div>
                     <div class="combatant-stats-line">
@@ -1766,7 +1807,7 @@
                     <div class="combat-bar">
                         <div class="combat-bar-fill combat-hp-enemy" id="combatMonsterHpBar"></div>
                     </div>
-                    <div style="font-size:1.1rem; color:#f87171; margin-top:18px;" id="combatMonsterBuffs">
+                    <div style="font-size:1.0rem; color:#f87171; margin-top:4px; line-height:1.2;" id="combatMonsterBuffs">
                         AC: <span id="combatMonsterAc">12</span> | Undead Crypt Guard
                     </div>
                 </div>
@@ -1840,7 +1881,7 @@
         import { music } from './js/music.js';
         import { ANCESTRY_DATA, calculateStats } from './js/stats.js';
         import { rollD20, getStatModifier, formatModifier, animateDiceRoll } from './js/dice.js';
-        import { MONSTERS, CONSUMABLE_ITEMS, rollDiceFormula } from './js/combat.js';
+        import { MONSTERS, CONSUMABLE_ITEMS, rollDiceFormula, CombatStage3D } from './js/combat.js';
 
         // DOM Screen & Header References
         const mainHeader = document.getElementById('mainHeader');
@@ -2516,8 +2557,10 @@
         const btnTabDefend = document.getElementById('btnTabDefend');
         const btnTabItems = document.getElementById('btnTabItems');
         const btnTabFlee = document.getElementById('btnTabFlee');
+        const combatViewport3D = document.getElementById('combatViewport3D');
 
         let combatState = null;
+        let combatStage3D = null;
 
         function startCombatEncounter(enc) {
             const monsterTemplate = MONSTERS[enc.monsterId] || MONSTERS.skeleton;
@@ -2573,6 +2616,10 @@
             switchCombatTab('attack');
 
             combatModal.style.display = 'flex';
+            if (!combatStage3D) {
+                combatStage3D = new CombatStage3D(combatViewport3D);
+            }
+            combatStage3D.start(conf, combatState.monster.id);
             music.playTrack('crypt', { reset: false });
         }
 
@@ -2752,10 +2799,13 @@
             const statBonus = charClass === 'warrior' ? getStatModifier(stats.str) : getStatModifier(stats.int);
             const targetAc = combatState.monster.ac;
 
+            if (combatStage3D) combatStage3D.playHeroAttack(type);
+
             rollCombatD20(statBonus, (d20) => {
                 const isHit = (!d20.isNat1 && (d20.isNat20 || d20.total >= targetAc));
 
                 if (isHit) {
+                    if (combatStage3D) combatStage3D.playMonsterHit(d20.isNat20);
                     let dmgTotal = 0;
                     let formulaDesc = '';
 
@@ -2817,6 +2867,7 @@
 
             combatState.player.isDefending = true;
             combatState.player.effectiveAc = combatState.player.baseAc + 4;
+            if (combatStage3D) combatStage3D.setHeroDefending(true);
             // Minor stamina/mana recovery
             playerStats.currentMp = Math.min(playerStats.maxMp, playerStats.currentMp + 4);
 
@@ -2841,18 +2892,24 @@
                 sound.playPotionDrink();
                 const healed = Math.min(playerStats.maxHp - playerStats.currentHp, def.value);
                 playerStats.currentHp = Math.min(playerStats.maxHp, playerStats.currentHp + def.value);
+                if (combatStage3D) combatStage3D.playHeroHeal('heal_hp');
                 addCombatLog(`🍷 Drank ${itemName}! Restored +${healed} HP!`, 'heal');
 
             } else if (def && def.type === 'heal_mp') {
                 sound.playPotionDrink();
                 const healed = Math.min(playerStats.maxMp - playerStats.currentMp, def.value);
                 playerStats.currentMp = Math.min(playerStats.maxMp, playerStats.currentMp + def.value);
+                if (combatStage3D) combatStage3D.playHeroHeal('heal_mp');
                 addCombatLog(`🧪 Drank ${itemName}! Restored +${healed} MP!`, 'heal');
 
             } else if (def && def.type === 'damage_undead') {
                 sound.playSpellCast();
                 const dmg = def.value;
                 combatState.monster.currentHp = Math.max(0, combatState.monster.currentHp - dmg);
+                if (combatStage3D) {
+                    combatStage3D.playHeroAttack('holy_water');
+                    combatStage3D.playMonsterHit(true);
+                }
                 addCombatLog(`✨ Hurled ${itemName}! Smashed foe dealing ${dmg} Radiant Damage!`, 'crit');
             }
 
@@ -2873,6 +2930,7 @@
                     sound.playFlee();
                     addCombatLog(`🏃 Escape Succeeded! D20 (${d20.rawRoll}) + ${agiMod} = ${d20.total} vs DC 11. You slipped away into the shadows!`, 'heal');
                     setTimeout(() => {
+                        if (combatStage3D) combatStage3D.stop();
                         combatModal.style.display = 'none';
                         combatState = null;
                     }, 1100);
@@ -2920,12 +2978,14 @@
             const playerAc = combatState.player.effectiveAc;
 
             addCombatLog(`💀 ${mon.name} prepares to strike with ${mon.attackName}...`, 'info');
+            if (combatStage3D) combatStage3D.playEnemyAttack();
 
             rollCombatD20(atkBonus, (d20) => {
                 const isHit = (!d20.isNat1 && (d20.isNat20 || d20.total >= playerAc));
 
                 if (isHit) {
                     sound.playHit();
+                    if (combatStage3D) combatStage3D.playHeroHit(combatState.player.isDefending);
                     const dice = mon.damageDice;
                     let dmgResult = rollDiceFormula(d20.isNat20 ? dice.count * 2 : dice.count, dice.sides, dice.mod);
                     let finalDmg = dmgResult.total;
@@ -2957,6 +3017,7 @@
                 // Reset player defending stance at the end of enemy turn
                 combatState.player.isDefending = false;
                 combatState.player.effectiveAc = combatState.player.baseAc;
+                if (combatStage3D) combatStage3D.setHeroDefending(false);
                 combatState.round++;
                 combatState.turn = 'player';
                 combatState.busy = false;
@@ -2974,6 +3035,7 @@
         function handleCombatVictory() {
             sound.playFanfare();
             combatState.turn = 'ended';
+            if (combatStage3D) combatStage3D.playMonsterDefeat();
             updateCombatHUD();
 
             const mon = combatState.monster;
@@ -3003,6 +3065,7 @@
             combatActionsPanel.style.display = 'none';
             btnDismissCombat.style.display = 'block';
             btnDismissCombat.textContent = 'CLAIM VICTORY & CONTINUE';
+            btnDismissCombat.onclick = null;
         }
 
         function handleCombatDefeat() {
@@ -3018,6 +3081,7 @@
 
             btnDismissCombat.onclick = () => {
                 sound.playSelect();
+                if (combatStage3D) combatStage3D.stop();
                 combatModal.style.display = 'none';
                 // Revive player with half health
                 playerStats.currentHp = Math.floor(playerStats.maxHp / 2);
@@ -3032,6 +3096,7 @@
 
         btnDismissCombat.addEventListener('click', () => {
             sound.playSelect();
+            if (combatStage3D) combatStage3D.stop();
             combatModal.style.display = 'none';
             combatState = null;
         });
