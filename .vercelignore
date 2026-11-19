@@ -4,5 +4,5 @@ demo.json
 t.ps1
 t2.ps1
 t3.ps1
-.env*
+.env
 .git

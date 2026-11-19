@@ -8,7 +8,16 @@
     "start": "node server.js",
     "test": "node --test tests/unit/*.test.js"
   },
-  "keywords": ["threejs", "game", "dungeon-crawl", "point-and-click", "retro"],
+  "keywords": [
+    "threejs",
+    "game",
+    "dungeon-crawl",
+    "point-and-click",
+    "retro"
+  ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "mongodb": "^7.9.0"
+  }
 }
