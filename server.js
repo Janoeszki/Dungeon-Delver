@@ -27,7 +27,62 @@ const MIME_TYPES = {
     '.mp3': 'audio/mpeg'
 };
 
+const ROOT = path.resolve(__dirname);
+
+// Only these paths are served statically. Everything else (.git, server.js,
+// tests/, *.md, scripts) returns 404.
+const PUBLIC_FILES = new Set([
+    'index.html',
+    'dungeon_delver_logo_small.png',
+    'dungeon_delver_chronicles-of-phusza.png'
+]);
+const PUBLIC_DIRS = ['js', 'vendor'];
+
+const SECURITY_HEADERS = {
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'no-referrer',
+    'Content-Security-Policy': [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-inline'",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src https://fonts.gstatic.com",
+        "img-src 'self' data: blob:",
+        "media-src 'self' data: blob:",
+        "worker-src 'self' blob:",
+        "connect-src 'self'",
+        "object-src 'none'",
+        "base-uri 'self'",
+        "frame-ancestors 'none'"
+    ].join('; ')
+};
+
+// Returns an absolute path inside ROOT, or null if the URL is malformed or escapes ROOT.
+export function resolveSafe(reqUrl) {
+    let decoded;
+    try {
+        decoded = decodeURIComponent(reqUrl);
+    } catch {
+        return null;
+    }
+    if (decoded.includes('\0') || decoded.includes('\\')) return null;
+
+    const filePath = path.resolve(ROOT, '.' + decoded);
+    if (!filePath.startsWith(ROOT + path.sep)) return null;
+    return filePath;
+}
+
+function isPublic(filePath) {
+    const rel = path.relative(ROOT, filePath).split(path.sep);
+    if (rel.some((seg) => seg.startsWith('.'))) return false;
+    if (rel.length === 1) return PUBLIC_FILES.has(rel[0]);
+    return PUBLIC_DIRS.includes(rel[0]);
+}
+
 export function handleRequest(req, res) {
+    const origWriteHead = res.writeHead.bind(res);
+    res.writeHead = (status, headers = {}) => origWriteHead(status, { ...SECURITY_HEADERS, ...headers });
+
     let reqUrl = (req.url || '/').split('?')[0];
 
     if (reqUrl === '/api/progression') {
@@ -109,11 +164,15 @@ export function handleRequest(req, res) {
 
     if (reqUrl === '/') reqUrl = '/index.html';
 
-    const safePath = path.normalize(decodeURIComponent(reqUrl)).replace(/^(\.\.[\/\\])+/, '');
-    const filePath = path.join(__dirname, safePath);
+    const filePath = resolveSafe(reqUrl);
+    if (!filePath) {
+        res.writeHead(400, { 'Content-Type': 'text/plain' });
+        res.end('400 Bad Request');
+        return;
+    }
 
     fs.stat(filePath, (err, stats) => {
-        if (err || !stats.isFile()) {
+        if (err || !stats.isFile() || !isPublic(filePath)) {
             res.writeHead(404, { 'Content-Type': 'text/plain' });
             res.end('404 Not Found');
             return;
