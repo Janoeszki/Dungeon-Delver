@@ -1902,6 +1902,117 @@
             border-top: 2px solid var(--gold-border);
             padding-top: 8px;
         }
+
+        /* Interactive Puzzle Modal */
+        .puzzle-stage {
+            background: #090d18;
+            border: 2px solid #2d3c5c;
+            border-radius: 6px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .puzzle-clue-box {
+            background: #0d1424;
+            border-left: 3px solid #818cf8;
+            padding: 8px 12px;
+            font-size: 1.15rem;
+            color: #c7d2fe;
+        }
+
+        .puzzle-sequence-bar {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .puzzle-slot {
+            width: 56px;
+            height: 56px;
+            border: 2px dashed var(--panel-border);
+            background: #111827;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            color: var(--gold-bright);
+        }
+
+        .puzzle-slot.filled {
+            border-style: solid;
+            border-color: var(--cyan-accent);
+            background: #172554;
+        }
+
+        .puzzle-grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .puzzle-grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .puzzle-tile-btn {
+            background: #162036;
+            border: 2px solid #3b82f6;
+            color: var(--text-light);
+            font-family: 'VT323', monospace;
+            font-size: 1.25rem;
+            padding: 10px 8px;
+            cursor: pointer;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.14s ease;
+        }
+
+        .puzzle-tile-btn:hover:not(:disabled) {
+            background: #1e2d4d;
+            border-color: var(--gold-bright);
+        }
+
+        .puzzle-tile-btn.active {
+            border-color: var(--gold-bright);
+            background: #273454;
+            color: var(--gold-bright);
+            box-shadow: 0 0 12px rgba(245, 166, 35, 0.35);
+        }
+
+        .puzzle-tile-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .puzzle-status-banner {
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 1.15rem;
+            text-align: center;
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: var(--text-light);
+        }
+
+        .puzzle-status-banner.success {
+            background: rgba(20, 83, 45, 0.35);
+            border-color: #22c55e;
+            color: #4ade80;
+        }
+
+        .puzzle-status-banner.error {
+            background: rgba(127, 29, 29, 0.35);
+            border-color: #ef4444;
+            color: #fca5a5;
+        }
     </style>
 </head>
 <body>
@@ -2192,6 +2303,14 @@
                         <button class="retro-btn" id="btnOpenShopForge" style="justify-content:center; width:100%; margin-top:4px;">🏪 AFTER-DELVE SHOP &amp; UPGRADES</button>
                     </div>
 
+                    <div class="form-group" id="floorSelectGroup">
+                        <label class="form-label">Select Dungeon Floor</label>
+                        <div class="grid-select" id="floorSelectForge">
+                            <div class="select-card active" data-floor="1"><span class="icon">💀</span><span class="title">Floor 1: Crypt</span></div>
+                            <div class="select-card" data-floor="2"><span class="icon">🔮</span><span class="title">Floor 2: Arcanum</span></div>
+                        </div>
+                    </div>
+
                     <button class="primary-action-btn" id="btnEnterDungeon">
                         ⚔️ ENTER THE CRYPT ⚔️
                     </button>
@@ -2258,7 +2377,7 @@
                 <span class="encounter-icon">👑</span>
                 <div>
                     <h2 class="encounter-title" id="victoryTitle">FLOOR 1 COMPLETE: THE CHARNEL THRESHOLD</h2>
-                    <span style="color:var(--gold-bright); font-size:1.1rem;">Exit Seal Unbound • Crown of Eldoria Claimed</span>
+                    <span id="victorySubtitle" style="color:var(--gold-bright); font-size:1.1rem;">Exit Seal Unbound • Crown of Eldoria Claimed</span>
                 </div>
             </div>
 
@@ -2272,6 +2391,10 @@
                 <div id="victoryBankLine" style="color:#4ade80; font-size:1.15rem;">🍪 HTTPCookie Vault Total: 0 Gold | 0 EXP</div>
                 <div id="victoryRoomsLine" style="color:var(--cyan-accent); font-size:1.1rem;">Rooms Explored: 7 / 7</div>
             </div>
+
+            <button class="primary-action-btn" id="btnDescendFloor2" style="width:100%; padding:10px; font-size:1.35rem; margin-bottom:4px;">
+                🔮 DESCEND TO FLOOR 2: THE SUNKEN ARCANUM
+            </button>
 
             <button class="primary-action-btn" id="btnVictoryShop" style="width:100%; padding:10px; font-size:1.35rem;">
                 🏪 AFTER-DELVE SHOP (SPEND GOLD &amp; EXP)
@@ -2387,6 +2510,7 @@
             <div class="shop-footer-bar">
                 <div style="display:flex; gap:10px; flex-wrap:wrap;">
                     <button class="primary-action-btn" id="btnShopNewDelve" style="padding:8px 18px; font-size:1.3rem;">⚔️ LAUNCH FLOOR 1 DELVE</button>
+                    <button class="retro-btn" id="btnShopFloor2Delve" style="padding:8px 16px;">🔮 DELVE FLOOR 2</button>
                     <button class="retro-btn" id="btnShopToForge">🏕️ CHARACTER FORGE</button>
                 </div>
                 <button class="result-dismiss-btn" id="btnCloseShop" style="display:block; padding:8px 18px;">✖ CLOSE SHOP</button>
@@ -2423,6 +2547,30 @@
             </div>
 
             <button class="result-dismiss-btn" id="btnDismissEncounter">CONTINUE ADVENTURE</button>
+        </div>
+    </div>
+
+    <!-- FLOOR 2 INTERACTIVE PUZZLE MODAL -->
+    <div class="encounter-overlay" id="puzzleModal">
+        <div class="encounter-card" style="width: 600px;">
+            <div class="encounter-header">
+                <span class="encounter-icon" id="puzzleIcon">🔮</span>
+                <div>
+                    <h2 class="encounter-title" id="puzzleTitle">Arcane Puzzle</h2>
+                    <span style="color:var(--cyan-accent); font-size:1.1rem;">Floor 2 Mechanism • Solve to Unbind Rewards &amp; Gates</span>
+                </div>
+            </div>
+
+            <p class="encounter-story" id="puzzleStory"></p>
+            <div class="puzzle-clue-box" id="puzzleClue"></div>
+            <div class="puzzle-stage" id="puzzleStage"></div>
+            <div class="puzzle-status-banner" id="puzzleStatusText">Inspect the mechanism and test your solution.</div>
+
+            <div class="title-secondary-row">
+                <button class="start-cta-secondary" id="btnPuzzleHint">🔍 INSPECT CLUE (INT CHECK)</button>
+                <button class="start-cta-secondary" id="btnPuzzleStepBack">↩ STEP BACK</button>
+            </div>
+            <button class="result-dismiss-btn" id="btnPuzzleContinue">CONTINUE ADVENTURE</button>
         </div>
     </div>
 
@@ -2566,7 +2714,8 @@
         import { music } from './js/music.js';
         import { ANCESTRY_DATA, CLASS_DATA, calculateStats } from './js/stats.js';
         import { rollD20, getStatModifier, formatModifier, animateDiceRoll } from './js/dice.js';
-        import { MONSTERS, CONSUMABLE_ITEMS, SPELLS, rollDiceFormula, chooseMonsterAction, resolvePlayerSpell, CombatStage3D } from './js/combat.js';
+        import { MONSTERS, ALL_MONSTERS, getMonsterTemplate, CONSUMABLE_ITEMS, SPELLS, rollDiceFormula, chooseMonsterAction, resolvePlayerSpell, CombatStage3D } from './js/combat.js';
+        import { PUZZLE_DEFINITIONS, createPuzzleState, applyPuzzleInput, evaluatePuzzleAttempt, getPuzzleHint } from './js/puzzles.js';
         import {
             HTTPCookie,
             progression,
@@ -2590,9 +2739,13 @@
         const hudRoom = document.getElementById('hudRoom');
         const adventureVignette = document.getElementById('adventureVignette');
         const victoryModal = document.getElementById('victoryModal');
+        const victoryTitle = document.getElementById('victoryTitle');
+        const victorySubtitle = document.getElementById('victorySubtitle');
+        const victoryStory = document.getElementById('victoryStory');
         const victoryStatsLine = document.getElementById('victoryStatsLine');
         const victoryBankLine = document.getElementById('victoryBankLine');
         const victoryRoomsLine = document.getElementById('victoryRoomsLine');
+        const btnDescendFloor2 = document.getElementById('btnDescendFloor2');
         const btnVictoryShop = document.getElementById('btnVictoryShop');
         const btnPlayAgain = document.getElementById('btnPlayAgain');
         const btnVictoryTitle = document.getElementById('btnVictoryTitle');
@@ -2600,6 +2753,11 @@
 
         // State & Mode
         let currentMode = 'start'; // 'start' | 'creator' | 'adventure'
+        let selectedFloor = 1;
+        let currentFloor = 1;
+        let solvedPuzzleIds = new Set();
+        let activePuzzleEncounter = null;
+        let activePuzzleState = null;
         let titleScene = null;
         let creatorApp = null;
         let adventureApp = null;
@@ -2634,7 +2792,7 @@
                 progression.awardDelveRewards({
                     gold: unbankedGold,
                     exp: unbankedXp,
-                    floor: 1,
+                    floor: currentFloor,
                     outcome
                 });
                 playerStats.bankedGold = playerStats.gold;
@@ -2642,7 +2800,7 @@
                 progression.state.lastDelveSummary = {
                     gold: playerStats.gold,
                     exp: playerStats.xp,
-                    floor: 1,
+                    floor: currentFloor,
                     outcome: outcome || 'victory'
                 };
                 progression.save();
@@ -2704,9 +2862,13 @@
         syncAncestryCardsUI();
 
         function formatRoomBanner(room) {
-            if (!room || !room.name) return 'Floor 1 — Entrance: Cracked Threshold';
-            if (/^floor\s*1/i.test(room.name)) return room.name;
-            return `Floor 1 — ${room.name}`;
+            if (!room || !room.name) {
+                return currentFloor === 2
+                    ? 'Floor 2: Entrance - Spiral Descent Landing'
+                    : 'Floor 1 — Entrance: Cracked Threshold';
+            }
+            if (new RegExp(`^floor\\s*${currentFloor}`, 'i').test(room.name)) return room.name;
+            return currentFloor === 2 ? `Floor 2: ${room.name}` : `Floor 1 — ${room.name}`;
         }
 
         function updateRoomBanner(room) {
@@ -2745,6 +2907,24 @@
         function openVictoryModal() {
             sound.playFanfare();
             bankCurrentDelveRewards('victory');
+            if (victoryTitle) {
+                victoryTitle.textContent = currentFloor === 2
+                    ? 'FLOOR 2 COMPLETE: THE SUNKEN ARCANUM'
+                    : 'FLOOR 1 COMPLETE: THE CHARNEL THRESHOLD';
+            }
+            if (victorySubtitle) {
+                victorySubtitle.textContent = currentFloor === 2
+                    ? 'Arch-Lich Vanquished • Staff of the Sunken Arcanum Claimed'
+                    : 'Exit Seal Unbound • Crown of Eldoria Claimed';
+            }
+            if (victoryStory) {
+                victoryStory.textContent = currentFloor === 2
+                    ? 'You solved the ancient mechanisms of the Sunken Arcanum, struck down its guardians, and claimed the Staff of the Sunken Arcanum!'
+                    : 'You have conquered the traps and monsters of Floor 1, unsealed the Phusza Descent, and claimed the Crown of Eldoria!';
+            }
+            if (btnDescendFloor2) {
+                btnDescendFloor2.style.display = currentFloor === 1 ? 'block' : 'none';
+            }
             if (victoryStatsLine) {
                 victoryStatsLine.textContent = `XP Earned: ${playerStats.xp} | Gold Plundered: ${playerStats.gold}`;
             }
@@ -2763,6 +2943,14 @@
             }
         }
 
+        if (btnDescendFloor2) {
+            btnDescendFloor2.addEventListener('click', () => {
+                sound.playFanfare();
+                if (victoryModal) victoryModal.style.display = 'none';
+                switchToAdventure(2);
+            });
+        }
+
         if (btnVictoryShop) {
             btnVictoryShop.addEventListener('click', () => {
                 sound.playSelect();
@@ -2775,7 +2963,7 @@
             btnPlayAgain.addEventListener('click', () => {
                 sound.playFanfare();
                 if (victoryModal) victoryModal.style.display = 'none';
-                switchToAdventure();
+                switchToAdventure(currentFloor);
             });
         }
 
@@ -2978,6 +3166,8 @@
             } else if (e.key === 'Escape') {
                 if (shopModal && shopModal.style.display === 'flex') {
                     closeShopModal();
+                } else if (puzzleModal && puzzleModal.style.display === 'flex') {
+                    closePuzzleStepBack();
                 } else if (loreModal.style.display === 'flex') {
                     loreModal.style.display = 'none';
                 }
@@ -3644,7 +3834,22 @@
         document.getElementById('btnShopNewDelve')?.addEventListener('click', () => {
             sound.playFanfare();
             closeShopModal();
-            switchToAdventure();
+            switchToAdventure(1);
+        });
+        document.getElementById('btnShopFloor2Delve')?.addEventListener('click', () => {
+            sound.playFanfare();
+            closeShopModal();
+            switchToAdventure(2);
+        });
+
+        document.querySelectorAll('#floorSelectForge [data-floor]').forEach((card) => {
+            card.addEventListener('click', () => {
+                sound.playSelect();
+                selectedFloor = Number(card.dataset.floor) === 2 ? 2 : 1;
+                document.querySelectorAll('#floorSelectForge [data-floor]').forEach((c) => {
+                    c.classList.toggle('active', Number(c.dataset.floor) === selectedFloor);
+                });
+            });
         });
         document.getElementById('btnShopToForge')?.addEventListener('click', () => {
             sound.playSelect();
@@ -3670,6 +3875,7 @@
 
         function hideAllModals() {
             if (encounterModal) encounterModal.style.display = 'none';
+            if (puzzleModal) puzzleModal.style.display = 'none';
             if (combatModal) combatModal.style.display = 'none';
             if (victoryModal) victoryModal.style.display = 'none';
             if (loreModal) loreModal.style.display = 'none';
@@ -3677,6 +3883,8 @@
             if (combatStage3D) combatStage3D.stop();
             combatState = null;
             currentEncounter = null;
+            activePuzzleEncounter = null;
+            activePuzzleState = null;
             pendingVictoryModal = false;
             pendingLethalRespawn = false;
         }
@@ -3703,10 +3911,16 @@
             music.playTrack('title', { reset: false });
         }
 
-        function switchToAdventure() {
+        function switchToAdventure(floorNum = selectedFloor) {
             if (currentMode === 'adventure' && (playerStats.gold > playerStats.bankedGold || playerStats.xp > playerStats.bankedXp)) {
                 bankCurrentDelveRewards('retreat');
             }
+            currentFloor = Number(floorNum) === 2 ? 2 : 1;
+            selectedFloor = currentFloor;
+            solvedPuzzleIds = new Set();
+            document.querySelectorAll('#floorSelectForge [data-floor]').forEach((c) => {
+                c.classList.toggle('active', Number(c.dataset.floor) === currentFloor);
+            });
             currentMode = 'adventure';
             hideAllModals();
             mainHeader.style.display = 'flex';
@@ -3755,6 +3969,7 @@
                 (encounter) => triggerEncounterModal(encounter),
                 () => updateAdventureHUD(),
                 {
+                    floorNumber: currentFloor,
                     onRoomEnter: (room, meta = {}) => {
                         updateRoomBanner(room);
                         if (meta.firstDiscovery && room && room.whisper) {
@@ -3784,7 +3999,10 @@
             );
 
             updateRoomBanner(adventureApp.getCurrentRoom());
-            addLogMessage(`⚡ ${conf.name} entered the Crypt of Eldoria! High danger lies ahead...`, 'crit');
+            const entryMsg = currentFloor === 2
+                ? `🔮 ${conf.name} descended into Floor 2: The Sunken Arcanum! Solve puzzles and vanquish the Arch-Lich.`
+                : `⚡ ${conf.name} entered the Crypt of Eldoria! High danger lies ahead...`;
+            addLogMessage(entryMsg, 'crit');
         }
 
         function switchToCreator() {
@@ -3864,6 +4082,257 @@
 
         let currentEncounter = null;
 
+        const puzzleModal = document.getElementById('puzzleModal');
+        const puzzleIcon = document.getElementById('puzzleIcon');
+        const puzzleTitle = document.getElementById('puzzleTitle');
+        const puzzleStory = document.getElementById('puzzleStory');
+        const puzzleClue = document.getElementById('puzzleClue');
+        const puzzleStage = document.getElementById('puzzleStage');
+        const puzzleStatusText = document.getElementById('puzzleStatusText');
+        const btnPuzzleHint = document.getElementById('btnPuzzleHint');
+        const btnPuzzleStepBack = document.getElementById('btnPuzzleStepBack');
+        const btnPuzzleContinue = document.getElementById('btnPuzzleContinue');
+
+        function setPuzzleStatus(msg, kind = 'info') {
+            if (!puzzleStatusText) return;
+            puzzleStatusText.textContent = msg;
+            puzzleStatusText.className = 'puzzle-status-banner';
+            if (kind === 'success') puzzleStatusText.classList.add('success');
+            if (kind === 'error') puzzleStatusText.classList.add('error');
+        }
+
+        function closePuzzleStepBack() {
+            if (puzzleModal) puzzleModal.style.display = 'none';
+            if (adventureApp && activePuzzleEncounter) {
+                adventureApp.resolveEncounterVisual(activePuzzleEncounter.id, false);
+            }
+            activePuzzleEncounter = null;
+            activePuzzleState = null;
+        }
+
+        function handlePuzzleEvaluation() {
+            if (!activePuzzleState || !activePuzzleEncounter) return;
+            const res = evaluatePuzzleAttempt(activePuzzleState);
+            const def = PUZZLE_DEFINITIONS[activePuzzleState.puzzleId];
+
+            if (res.solved) {
+                sound.playSuccess();
+                setPuzzleStatus(res.feedback, 'success');
+                addLogMessage(`🔮 Solved ${def.name}: ${res.feedback}`, 'success');
+
+                if (res.reward) {
+                    if (res.reward.gold) playerStats.gold += res.reward.gold;
+                    if (res.reward.xp) playerStats.xp += res.reward.xp;
+                    if (res.reward.consumable) playerStats.consumables.push(res.reward.consumable);
+                    bankCurrentDelveRewards('mid_run');
+                }
+
+                if (!solvedPuzzleIds.has(def.id)) {
+                    solvedPuzzleIds.add(def.id);
+                    if (solvedPuzzleIds.size === Object.keys(PUZZLE_DEFINITIONS).length) {
+                        playerStats.gold += 75;
+                        playerStats.xp += 80;
+                        bankCurrentDelveRewards('mid_run');
+                        addLogMessage('🌟 Arcanum Mastery! All Floor 2 puzzles solved (+75 Gold, +80 XP).', 'crit');
+                    }
+                }
+
+                if (adventureApp) {
+                    adventureApp.resolveEncounterVisual(activePuzzleEncounter.id, true);
+                }
+                updateAdventureHUD();
+                if (btnPuzzleHint) btnPuzzleHint.style.display = 'none';
+                if (btnPuzzleStepBack) btnPuzzleStepBack.style.display = 'none';
+                if (btnPuzzleContinue) btnPuzzleContinue.style.display = 'block';
+                renderPuzzleStage();
+            } else {
+                sound.playTrapTrigger();
+                triggerDamageFeedback();
+                const dmg = res.failDamage || 8;
+                playerStats.currentHp = Math.max(0, playerStats.currentHp - dmg);
+                setPuzzleStatus(`${res.feedback} Took ${dmg} arcane damage!`, 'error');
+                addLogMessage(`💥 ${def.name} misfired (-${dmg} HP): ${res.feedback}`, 'fail');
+                updateAdventureHUD();
+
+                if (playerStats.currentHp <= 0) {
+                    const revivedHp = Math.max(2, Math.floor(playerStats.maxHp / 2));
+                    if (puzzleModal) puzzleModal.style.display = 'none';
+                    activePuzzleEncounter = null;
+                    activePuzzleState = null;
+                    respawnPlayerAtEntrance(`💀 Slain by ${def.name} backlash! Revived at the entrance with ${revivedHp} HP.`);
+                    return;
+                }
+                renderPuzzleStage();
+            }
+        }
+
+        function renderPuzzleStage() {
+            if (!puzzleStage || !activePuzzleState) return;
+            const def = PUZZLE_DEFINITIONS[activePuzzleState.puzzleId];
+            if (!def) return;
+            puzzleStage.innerHTML = '';
+
+            if (def.puzzleType === 'rune_sequence') {
+                const seqBar = document.createElement('div');
+                seqBar.className = 'puzzle-sequence-bar';
+                for (let i = 0; i < def.solution.length; i++) {
+                    const slot = document.createElement('div');
+                    const runeId = activePuzzleState.sequence[i];
+                    const glyph = def.glyphs.find((g) => g.id === runeId);
+                    slot.className = `puzzle-slot${glyph ? ' filled' : ''}`;
+                    slot.textContent = glyph ? glyph.icon : String(i + 1);
+                    seqBar.appendChild(slot);
+                }
+                puzzleStage.appendChild(seqBar);
+
+                const grid = document.createElement('div');
+                grid.className = 'puzzle-grid-2';
+                def.glyphs.forEach((glyph) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'puzzle-tile-btn';
+                    const chosen = activePuzzleState.sequence.includes(glyph.id);
+                    btn.disabled = activePuzzleState.solved || chosen;
+                    btn.innerHTML = `<span style="font-size:1.7rem;">${glyph.icon}</span><span>${glyph.label}</span>`;
+                    btn.addEventListener('click', () => {
+                        sound.playSelect();
+                        const { autoEvaluate } = applyPuzzleInput(activePuzzleState, { type: 'select_rune', runeId: glyph.id });
+                        renderPuzzleStage();
+                        if (autoEvaluate) handlePuzzleEvaluation();
+                    });
+                    grid.appendChild(btn);
+                });
+                puzzleStage.appendChild(grid);
+
+                if (!activePuzzleState.solved) {
+                    const resetBtn = document.createElement('button');
+                    resetBtn.className = 'retro-btn';
+                    resetBtn.style.justifyContent = 'center';
+                    resetBtn.textContent = '↺ CLEAR SEQUENCE';
+                    resetBtn.addEventListener('click', () => {
+                        sound.playSelect();
+                        applyPuzzleInput(activePuzzleState, { type: 'reset_runes' });
+                        renderPuzzleStage();
+                    });
+                    puzzleStage.appendChild(resetBtn);
+                }
+            } else if (def.puzzleType === 'mirror_alignment') {
+                const dirLabels = { N: '⬆️ North', E: '➡️ East', S: '⬇️ South', W: '⬅️ West' };
+                const grid = document.createElement('div');
+                grid.className = 'puzzle-grid-3';
+                def.mirrors.forEach((mirror, idx) => {
+                    const angle = activePuzzleState.mirrorAngles[idx];
+                    const btn = document.createElement('button');
+                    btn.className = 'puzzle-tile-btn';
+                    btn.disabled = activePuzzleState.solved;
+                    btn.innerHTML = `<strong>${mirror.label}</strong><span style="color:var(--cyan-accent); font-size:1.35rem;">${dirLabels[angle] || angle}</span><span style="font-size:0.95rem; color:var(--text-muted);">Click to Rotate</span>`;
+                    btn.addEventListener('click', () => {
+                        sound.playSelect();
+                        applyPuzzleInput(activePuzzleState, { type: 'rotate_mirror', index: idx });
+                        renderPuzzleStage();
+                    });
+                    grid.appendChild(btn);
+                });
+                puzzleStage.appendChild(grid);
+
+                if (!activePuzzleState.solved) {
+                    const checkBtn = document.createElement('button');
+                    checkBtn.className = 'primary-action-btn';
+                    checkBtn.style.padding = '8px';
+                    checkBtn.textContent = '✨ ALIGN STARLIGHT BEAM';
+                    checkBtn.addEventListener('click', handlePuzzleEvaluation);
+                    puzzleStage.appendChild(checkBtn);
+                }
+            } else if (def.puzzleType === 'alchemist_scales') {
+                const currentSum = activePuzzleState.selectedWeights.reduce((acc, v) => acc + v, 0);
+                const counter = document.createElement('div');
+                counter.style.cssText = 'text-align:center; font-size:1.25rem; color:var(--gold-bright);';
+                counter.textContent = `Selected: ${activePuzzleState.selectedWeights.length} / ${def.requiredCount} weights | Total: ${currentSum} / ${def.targetSum}`;
+                puzzleStage.appendChild(counter);
+
+                const grid = document.createElement('div');
+                grid.className = 'puzzle-grid-3';
+                def.weights.forEach((w) => {
+                    const selected = activePuzzleState.selectedWeights.includes(w.value);
+                    const btn = document.createElement('button');
+                    btn.className = `puzzle-tile-btn${selected ? ' active' : ''}`;
+                    btn.disabled = activePuzzleState.solved || (!selected && activePuzzleState.selectedWeights.length >= def.requiredCount);
+                    btn.innerHTML = `<span style="font-size:1.4rem;">⚖️ ${w.value}</span><span>${w.label}</span>`;
+                    btn.addEventListener('click', () => {
+                        sound.playSelect();
+                        applyPuzzleInput(activePuzzleState, { type: 'toggle_weight', weight: w.value });
+                        renderPuzzleStage();
+                    });
+                    grid.appendChild(btn);
+                });
+                puzzleStage.appendChild(grid);
+
+                if (!activePuzzleState.solved) {
+                    const checkBtn = document.createElement('button');
+                    checkBtn.className = 'primary-action-btn';
+                    checkBtn.style.padding = '8px';
+                    checkBtn.textContent = '⚖️ WEIGH THE SCALE';
+                    checkBtn.addEventListener('click', handlePuzzleEvaluation);
+                    puzzleStage.appendChild(checkBtn);
+                }
+            }
+        }
+
+        function openPuzzleModal(enc) {
+            const def = PUZZLE_DEFINITIONS[enc.puzzleId || enc.id];
+            if (!def || !puzzleModal) return;
+            activePuzzleEncounter = enc;
+            activePuzzleState = createPuzzleState(def.id);
+
+            if (puzzleIcon) puzzleIcon.textContent = def.icon;
+            if (puzzleTitle) puzzleTitle.textContent = def.name;
+            if (puzzleStory) puzzleStory.textContent = def.description;
+            if (puzzleClue) puzzleClue.textContent = `Clue: ${def.clue}`;
+            if (btnPuzzleHint) {
+                btnPuzzleHint.style.display = 'block';
+                btnPuzzleHint.disabled = false;
+                btnPuzzleHint.textContent = `🔍 INSPECT CLUE (INT DC ${def.hintDc})`;
+            }
+            if (btnPuzzleStepBack) btnPuzzleStepBack.style.display = 'block';
+            if (btnPuzzleContinue) btnPuzzleContinue.style.display = 'none';
+
+            setPuzzleStatus('Solve the mechanism to unlock its reward.', 'info');
+            renderPuzzleStage();
+            puzzleModal.style.display = 'flex';
+        }
+
+        if (btnPuzzleHint) {
+            btnPuzzleHint.addEventListener('click', () => {
+                if (!activePuzzleState) return;
+                const def = PUZZLE_DEFINITIONS[activePuzzleState.puzzleId];
+                const conf = creatorApp.config;
+                const stats = calculateStats(conf.ancestry, conf.charClass, progression);
+                const outcome = rollD20(stats.int || 10, 'Intelligence', def.hintDc);
+                sound.playDiceLand(outcome.isNat20);
+                if (outcome.success) {
+                    const hint = getPuzzleHint(activePuzzleState);
+                    setPuzzleStatus(`INT Check (${outcome.total} vs DC ${def.hintDc}) Passed! Hint: ${hint}`, 'success');
+                } else {
+                    setPuzzleStatus(`INT Check (${outcome.total} vs DC ${def.hintDc}) Failed. Study the clue carefully.`, 'error');
+                }
+            });
+        }
+
+        if (btnPuzzleStepBack) {
+            btnPuzzleStepBack.addEventListener('click', () => {
+                sound.playSelect();
+                closePuzzleStepBack();
+            });
+        }
+
+        if (btnPuzzleContinue) {
+            btnPuzzleContinue.addEventListener('click', () => {
+                sound.playSelect();
+                if (puzzleModal) puzzleModal.style.display = 'none';
+                activePuzzleEncounter = null;
+                activePuzzleState = null;
+            });
+        }
+
         function triggerEncounterModal(enc) {
             currentEncounter = enc;
             pendingLethalRespawn = false;
@@ -3871,6 +4340,10 @@
 
             if (enc.isCombat) {
                 startCombatEncounter(enc);
+                return;
+            }
+            if (enc.kind === 'puzzle') {
+                openPuzzleModal(enc);
                 return;
             }
 
@@ -4098,7 +4571,7 @@
         let combatStage3D = null;
 
         function startCombatEncounter(enc) {
-            const monsterTemplate = MONSTERS[enc.monsterId] || MONSTERS.skeleton;
+            const monsterTemplate = getMonsterTemplate(enc.monsterId);
             const conf = creatorApp.config;
             const stats = calculateStats(conf.ancestry, conf.charClass, progression);
 

@@ -94,6 +94,96 @@ export const MONSTERS = {
     }
 };
 
+export const FLOOR2_MONSTERS = {
+    obsidian_gargoyle: {
+        id: 'obsidian_gargoyle',
+        name: 'Obsidian Gargoyle',
+        icon: '🦇',
+        maxHp: 64,
+        ac: 13,
+        attackBonus: 5,
+        damageDice: { count: 1, sides: 10, mod: 3 },
+        attackName: 'Stone Talon Rake',
+        specialAttackName: 'Obsidian Wing Dive',
+        specialChance: 0.3,
+        specialMultiplier: 1.45,
+        xpReward: 115,
+        goldReward: 70,
+        loot: [
+            { item: 'Greater Healing Potion', chance: 0.45 },
+            { item: 'Ancient Bone Ring', chance: 0.5 }
+        ],
+        description: 'A horned sentinel carved from volcanic glass whose stone wings thunder across the sunken barracks.'
+    },
+    blight_ooze: {
+        id: 'blight_ooze',
+        name: 'Blighted Alchemist Ooze',
+        icon: '🟢',
+        maxHp: 72,
+        ac: 11,
+        attackBonus: 5,
+        damageDice: { count: 2, sides: 6, mod: 2 },
+        attackName: 'Caustic Pseudopod',
+        specialAttackName: 'Acidic Engulf',
+        specialChance: 0.3,
+        specialMultiplier: 1.4,
+        xpReward: 125,
+        goldReward: 75,
+        loot: [
+            { item: 'Mana Draught', chance: 0.6 },
+            { item: 'Greater Healing Potion', chance: 0.45 }
+        ],
+        description: 'A pulsing mass of virulent alchemical slime suspending dissolved skulls and splintered ribs within.'
+    },
+    runebound_sentinel: {
+        id: 'runebound_sentinel',
+        name: 'Runebound Sentinel',
+        icon: '🛡️',
+        maxHp: 68,
+        ac: 14,
+        attackBonus: 5,
+        damageDice: { count: 1, sides: 10, mod: 4 },
+        attackName: 'Runeblade Cleave',
+        specialAttackName: 'Aegis Shockwave',
+        specialChance: 0.28,
+        specialMultiplier: 1.45,
+        xpReward: 135,
+        goldReward: 85,
+        loot: [
+            { item: 'Holy Water Flask', chance: 0.5 },
+            { item: 'Ancient Bone Ring', chance: 0.5 }
+        ],
+        description: 'An enchanted iron juggernaut bound by glowing cyan ward-rings and armed with an astral greatsword.'
+    },
+    arch_lich: {
+        id: 'arch_lich',
+        name: 'Arch-Lich of the Arcanum',
+        icon: '👑',
+        maxHp: 82,
+        ac: 15,
+        attackBonus: 6,
+        damageDice: { count: 2, sides: 8, mod: 3 },
+        attackName: 'Phylactery Bolt',
+        specialAttackName: 'Abyssal Soul Nova',
+        specialChance: 0.35,
+        specialMultiplier: 1.45,
+        xpReward: 200,
+        goldReward: 140,
+        loot: [
+            { item: 'Greater Healing Potion', chance: 0.7 },
+            { item: 'Holy Water Flask', chance: 0.65 },
+            { item: 'Mana Draught', chance: 0.7 }
+        ],
+        description: 'A crowned undead archmage floating above an orbiting ring of phylactery shards.'
+    }
+};
+
+export const ALL_MONSTERS = { ...MONSTERS, ...FLOOR2_MONSTERS };
+
+export function getMonsterTemplate(id) {
+    return ALL_MONSTERS[id] || MONSTERS.skeleton;
+}
+
 export const CONSUMABLE_ITEMS = {
     'Lesser Healing Potion': {
         name: 'Lesser Healing Potion',
@@ -587,10 +677,17 @@ export class CombatStage3D {
      * Intentionally free of `this.*` lookups so pure Node tests can invoke directly.
      */
     buildMonsterModel(monsterId) {
+        const FLOOR2_IDS = new Set([
+            'obsidian_gargoyle',
+            'blight_ooze',
+            'runebound_sentinel',
+            'arch_lich'
+        ]);
         const resolvedId = (
             monsterId === 'crypt_ghoul' ||
             monsterId === 'crypt_spider' ||
-            monsterId === 'shadow_wraith'
+            monsterId === 'shadow_wraith' ||
+            FLOOR2_IDS.has(monsterId)
         ) ? monsterId : 'skeleton';
 
         const root = new THREE.Group();
@@ -613,6 +710,9 @@ export class CombatStage3D {
         let shroudTails = null;
         let auraGroup = null;
         let soulCore = null;
+        let wings = null;
+        let oozeCore = null;
+        let tendrils = null;
 
         if (resolvedId === 'crypt_spider') {
             const carapaceMat = new THREE.MeshPhongMaterial({
@@ -1084,6 +1184,411 @@ export class CombatStage3D {
             rightLeg = makeLeg(1);
             bodyGroup.add(leftLeg, rightLeg);
 
+        } else if (resolvedId === 'obsidian_gargoyle') {
+            const stoneMat = new THREE.MeshPhongMaterial({
+                color: 0x221f2b,
+                shininess: 35,
+                specular: 0x64748b,
+                flatShading: true
+            });
+            const darkStoneMat = new THREE.MeshLambertMaterial({ color: 0x12101a, flatShading: true });
+            const wingMembraneMat = new THREE.MeshLambertMaterial({
+                color: 0x3b263d,
+                side: THREE.DoubleSide,
+                flatShading: true
+            });
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
+            const clawMat = new THREE.MeshLambertMaterial({ color: 0x94a3b8, flatShading: true });
+
+            const makeGargoyleLeg = (side) => {
+                const leg = new THREE.Group();
+                leg.name = side < 0 ? 'LeftLeg' : 'RightLeg';
+                leg.position.set(side * 0.22, 0.68, 0);
+                const thigh = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.36, 0.24), stoneMat);
+                thigh.position.y = -0.18;
+                const shin = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.32, 0.18), darkStoneMat);
+                shin.position.set(0, -0.44, -0.04);
+                const talon = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.22, 4), clawMat);
+                talon.position.set(0, -0.56, 0.12);
+                talon.rotation.x = Math.PI / 2;
+                leg.add(thigh, shin, talon);
+                return leg;
+            };
+            leftLeg = makeGargoyleLeg(-1);
+            rightLeg = makeGargoyleLeg(1);
+            bodyGroup.add(leftLeg, rightLeg);
+
+            torso = new THREE.Group();
+            torso.name = 'Torso';
+            const chest = new THREE.Mesh(new THREE.DodecahedronGeometry(0.42, 0), stoneMat);
+            chest.scale.set(1.15, 1.25, 0.85);
+            chest.position.y = 1.04;
+            torso.add(chest);
+
+            const waist = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.22, 0.32, 6), darkStoneMat);
+            waist.position.y = 0.72;
+            torso.add(waist);
+
+            for (let s = 0; s < 3; s++) {
+                const crest = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.2, 4), darkStoneMat);
+                crest.position.set(0, 0.85 + s * 0.22, -0.32);
+                crest.rotation.x = -Math.PI * 0.42;
+                torso.add(crest);
+            }
+            bodyGroup.add(torso);
+
+            wings = [];
+            [-1, 1].forEach((side) => {
+                const wingPivot = new THREE.Group();
+                wingPivot.name = side < 0 ? 'LeftWing' : 'RightWing';
+                wingPivot.position.set(side * 0.26, 1.28, -0.22);
+
+                const armBone = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.09, 0.09), darkStoneMat);
+                armBone.position.set(side * 0.36, 0.24, -0.06);
+                armBone.rotation.z = side * 0.45;
+                wingPivot.add(armBone);
+
+                const membrane = new THREE.Mesh(new THREE.ConeGeometry(0.55, 0.85, 3), wingMembraneMat);
+                membrane.scale.set(1.2, 1.0, 0.14);
+                membrane.position.set(side * 0.55, -0.05, -0.14);
+                membrane.rotation.z = -side * 0.72;
+                wingPivot.add(membrane);
+
+                const wingSpur = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.24, 4), clawMat);
+                wingSpur.position.set(side * 0.72, 0.5, -0.08);
+                wingSpur.rotation.z = -side * 0.3;
+                wingPivot.add(wingSpur);
+
+                torso.add(wingPivot);
+                wings.push({ group: wingPivot, side });
+            });
+
+            head = new THREE.Group();
+            head.name = 'Head';
+            head.position.set(0, 1.62, 0.14);
+            const cranium = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.42, 0.42), stoneMat);
+            head.add(cranium);
+
+            const snout = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.2, 0.26), darkStoneMat);
+            snout.position.set(0, -0.1, 0.22);
+            head.add(snout);
+
+            [-0.1, 0.1].forEach((ex) => {
+                const eye = new THREE.Mesh(new THREE.OctahedronGeometry(0.045, 0), eyeMat);
+                eye.position.set(ex, 0.05, 0.22);
+                head.add(eye);
+            });
+
+            [-1, 1].forEach((side) => {
+                const horn = new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.4, 5), darkStoneMat);
+                horn.position.set(side * 0.19, 0.28, -0.04);
+                horn.rotation.z = -side * 0.45;
+                horn.rotation.x = -0.25;
+                head.add(horn);
+            });
+            bodyGroup.add(head);
+
+            const makeGargoyleArm = (side) => {
+                const arm = new THREE.Group();
+                arm.name = side < 0 ? 'LeftArm' : 'RightArm';
+                arm.position.set(side * 0.5, 1.3, 0.06);
+                const upper = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.56, 0.2), stoneMat);
+                upper.position.y = -0.26;
+                arm.add(upper);
+                for (let c = -1; c <= 1; c++) {
+                    const claw = new THREE.Mesh(new THREE.ConeGeometry(0.032, 0.24, 4), clawMat);
+                    claw.position.set(c * 0.055, -0.62, 0.08);
+                    claw.rotation.x = Math.PI * 0.85;
+                    arm.add(claw);
+                }
+                return arm;
+            };
+            leftArm = makeGargoyleArm(-1);
+            rightArm = makeGargoyleArm(1);
+            bodyGroup.add(leftArm, rightArm);
+
+        } else if (resolvedId === 'blight_ooze') {
+            const outerSlimeMat = new THREE.MeshPhongMaterial({
+                color: 0x4d7c0f,
+                emissive: 0x1a2e05,
+                emissiveIntensity: 0.4,
+                transparent: true,
+                opacity: 0.78,
+                shininess: 80,
+                flatShading: true
+            });
+            const innerCoreMat = new THREE.MeshBasicMaterial({ color: 0xa3e635 });
+            const boneMat = new THREE.MeshLambertMaterial({ color: 0xd6d3d1, flatShading: true });
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0xecfccb });
+
+            torso = new THREE.Group();
+            torso.name = 'Torso';
+
+            const baseMound = new THREE.Mesh(new THREE.DodecahedronGeometry(0.68, 0), outerSlimeMat);
+            baseMound.scale.set(1.18, 0.62, 1.15);
+            baseMound.position.y = 0.45;
+            torso.add(baseMound);
+
+            const midDome = new THREE.Mesh(new THREE.IcosahedronGeometry(0.52, 0), outerSlimeMat);
+            midDome.scale.set(1.0, 1.05, 0.96);
+            midDome.position.y = 0.86;
+            torso.add(midDome);
+
+            const crownDome = new THREE.Mesh(new THREE.DodecahedronGeometry(0.32, 0), outerSlimeMat);
+            crownDome.position.set(0, 1.32, 0.04);
+            torso.add(crownDome);
+
+            oozeCore = new THREE.Mesh(new THREE.OctahedronGeometry(0.24, 0), innerCoreMat);
+            oozeCore.position.set(0, 0.78, 0);
+            oozeCore.userData.noShadow = true;
+            torso.add(oozeCore);
+
+            const trappedSkull = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.2, 0.22), boneMat);
+            trappedSkull.position.set(-0.14, 0.92, 0.14);
+            trappedSkull.rotation.set(0.3, 0.5, -0.2);
+            torso.add(trappedSkull);
+
+            const trappedRib = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.36, 5), boneMat);
+            trappedRib.position.set(0.18, 0.6, 0.12);
+            trappedRib.rotation.set(0.4, 0.2, 1.1);
+            torso.add(trappedRib);
+
+            for (let b = 0; b < 6; b++) {
+                const ang = (b / 6) * Math.PI * 2;
+                const bubble = new THREE.Mesh(new THREE.OctahedronGeometry(0.09, 0), innerCoreMat);
+                bubble.position.set(Math.cos(ang) * 0.46, 0.45 + (b % 3) * 0.26, Math.sin(ang) * 0.46);
+                bubble.userData.noShadow = true;
+                torso.add(bubble);
+            }
+
+            tendrils = [];
+            for (let tIdx = 0; tIdx < 4; tIdx++) {
+                const ang = (tIdx / 4) * Math.PI * 2 + Math.PI / 4;
+                const tPivot = new THREE.Group();
+                tPivot.position.set(Math.cos(ang) * 0.52, 0.5, Math.sin(ang) * 0.52);
+                tPivot.rotation.y = -ang;
+                const whip = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.55, 5), outerSlimeMat);
+                whip.position.set(0.22, 0.08, 0);
+                whip.rotation.z = -Math.PI * 0.38;
+                tPivot.add(whip);
+                torso.add(tPivot);
+                tendrils.push(tPivot);
+            }
+            bodyGroup.add(torso);
+
+            head = new THREE.Group();
+            head.name = 'Head';
+            head.position.set(0, 1.38, 0.24);
+            [-0.1, 0.1].forEach((ex) => {
+                const eye = new THREE.Mesh(new THREE.OctahedronGeometry(0.05, 0), eyeMat);
+                eye.position.set(ex, 0.04, 0.08);
+                head.add(eye);
+            });
+            bodyGroup.add(head);
+
+        } else if (resolvedId === 'runebound_sentinel') {
+            const steelMat = new THREE.MeshPhongMaterial({
+                color: 0x334155,
+                shininess: 60,
+                specular: 0x94a3b8,
+                flatShading: true
+            });
+            const darkIronMat = new THREE.MeshLambertMaterial({ color: 0x1e293b, flatShading: true });
+            const runeGlowMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+            const bladeMat = new THREE.MeshLambertMaterial({ color: 0xe2e8f0, flatShading: true });
+
+            const makeSentinelLeg = (side) => {
+                const leg = new THREE.Group();
+                leg.name = side < 0 ? 'LeftLeg' : 'RightLeg';
+                leg.position.set(side * 0.22, 0.7, 0);
+                const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.7, 0.26), darkIronMat);
+                pillar.position.y = -0.35;
+                const kneeRune = new THREE.Mesh(new THREE.OctahedronGeometry(0.06, 0), runeGlowMat);
+                kneeRune.position.set(0, -0.22, 0.15);
+                leg.add(pillar, kneeRune);
+                return leg;
+            };
+            leftLeg = makeSentinelLeg(-1);
+            rightLeg = makeSentinelLeg(1);
+            bodyGroup.add(leftLeg, rightLeg);
+
+            torso = new THREE.Group();
+            torso.name = 'Torso';
+            const cuirass = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.76, 0.44), steelMat);
+            cuirass.position.y = 1.12;
+            torso.add(cuirass);
+
+            const chestSigil = new THREE.Mesh(new THREE.OctahedronGeometry(0.14, 0), runeGlowMat);
+            chestSigil.position.set(0, 1.15, 0.24);
+            torso.add(chestSigil);
+
+            [-1, 1].forEach((side) => {
+                const pauldron = new THREE.Mesh(new THREE.DodecahedronGeometry(0.24, 0), steelMat);
+                pauldron.position.set(side * 0.48, 1.46, 0);
+                torso.add(pauldron);
+            });
+            bodyGroup.add(torso);
+
+            head = new THREE.Group();
+            head.name = 'Head';
+            head.position.set(0, 1.72, 0);
+            const helm = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.46, 0.42), darkIronMat);
+            head.add(helm);
+            const visor = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.07, 0.06), runeGlowMat);
+            visor.position.set(0, 0.02, 0.22);
+            head.add(visor);
+            const crest = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.26, 4), runeGlowMat);
+            crest.position.set(0, 0.34, 0);
+            head.add(crest);
+            bodyGroup.add(head);
+
+            leftArm = new THREE.Group();
+            leftArm.name = 'LeftArm';
+            leftArm.position.set(-0.52, 1.38, 0);
+            const armL = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.6, 0.2), darkIronMat);
+            armL.position.y = -0.28;
+            const towerShield = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.88, 0.1), steelMat);
+            towerShield.position.set(-0.08, -0.35, 0.2);
+            const shieldRune = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.56, 0.12), runeGlowMat);
+            shieldRune.position.set(-0.08, -0.35, 0.21);
+            leftArm.add(armL, towerShield, shieldRune);
+            bodyGroup.add(leftArm);
+
+            rightArm = new THREE.Group();
+            rightArm.name = 'RightArm';
+            rightArm.position.set(0.52, 1.38, 0);
+            const armR = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.6, 0.2), darkIronMat);
+            armR.position.y = -0.28;
+            const hilt = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.08, 0.08), darkIronMat);
+            hilt.position.set(0, -0.58, 0.22);
+            const swordBlade = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.28, 0.06), bladeMat);
+            swordBlade.position.set(0, 0.06, 0.24);
+            const swordCore = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.0, 0.08), runeGlowMat);
+            swordCore.position.set(0, 0.06, 0.24);
+            rightArm.add(armR, hilt, swordBlade, swordCore);
+            bodyGroup.add(rightArm);
+
+            auraGroup = new THREE.Group();
+            auraGroup.name = 'Aura';
+            auraGroup.position.set(0, 1.15, 0);
+            auraGroup.userData.noShadow = true;
+            const halo = new THREE.Mesh(new THREE.TorusGeometry(0.7, 0.025, 4, 16), runeGlowMat);
+            halo.rotation.x = Math.PI / 2;
+            halo.userData.noShadow = true;
+            auraGroup.add(halo);
+            bodyGroup.add(auraGroup);
+
+        } else if (resolvedId === 'arch_lich') {
+            const robeMat = new THREE.MeshLambertMaterial({
+                color: 0x1e1b4b,
+                emissive: 0x312e81,
+                emissiveIntensity: 0.4,
+                flatShading: true
+            });
+            const goldCrownMat = new THREE.MeshLambertMaterial({ color: 0xfbbf24, flatShading: true });
+            const boneMat = new THREE.MeshLambertMaterial({ color: 0xe2e8f0, flatShading: true });
+            const arcaneMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+            const phylacteryMat = new THREE.MeshBasicMaterial({ color: 0xc084fc });
+
+            torso = new THREE.Group();
+            torso.name = 'Torso';
+            const robeGeo = createMonsterLoftedPrism([
+                { y: 0.36, rx: 0.46, rz: 0.38, twist: 0.15 },
+                { y: 0.88, rx: 0.30, rz: 0.24, twist: 0 },
+                { y: 1.38, rx: 0.40, rz: 0.30, twist: 0.1 },
+                { y: 1.54, rx: 0.34, rz: 0.26, twist: 0 }
+            ], 8, true, false);
+            torso.add(new THREE.Mesh(robeGeo, robeMat));
+
+            const collar = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.22, 0.38), goldCrownMat);
+            collar.position.set(0, 1.5, -0.04);
+            torso.add(collar);
+
+            soulCore = new THREE.Mesh(new THREE.OctahedronGeometry(0.14, 0), phylacteryMat);
+            soulCore.position.set(0, 1.18, 0.28);
+            torso.add(soulCore);
+
+            shroudTails = [];
+            for (let i = 0; i < 6; i++) {
+                const ang = (i / 6) * Math.PI * 2;
+                const tailPivot = new THREE.Group();
+                tailPivot.position.set(Math.sin(ang) * 0.4, 0.38, Math.cos(ang) * 0.32);
+                tailPivot.rotation.y = ang;
+                const hem = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.34, 4), robeMat);
+                hem.position.set(0, -0.14, 0.03);
+                hem.rotation.x = Math.PI + 0.15;
+                tailPivot.add(hem);
+                torso.add(tailPivot);
+                shroudTails.push(tailPivot);
+            }
+            bodyGroup.add(torso);
+
+            head = new THREE.Group();
+            head.name = 'Head';
+            head.position.set(0, 1.76, 0.04);
+            const skull = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.36, 0.34), boneMat);
+            head.add(skull);
+
+            [-0.08, 0.08].forEach((ex) => {
+                const eye = new THREE.Mesh(new THREE.OctahedronGeometry(0.042, 0), arcaneMat);
+                eye.position.set(ex, 0.04, 0.18);
+                head.add(eye);
+            });
+
+            const crownBand = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.2, 0.14, 6), goldCrownMat);
+            crownBand.position.y = 0.22;
+            head.add(crownBand);
+            for (let s = 0; s < 5; s++) {
+                const ang = (s / 5) * Math.PI * 2;
+                const spire = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.24, 4), goldCrownMat);
+                spire.position.set(Math.cos(ang) * 0.2, 0.36, Math.sin(ang) * 0.2);
+                head.add(spire);
+            }
+            bodyGroup.add(head);
+
+            const makeLichArm = (side) => {
+                const arm = new THREE.Group();
+                arm.name = side < 0 ? 'LeftArm' : 'RightArm';
+                arm.position.set(side * 0.46, 1.42, 0.04);
+                const sleeve = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.5, 5), robeMat);
+                sleeve.position.y = -0.22;
+                sleeve.rotation.x = Math.PI;
+                const hand = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.18, 0.12), boneMat);
+                hand.position.set(0, -0.44, 0.06);
+                arm.add(sleeve, hand);
+                return arm;
+            };
+            leftArm = makeLichArm(-1);
+            rightArm = makeLichArm(1);
+
+            const staff = new THREE.Group();
+            const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 2.0, 6), goldCrownMat);
+            pole.position.y = 0.2;
+            const orb = new THREE.Mesh(new THREE.OctahedronGeometry(0.16, 0), arcaneMat);
+            orb.position.y = 1.3;
+            staff.add(pole, orb);
+            staff.position.set(0, -0.45, 0.2);
+            staff.rotation.x = 0.2;
+            rightArm.add(staff);
+            bodyGroup.add(leftArm, rightArm);
+
+            auraGroup = new THREE.Group();
+            auraGroup.name = 'Aura';
+            auraGroup.position.set(0, 1.15, 0);
+            auraGroup.userData.noShadow = true;
+            const ring = new THREE.Mesh(new THREE.TorusGeometry(0.76, 0.025, 4, 18), phylacteryMat);
+            ring.rotation.x = Math.PI / 2 - 0.2;
+            ring.userData.noShadow = true;
+            auraGroup.add(ring);
+            for (let m = 0; m < 4; m++) {
+                const ang = (m / 4) * Math.PI * 2;
+                const shard = new THREE.Mesh(new THREE.OctahedronGeometry(0.075, 0), arcaneMat);
+                shard.position.set(Math.cos(ang) * 0.78, Math.sin(ang) * 0.2, Math.sin(ang) * 0.78);
+                shard.userData.noShadow = true;
+                auraGroup.add(shard);
+            }
+            bodyGroup.add(auraGroup);
+
         } else {
             // Articulated Skeletal Vanguard
             const boneMat = new THREE.MeshLambertMaterial({ color: 0xe2e8f0, flatShading: true });
@@ -1222,7 +1727,10 @@ export class CombatStage3D {
                 spiderLegs,
                 shroudTails,
                 auraGroup,
-                soulCore
+                soulCore,
+                wings,
+                oozeCore,
+                tendrils
             }
         };
     }
@@ -1469,6 +1977,12 @@ export class CombatStage3D {
                 this.enemyAnim = { kind: 'special_drain', t: 0, dur: 0.72, fired: false };
             } else if (monsterId === 'crypt_ghoul') {
                 this.enemyAnim = { kind: 'special_pounce', t: 0, dur: 0.7 };
+            } else if (monsterId === 'obsidian_gargoyle') {
+                this.enemyAnim = { kind: 'special_pounce', t: 0, dur: 0.72 };
+            } else if (monsterId === 'blight_ooze') {
+                this.enemyAnim = { kind: 'special_venom', t: 0, dur: 0.72, fired: false };
+            } else if (monsterId === 'arch_lich') {
+                this.enemyAnim = { kind: 'special_drain', t: 0, dur: 0.74, fired: false };
             } else {
                 this.enemyAnim = { kind: 'special_bash', t: 0, dur: 0.68 };
             }
@@ -1607,7 +2121,7 @@ export class CombatStage3D {
                             leg.kneeGroup.rotation.z = -leg.side * Math.cos(phase) * 0.08;
                         });
                     }
-                } else if (mAnim.monsterId === 'shadow_wraith') {
+                } else if (mAnim.monsterId === 'shadow_wraith' || mAnim.monsterId === 'arch_lich') {
                     if (mAnim.bodyGroup) {
                         mAnim.bodyGroup.position.y = 0.14 + Math.sin(t * 2.2) * 0.10;
                         mAnim.bodyGroup.rotation.z = Math.sin(t * 1.1) * 0.04;
@@ -1620,12 +2134,28 @@ export class CombatStage3D {
                     if (mAnim.head) mAnim.head.rotation.y = Math.sin(t * 1.5) * 0.10;
                     if (mAnim.rightArm) mAnim.rightArm.rotation.x = -0.55 + Math.sin(t * 2.0) * 0.12;
                     if (mAnim.leftArm) mAnim.leftArm.rotation.x = -0.55 - Math.sin(t * 2.0) * 0.12;
+                } else if (mAnim.monsterId === 'blight_ooze') {
+                    if (mAnim.bodyGroup) {
+                        const squash = 1.0 + Math.sin(t * 3.4) * 0.06;
+                        mAnim.bodyGroup.scale.set(squash, 1 / squash, squash);
+                    }
+                    if (mAnim.oozeCore) mAnim.oozeCore.rotation.y += delta * 2.0;
+                    if (Array.isArray(mAnim.tendrils)) {
+                        mAnim.tendrils.forEach((td, idx) => {
+                            td.rotation.z = Math.sin(t * 3.0 + idx * 1.2) * 0.18;
+                        });
+                    }
                 } else {
                     const crouchOffset = mAnim.monsterId === 'crypt_ghoul' ? -0.04 : 0;
                     if (mAnim.torso) mAnim.torso.position.y = crouchOffset + Math.sin(t * 2.4) * 0.03;
                     if (mAnim.head) mAnim.head.rotation.y = Math.sin(t * 1.3) * 0.08;
                     if (mAnim.rightArm) mAnim.rightArm.rotation.x = -0.15 + Math.sin(t * 2.1) * 0.08;
                     if (mAnim.leftArm) mAnim.leftArm.rotation.x = -0.25 - Math.sin(t * 2.1) * 0.05;
+                    if (Array.isArray(mAnim.wings)) {
+                        mAnim.wings.forEach((w) => {
+                            w.group.rotation.y = w.side * (0.2 + Math.sin(t * 3.2) * 0.18);
+                        });
+                    }
                 }
             }
         }
