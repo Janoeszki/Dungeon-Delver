@@ -3,7 +3,7 @@ import { CharacterBuilder } from './characterBuilder.js';
 import { sound } from './audio.js';
 import { music } from './music.js';
 import { createFloor1Layout, buildNavGrid } from './floor1Layout.js';
-import { createFloor1Run } from './encounters.js';
+import { createFloor1Run, createFloorRun } from './encounters.js';
 import {
     buildOverworldMonster,
     updateOverworldMonster,
@@ -13,6 +13,8 @@ import {
     updateDoorPropVisual,
     buildShrineProp,
     buildExitSealProp,
+    buildPuzzleProp,
+    updatePuzzlePropVisual,
     buildRoomPropAnchor,
     buildTorchSconceMesh,
     buildBeacon,
@@ -568,6 +570,20 @@ export function applyEncounterResolution(enc, success, opts = {}) {
         };
     }
 
+    if (enc.kind === 'puzzle') {
+        const resolved = Boolean(success === true || opts?.resolved === true);
+        enc.resolved = resolved;
+        enc.solved = resolved;
+        return {
+            resolved,
+            trapState: null,
+            unlockDoorId: resolved ? (enc.unlocksDoorId || null) : null,
+            victory: false,
+            retryable: true,
+            hideBeacon: resolved
+        };
+    }
+
     const resolved = Boolean(success === true || opts?.resolved === true);
     enc.resolved = resolved;
     return {
@@ -607,6 +623,11 @@ export class DungeonWorldApp {
             this.runData = opts;
         } else if (opts.runData && opts.runData.floor && Array.isArray(opts.runData.encounters)) {
             this.runData = opts.runData;
+        } else if (opts.floorNumber && Number(opts.floorNumber) !== 1) {
+            this.runData = createFloorRun(Number(opts.floorNumber), {
+                seed: opts.seed ?? null,
+                randomizeThemes: Boolean(opts.randomizeThemes)
+            });
         } else {
             this.runData = createFloor1Run({
                 seed: opts.seed ?? null,
@@ -710,9 +731,10 @@ export class DungeonWorldApp {
         const height = this.container.clientHeight || (typeof window !== 'undefined' ? window.innerHeight : 800);
         const sp = this.floor.spawnPoint || { x: 0, z: 21 };
 
+        const theme = this.floor?.theme || {};
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x040509);
-        this.scene.fog = new THREE.FogExp2(0x040509, 0.056);
+        this.scene.background = new THREE.Color(theme.background ?? 0x040509);
+        this.scene.fog = new THREE.FogExp2(theme.fogColor ?? 0x040509, theme.fogDensity ?? 0.056);
 
         // Isometric perspective camera tracking player at (x, 14, z + 10)
         this.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
@@ -774,8 +796,9 @@ export class DungeonWorldApp {
     }
 
     buildDungeonEnvironment() {
+        const theme = this.floor?.theme || {};
         const wallTex = createStoneWallTexture(2, 1);
-        const wallMat = new THREE.MeshLambertMaterial({ color: 0xc2cde0, map: wallTex, flatShading: true });
+        const wallMat = new THREE.MeshLambertMaterial({ color: theme.wallTint ?? 0xc2cde0, map: wallTex, flatShading: true });
         const trimMat = new THREE.MeshLambertMaterial({ color: 0x3b4860, flatShading: true });
         const southCapMat = new THREE.MeshLambertMaterial({ color: 0x2c3648, flatShading: true });
 
@@ -789,7 +812,7 @@ export class DungeonWorldApp {
 
             const roomFloorTex = createStoneFloorTexture(Math.max(1, w / 2), Math.max(1, d / 2));
             const roomFloorMat = new THREE.MeshLambertMaterial({
-                color: 0xd2dced,
+                color: theme.floorTint ?? 0xd2dced,
                 map: roomFloorTex,
                 flatShading: true
             });
@@ -895,7 +918,7 @@ export class DungeonWorldApp {
 
             const corrTex = createStoneFloorTexture(Math.max(1, w / 2), Math.max(1, d / 2));
             const corrMat = new THREE.MeshLambertMaterial({
-                color: 0xbac6da,
+                color: theme.corridorTint ?? 0xbac6da,
                 map: corrTex,
                 flatShading: true
             });
@@ -958,10 +981,21 @@ export class DungeonWorldApp {
             this.doorEntries.push(doorEntry);
         }
 
-        // 5. Floating Dust Motes across Floor 1 bounds
+        // 5. Floating Dust Motes across floor bounds
+        let dMinX = -18;
+        let dMaxX = 18;
+        let dMinZ = -35;
+        let dMaxZ = 25;
+        if (this.rooms.length > 0) {
+            dMinX = Math.min(...this.rooms.map((r) => r.bounds.minX)) - 1;
+            dMaxX = Math.max(...this.rooms.map((r) => r.bounds.maxX)) + 1;
+            dMinZ = Math.min(...this.rooms.map((r) => r.bounds.minZ)) - 1;
+            dMaxZ = Math.max(...this.rooms.map((r) => r.bounds.maxZ)) + 1;
+        }
         this.dustMotes = buildDustMotesSystem({
-            bounds: { minX: -18, maxX: 18, minZ: -35, maxZ: 25 },
-            count: 140
+            bounds: { minX: dMinX, maxX: dMaxX, minZ: dMinZ, maxZ: dMaxZ },
+            count: 140,
+            color: theme.dustColor ?? 0x7c8aa3
         });
         this.scene.add(this.dustMotes.points);
     }
@@ -998,6 +1032,20 @@ export class DungeonWorldApp {
                 hitProxy.position.y = 1.2;
                 propGroup.add(hitProxy);
                 propEntry = doorEntry || { group: hitProxy };
+            } else if (enc.kind === 'puzzle') {
+                propEntry = buildPuzzleProp(enc.puzzleType || 'rune_sequence', Boolean(enc.solved || enc.resolved));
+                propGroup.add(propEntry.group);
+                this.lightCandidates.push({
+                    roomId: enc.roomId,
+                    x: enc.pos.x,
+                    y: 1.4,
+                    z: enc.pos.z,
+                    color: 0x38bdf8,
+                    intensity: 5.5,
+                    distance: 10,
+                    decay: 1.2,
+                    discovered: this.discoveredRoomIds.has(enc.roomId)
+                });
             } else if (enc.kind === 'exit') {
                 propEntry = buildExitSealProp(enc);
                 propGroup.add(propEntry.group);
@@ -1193,6 +1241,7 @@ export class DungeonWorldApp {
 
             const selectors = [
                 '#encounterModal',
+                '#puzzleModal',
                 '#combatModal',
                 '#loreModal',
                 '#victoryModal',
@@ -1683,6 +1732,22 @@ export class DungeonWorldApp {
             return;
         }
 
+        if (enc.kind === 'puzzle') {
+            if (item?.propEntry) {
+                updatePuzzlePropVisual(item.propEntry, Boolean(enc.solved), 0, this.elapsedTime);
+            }
+            if (res.resolved) {
+                if (res.unlockDoorId) {
+                    this.unlockDoor(res.unlockDoorId, opts);
+                }
+                if (item?.beacon) item.beacon.visible = false;
+                this.refreshVisibilityAndLights(0, false);
+            } else {
+                this.cooldownMap.set(enc.id, { untilMs: nowMs + 700, requireMoveOrExit: true });
+            }
+            return;
+        }
+
         if (enc.kind === 'exit') {
             if (res.resolved) {
                 if (item?.propEntry) item.propEntry.opened = true;
@@ -1963,6 +2028,8 @@ export class DungeonWorldApp {
                 updateOverworldMonster(item.propEntry, delta, time, item.isAggro);
             } else if (enc.kind === 'trap' && item.propEntry) {
                 updateTrapPropVisual(item.propEntry, enc.trapState || 'armed', delta, time);
+            } else if (enc.kind === 'puzzle' && item.propEntry) {
+                updatePuzzlePropVisual(item.propEntry, Boolean(enc.solved || enc.resolved), delta, time);
             } else if (enc.kind === 'exit' && item.propEntry) {
                 if (item.propEntry.crownOrb) {
                     item.propEntry.crownOrb.rotation.y += delta * 1.4;

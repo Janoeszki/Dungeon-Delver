@@ -195,7 +195,7 @@ function computeDoorBox(door, gridSize = 1.0) {
  * Generates non-overlapping, gap-free perimeter walls around rooms and corridors
  * using greedy 2D rectangle merging, marking all South-facing walls for camera cutaway.
  */
-function generateWalls(rooms, corridors, gridSize = 1.0) {
+export function generateWalls(rooms, corridors, gridSize = 1.0) {
     const rects = [...rooms.map((r) => r.bounds), ...corridors.map((c) => c.bounds)];
     let minX = Infinity;
     let maxX = -Infinity;

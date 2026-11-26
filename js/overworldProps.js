@@ -8,6 +8,24 @@ export const OVERWORLD_MONSTER_IDS = Object.freeze([
     'shadow_wraith'
 ]);
 
+export const FLOOR2_MONSTER_IDS = Object.freeze([
+    'obsidian_gargoyle',
+    'blight_ooze',
+    'runebound_sentinel',
+    'arch_lich'
+]);
+
+export const ALL_OVERWORLD_MONSTER_IDS = Object.freeze([
+    ...OVERWORLD_MONSTER_IDS,
+    ...FLOOR2_MONSTER_IDS
+]);
+
+export const PUZZLE_PROP_TYPES = Object.freeze([
+    'rune_sequence',
+    'mirror_alignment',
+    'alchemist_scales'
+]);
+
 export const OVERWORLD_TRAP_TYPES = Object.freeze([
     'spike_pit',
     'pendulum_scythe',
@@ -40,7 +58,7 @@ function makeFaceted(geometry) {
  * Embeds ZERO PointLights to preserve the scene <= 8 light budget.
  */
 export function buildOverworldMonster(monsterId = 'skeleton', scale = 1.0) {
-    const resolvedId = OVERWORLD_MONSTER_IDS.includes(monsterId) ? monsterId : 'skeleton';
+    const resolvedId = ALL_OVERWORLD_MONSTER_IDS.includes(monsterId) ? monsterId : 'skeleton';
     const resolvedScale = Number.isFinite(scale) && scale > 0 ? scale : 1.0;
 
     const model = CombatStage3D.prototype.buildMonsterModel.call({}, resolvedId);
@@ -107,7 +125,7 @@ export function updateOverworldMonster(entry, delta = 0.016, elapsed = 0, isAggr
         return;
     }
 
-    if (anim.monsterId === 'shadow_wraith') {
+    if (anim.monsterId === 'shadow_wraith' || anim.monsterId === 'arch_lich') {
         if (anim.bodyGroup) {
             anim.bodyGroup.position.y = (isAggro ? 0.22 : 0.14) + Math.sin(t * (isAggro ? 3.8 : 2.2)) * 0.10;
             anim.bodyGroup.rotation.z = Math.sin(t * 1.1) * 0.04;
@@ -130,6 +148,26 @@ export function updateOverworldMonster(entry, delta = 0.016, elapsed = 0, isAggr
                 : -0.55 - Math.sin(t * 2.0) * 0.12;
         }
         return;
+    }
+
+    if (anim.monsterId === 'blight_ooze') {
+        if (anim.bodyGroup) {
+            const squash = 1.0 + Math.sin(t * (isAggro ? 6.5 : 3.2)) * (isAggro ? 0.1 : 0.05);
+            anim.bodyGroup.scale.set(squash, 1 / squash, squash);
+        }
+        if (anim.oozeCore) anim.oozeCore.rotation.y += dt * (isAggro ? 4.0 : 1.8);
+        if (Array.isArray(anim.tendrils)) {
+            anim.tendrils.forEach((td, idx) => {
+                td.rotation.z = Math.sin(t * (isAggro ? 6.0 : 3.0) + idx * 1.1) * (isAggro ? 0.3 : 0.16);
+            });
+        }
+        return;
+    }
+
+    if (Array.isArray(anim.wings)) {
+        anim.wings.forEach((w) => {
+            w.group.rotation.y = w.side * (0.2 + Math.sin(t * (isAggro ? 8.0 : 3.2)) * (isAggro ? 0.35 : 0.16));
+        });
     }
 
     // skeleton & crypt_ghoul
@@ -1065,6 +1103,39 @@ export function buildRoomPropAnchor(anchor = {}) {
         splatter.position.set(-0.42, 0.015, 0.26);
         group.add(mainPool, innerPool, splatter);
 
+    } else if (type === 'rune_pillar') {
+        const pillarMat = new THREE.MeshLambertMaterial({ color: 0x242a3d, flatShading: true });
+        const glowMat = new THREE.MeshBasicMaterial({ color: 0x6366f1 });
+        const base = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.22, 0.42), pillarMat);
+        base.position.y = 0.11;
+        const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.28, 1.35, 0.28), pillarMat);
+        shaft.position.y = 0.88;
+        shaft.castShadow = true;
+        const runeBand = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.14, 0.32), glowMat);
+        runeBand.position.y = 1.15;
+        group.add(base, shaft, runeBand);
+
+    } else if (type === 'crystal_cluster') {
+        const crystalMat = new THREE.MeshPhongMaterial({
+            color: 0x38bdf8,
+            emissive: 0x0284c7,
+            emissiveIntensity: 0.45,
+            shininess: 70,
+            flatShading: true
+        });
+        const specs = [
+            { x: 0, y: 0.36, z: 0, s: 0.16, h: 0.72, rx: 0.08, rz: -0.05 },
+            { x: -0.14, y: 0.24, z: 0.1, s: 0.11, h: 0.48, rx: 0.24, rz: 0.3 },
+            { x: 0.15, y: 0.22, z: -0.08, s: 0.1, h: 0.44, rx: -0.2, rz: -0.32 }
+        ];
+        specs.forEach((sp) => {
+            const shard = new THREE.Mesh(new THREE.ConeGeometry(sp.s, sp.h, 5), crystalMat);
+            shard.position.set(sp.x, sp.y, sp.z);
+            shard.rotation.set(sp.rx, 0, sp.rz);
+            shard.castShadow = true;
+            group.add(shard);
+        });
+
     } else {
         const stone = new THREE.Mesh(new THREE.DodecahedronGeometry(0.22, 0), ironMat);
         stone.position.y = 0.14;
@@ -1072,6 +1143,153 @@ export function buildRoomPropAnchor(anchor = {}) {
     }
 
     return group;
+}
+
+/**
+ * Builds 3D puzzle altar props for Floor 2 puzzle types with zero embedded PointLights.
+ */
+export function buildPuzzleProp(puzzleType = 'rune_sequence', solved = false) {
+    const resolvedType = PUZZLE_PROP_TYPES.includes(puzzleType) ? puzzleType : 'rune_sequence';
+    const group = new THREE.Group();
+    group.name = `Puzzle_${resolvedType}`;
+    group.userData = {
+        puzzleType: resolvedType,
+        solved: Boolean(solved),
+        isPuzzleProp: true
+    };
+
+    const slateMat = new THREE.MeshLambertMaterial({ color: 0x1e2438, flatShading: true });
+    const brassMat = new THREE.MeshLambertMaterial({ color: 0xb45309, flatShading: true });
+    const glowMat = new THREE.MeshBasicMaterial({ color: solved ? 0xfbbf24 : 0x38bdf8 });
+    const ringMat = new THREE.MeshBasicMaterial({ color: solved ? 0xfbbf24 : 0x818cf8 });
+
+    const parts = { glowMat, ringMat };
+
+    if (resolvedType === 'mirror_alignment') {
+        const dais = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.3, 0.16, 8), slateMat);
+        dais.position.y = 0.08;
+        dais.receiveShadow = true;
+        group.add(dais);
+
+        const prisms = [];
+        [-0.7, 0, 0.7].forEach((px, idx) => {
+            const ped = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.65, 0.32), slateMat);
+            ped.position.set(px, 0.4, idx === 1 ? -0.35 : 0.25);
+            ped.castShadow = true;
+            const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.18, 0), glowMat);
+            crystal.position.set(px, 0.96, idx === 1 ? -0.35 : 0.25);
+            group.add(ped, crystal);
+            prisms.push(crystal);
+        });
+
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.96, 0.03, 4, 16), ringMat);
+        ring.rotation.x = Math.PI / 2;
+        ring.position.y = 0.18;
+        group.add(ring);
+
+        parts.prisms = prisms;
+        parts.ring = ring;
+    } else if (resolvedType === 'alchemist_scales') {
+        const plinth = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.24, 0.9), slateMat);
+        plinth.position.y = 0.12;
+        plinth.receiveShadow = true;
+        const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 1.05, 6), brassMat);
+        stand.position.y = 0.72;
+        stand.castShadow = true;
+        const beam = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.08, 0.1), brassMat);
+        beam.position.y = 1.24;
+        const panL = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.18, 0.06, 8), glowMat);
+        panL.position.set(-0.52, 0.92, 0);
+        const panR = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.18, 0.06, 8), glowMat);
+        panR.position.set(0.52, 0.92, 0);
+        const coreGem = new THREE.Mesh(new THREE.OctahedronGeometry(0.16, 0), ringMat);
+        coreGem.position.y = 1.44;
+        group.add(plinth, stand, beam, panL, panR, coreGem);
+
+        parts.beam = beam;
+        parts.coreGem = coreGem;
+    } else {
+        // rune_sequence lunar dial
+        const dialBase = new THREE.Mesh(new THREE.CylinderGeometry(1.22, 1.32, 0.14, 12), slateMat);
+        dialBase.position.y = 0.07;
+        dialBase.receiveShadow = true;
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.98, 0.04, 4, 16), ringMat);
+        ring.rotation.x = Math.PI / 2;
+        ring.position.y = 0.16;
+        group.add(dialBase, ring);
+
+        const stones = [];
+        for (let i = 0; i < 4; i++) {
+            const ang = (i / 4) * Math.PI * 2 + Math.PI / 4;
+            const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.72, 0.24), slateMat);
+            pillar.position.set(Math.cos(ang) * 0.9, 0.42, Math.sin(ang) * 0.9);
+            pillar.castShadow = true;
+            const runeOrb = new THREE.Mesh(new THREE.OctahedronGeometry(0.12, 0), glowMat);
+            runeOrb.position.set(Math.cos(ang) * 0.9, 0.94, Math.sin(ang) * 0.9);
+            group.add(pillar, runeOrb);
+            stones.push(runeOrb);
+        }
+
+        const centerCrystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.22, 0), glowMat);
+        centerCrystal.position.y = 0.65;
+        group.add(centerCrystal);
+
+        parts.stones = stones;
+        parts.ring = ring;
+        parts.centerCrystal = centerCrystal;
+    }
+
+    const entry = {
+        group,
+        puzzleType: resolvedType,
+        solved: Boolean(solved),
+        parts
+    };
+    updatePuzzlePropVisual(entry, Boolean(solved), 0, 0);
+    return entry;
+}
+
+export function updatePuzzlePropVisual(entry, solved, delta = 0.016, elapsed = 0) {
+    if (!entry || !entry.group) return;
+    const isSolved = Boolean(solved);
+    entry.solved = isSolved;
+    entry.group.userData.solved = isSolved;
+
+    const { parts } = entry;
+    if (!parts) return;
+
+    if (parts.glowMat) {
+        parts.glowMat.color.setHex(isSolved ? 0xfbbf24 : 0x38bdf8);
+    }
+    if (parts.ringMat) {
+        parts.ringMat.color.setHex(isSolved ? 0xf59e0b : 0x818cf8);
+    }
+
+    const dt = Number.isFinite(delta) && delta > 0 ? Math.min(delta, 0.1) : 0;
+    const t = Number.isFinite(elapsed) ? elapsed : 0;
+
+    if (parts.centerCrystal) {
+        parts.centerCrystal.rotation.y += dt * (isSolved ? 2.2 : 1.0);
+        parts.centerCrystal.position.y = (isSolved ? 0.92 : 0.65) + Math.sin(t * 2.5) * 0.05;
+    }
+    if (Array.isArray(parts.stones)) {
+        parts.stones.forEach((orb, idx) => {
+            orb.rotation.y += dt * 1.4;
+            orb.position.y = (isSolved ? 1.04 : 0.94) + Math.sin(t * 2.4 + idx) * 0.03;
+        });
+    }
+    if (Array.isArray(parts.prisms)) {
+        parts.prisms.forEach((p, idx) => {
+            p.rotation.y += dt * (isSolved ? 2.4 : 0.9);
+            p.position.y = (isSolved ? 1.08 : 0.96) + Math.sin(t * 2.2 + idx) * 0.04;
+        });
+    }
+    if (parts.beam) {
+        parts.beam.rotation.z = isSolved ? 0 : Math.sin(t * 1.8) * 0.16;
+    }
+    if (parts.coreGem) {
+        parts.coreGem.rotation.y += dt * (isSolved ? 2.6 : 1.1);
+    }
 }
 
 /**

@@ -4,6 +4,8 @@
  */
 
 import { createFloor1Layout } from './floor1Layout.js';
+import { createFloor2Layout } from './floor2Layout.js';
+import { PUZZLE_DEFINITIONS } from './puzzles.js';
 
 function deepFreeze(value) {
     if (!value || typeof value !== 'object') return value;
@@ -838,3 +840,357 @@ const LEGACY_ENCOUNTER_TEMPLATES = deepFreeze([
 export const ENCOUNTERS = Object.freeze(
     LEGACY_ENCOUNTER_TEMPLATES.map((enc) => deepClone(enc))
 );
+
+const FLOOR2_MONSTER_TEMPLATES = deepFreeze({
+    obsidian_gargoyle: {
+        monsterId: 'obsidian_gargoyle',
+        name: 'Obsidian Gargoyle',
+        icon: '🦇',
+        monsterScale: 1.05,
+        aggroRadius: 5.2,
+        triggerRadius: 2.2,
+        description: 'A horned gargoyle carved from volcanic glass tears free from its plinth and lunges with stone talons!',
+        options: [
+            {
+                label: 'Engage in Tactical Turn-Based Combat',
+                action: 'combat',
+                stat: 'str',
+                statName: 'Strength'
+            }
+        ]
+    },
+    blight_ooze: {
+        monsterId: 'blight_ooze',
+        name: 'Blighted Alchemist Ooze',
+        icon: '🟢',
+        monsterScale: 1.1,
+        aggroRadius: 4.8,
+        triggerRadius: 2.2,
+        description: 'A bubbling cauldron-mass of caustic slime surges across the flagstones with trapped skulls rattling inside!',
+        options: [
+            {
+                label: 'Engage in Tactical Turn-Based Combat',
+                action: 'combat',
+                stat: 'vit',
+                statName: 'Vitality'
+            }
+        ]
+    },
+    runebound_sentinel: {
+        monsterId: 'runebound_sentinel',
+        name: 'Runebound Sentinel',
+        icon: '🛡️',
+        monsterScale: 1.1,
+        aggroRadius: 5.2,
+        triggerRadius: 2.2,
+        description: 'An armored runic construct steps out of the shadows, raising a glowing greatsword and tower shield.',
+        options: [
+            {
+                label: 'Engage in Tactical Turn-Based Combat',
+                action: 'combat',
+                stat: 'str',
+                statName: 'Strength'
+            }
+        ]
+    },
+    arch_lich: {
+        monsterId: 'arch_lich',
+        name: 'Arch-Lich of the Arcanum',
+        icon: '👑',
+        monsterScale: 1.25,
+        aggroRadius: 5.6,
+        triggerRadius: 2.2,
+        description: 'Crowned in tarnished gold and wreathed in astral shards, the Arch-Lich raises its phylactery staff to bar the Astral Conduit.',
+        options: [
+            {
+                label: 'Engage in Tactical Turn-Based Combat',
+                action: 'combat',
+                stat: 'int',
+                statName: 'Intelligence'
+            }
+        ]
+    }
+});
+
+function createFloor2CombatEncounter(id, roomId, pos, monsterId) {
+    const tpl = FLOOR2_MONSTER_TEMPLATES[monsterId] || FLOOR2_MONSTER_TEMPLATES.obsidian_gargoyle;
+    return {
+        id,
+        name: tpl.name,
+        icon: tpl.icon,
+        roomId,
+        kind: 'combat',
+        pos: { x: pos.x, y: 0, z: pos.z },
+        triggerRadius: tpl.triggerRadius,
+        description: tpl.description,
+        resolved: false,
+        isCombat: true,
+        monsterId: tpl.monsterId,
+        monsterScale: tpl.monsterScale,
+        aggroRadius: tpl.aggroRadius,
+        options: deepClone(tpl.options)
+    };
+}
+
+/**
+ * Generates an isolated, deep-cloned Floor 2 run state `{ floor, encounters, doors, rooms }`.
+ */
+export function createFloor2Run() {
+    const floor = createFloor2Layout();
+    const encounters = [];
+
+    const atrium = floor.rooms.find((r) => r.id === 'f2_atrium');
+    if (atrium) {
+        encounters.push({
+            id: 'astral_font',
+            name: 'Astral Restoration Font',
+            icon: '⛲',
+            roomId: atrium.id,
+            kind: 'shrine',
+            pos: { x: -3.2, y: 0, z: 7.5 },
+            triggerRadius: 2.1,
+            description: 'Starlight pools inside a carved basalt basin, humming with restorative mana from the Sunken Arcanum.',
+            resolved: false,
+            isCombat: false,
+            options: [
+                {
+                    label: 'Drink from the astral waters',
+                    stat: 'vit',
+                    statName: 'Vitality',
+                    dc: 9,
+                    successMsg: 'Cool starlight courses through your veins! Health and mana are fully restored.',
+                    failMsg: 'The chilled mineral draught steadies your breath (+20 HP).',
+                    reward: { fullHeal: true, xp: 25 },
+                    penalty: { partialHeal: 20 }
+                }
+            ]
+        });
+    }
+
+    for (const door of floor.doors) {
+        const approachRoomId = door.connects[0];
+        if (door.id === 'door_f2_rune_gate') {
+            encounters.push({
+                id: door.encounterId || 'f2_rune_gate',
+                name: 'Sealed Lunar Rune Gate',
+                icon: '🚪',
+                roomId: approachRoomId,
+                kind: 'door',
+                doorId: door.id,
+                unlockedByPuzzleId: 'puzzle_twin_moons',
+                retryable: true,
+                pos: { x: door.x, y: 0, z: door.z },
+                triggerRadius: 2.1,
+                description: 'Arcane lunar bars seal the passage north into the Vault of Mirrors. Solve the Dial of the Twin Moons to the west or force the ward directly.',
+                resolved: false,
+                isCombat: false,
+                options: [
+                    {
+                        label: 'Shatter the ward-latches with brute strength',
+                        stat: 'str',
+                        statName: 'Strength',
+                        dc: 14,
+                        successMsg: 'Sparks scatter across the stone as you wrench the lunar gate open!',
+                        failMsg: 'The warded iron throws you back with a jarring shock.',
+                        reward: { xp: 35, unlocksDoor: true },
+                        penalty: { hpDamage: 10 }
+                    },
+                    {
+                        label: 'Bypass the celestial tumblers with nimble picks',
+                        stat: 'agi',
+                        statName: 'Agility',
+                        dc: 13,
+                        successMsg: 'Click by click, you align the hidden pins and slide the rune gate clear.',
+                        failMsg: 'A tension spring snaps across your gauntlet.',
+                        reward: { xp: 35, unlocksDoor: true },
+                        penalty: { hpDamage: 8 }
+                    },
+                    {
+                        label: 'Invert the lunar sigil by arcane deduction',
+                        stat: 'int',
+                        statName: 'Intelligence',
+                        dc: 13,
+                        successMsg: 'The lunar runes dissolve into pale mist as the gate swings open.',
+                        failMsg: 'Arcane feedback singes your palms.',
+                        reward: { xp: 35, unlocksDoor: true },
+                        penalty: { hpDamage: 9 }
+                    }
+                ]
+            });
+        } else {
+            encounters.push({
+                id: door.encounterId || 'f2_obsidian_seal',
+                name: 'Obsidian Sanctum Seal',
+                icon: '⛓️',
+                roomId: approachRoomId,
+                kind: 'door',
+                doorId: door.id,
+                unlockedByPuzzleId: 'puzzle_alchemist_scales',
+                retryable: true,
+                pos: { x: door.x, y: 0, z: door.z },
+                triggerRadius: 2.1,
+                description: 'Twin obsidian leaves bound by brass weights seal the Arch-Lich Sanctum. Balance the Scales of Equilibrium or break the seal by force.',
+                resolved: false,
+                isCombat: false,
+                options: [
+                    {
+                        label: 'Heave the counterweight chains apart',
+                        stat: 'str',
+                        statName: 'Strength',
+                        dc: 15,
+                        successMsg: 'The heavy chains snap free and the obsidian leaves part!',
+                        failMsg: 'The obsidian seal holds fast, bruising your shoulders.',
+                        reward: { xp: 50, unlocksDoor: true },
+                        penalty: { hpDamage: 12 }
+                    },
+                    {
+                        label: 'Pick the astral deadlock mechanism',
+                        stat: 'agi',
+                        statName: 'Agility',
+                        dc: 14,
+                        successMsg: 'Your pick slips past the counterweight catch and frees the seal.',
+                        failMsg: 'A needle trap nicks your wrist inside the lock.',
+                        reward: { xp: 50, unlocksDoor: true },
+                        penalty: { hpDamage: 10 }
+                    },
+                    {
+                        label: 'Unweave the Arch-Lich binding glyphs',
+                        stat: 'int',
+                        statName: 'Intelligence',
+                        dc: 14,
+                        successMsg: 'The purple sigils unravel and the sanctum doors groan wide.',
+                        failMsg: 'Frost-burnt runes repel your grasp.',
+                        reward: { xp: 50, unlocksDoor: true },
+                        penalty: { hpDamage: 10 }
+                    }
+                ]
+            });
+        }
+    }
+
+    const puzzleRoomMap = {
+        f2_west_puzzle: 'puzzle_twin_moons',
+        f2_central_hall: 'puzzle_mirror_relay',
+        f2_north_puzzle: 'puzzle_alchemist_scales'
+    };
+
+    const monsterRoomMap = {
+        f2_east_mobs: 'obsidian_gargoyle',
+        f2_west_crypt: 'runebound_sentinel',
+        f2_east_crypt: 'blight_ooze',
+        f2_sanctum: 'arch_lich'
+    };
+
+    for (const room of floor.rooms) {
+        const cx = (room.bounds.minX + room.bounds.maxX) / 2;
+        const cz = room.role === 'sanctum'
+            ? -27.5
+            : (room.bounds.minZ + room.bounds.maxZ) / 2;
+
+        if (room.inhabitantType === 'puzzle') {
+            const puzzleId = puzzleRoomMap[room.id] || 'puzzle_twin_moons';
+            const def = PUZZLE_DEFINITIONS[puzzleId];
+            encounters.push({
+                id: def.id,
+                puzzleId: def.id,
+                puzzleType: def.puzzleType,
+                name: def.name,
+                icon: def.icon,
+                roomId: room.id,
+                kind: 'puzzle',
+                pos: { x: cx, y: 0, z: cz },
+                triggerRadius: 2.2,
+                description: def.description,
+                clue: def.clue,
+                unlocksDoorId: def.unlocksDoorId || null,
+                solved: false,
+                resolved: false,
+                isCombat: false,
+                options: []
+            });
+        } else if (room.inhabitantType === 'monster') {
+            const monsterId = monsterRoomMap[room.id] || 'obsidian_gargoyle';
+            encounters.push(createFloor2CombatEncounter(monsterId, room.id, { x: cx, z: cz }, monsterId));
+        }
+    }
+
+    const sanctum = floor.rooms.find((r) => r.role === 'sanctum');
+    if (sanctum) {
+        encounters.push({
+            id: 'f2_exit_seal',
+            name: 'The Astral Conduit',
+            icon: '🌟',
+            roomId: sanctum.id,
+            kind: 'exit',
+            pos: { x: 0, y: 0, z: -32.2 },
+            triggerRadius: 2.1,
+            description: 'A crystalline conduit of woven starlight crowns the Arch-Lich dais, safeguarding the Staff of the Sunken Arcanum.',
+            resolved: false,
+            isCombat: false,
+            options: [
+                {
+                    label: 'Align the conduit prisms to claim the Staff',
+                    stat: 'int',
+                    statName: 'Intelligence',
+                    dc: 14,
+                    successMsg: 'The astral rings click into harmony! You claim the Staff of the Sunken Arcanum and conquer Floor 2!',
+                    failMsg: 'A crackling arc of starlight jolts your gauntlets before the conduit stabilizes.',
+                    reward: {
+                        gold: 250,
+                        item: 'Staff of the Sunken Arcanum (+10 MP)',
+                        consumable: 'Greater Healing Potion',
+                        xp: 175,
+                        victory: true
+                    },
+                    penalty: { hpDamage: 14 }
+                },
+                {
+                    label: 'Wrench the phylactery key free by force',
+                    stat: 'str',
+                    statName: 'Strength',
+                    dc: 15,
+                    successMsg: 'With thunderous strength, you snap the binding clasp and lift the Staff of the Sunken Arcanum!',
+                    failMsg: 'The warded bronze rebounds against your arms.',
+                    reward: {
+                        gold: 250,
+                        item: 'Staff of the Sunken Arcanum (+10 MP)',
+                        consumable: 'Greater Healing Potion',
+                        xp: 175,
+                        victory: true
+                    },
+                    penalty: { hpDamage: 15 }
+                },
+                {
+                    label: 'Disarm the astral ward-pins with swift precision',
+                    stat: 'agi',
+                    statName: 'Agility',
+                    dc: 14,
+                    successMsg: 'Your steady hands release each pin cleanly, unlocking the Staff of the Sunken Arcanum!',
+                    failMsg: 'A hidden needle-ward grazes your palm as the seal resets.',
+                    reward: {
+                        gold: 250,
+                        item: 'Staff of the Sunken Arcanum (+10 MP)',
+                        consumable: 'Holy Water Flask',
+                        xp: 175,
+                        victory: true
+                    },
+                    penalty: { hpDamage: 12 }
+                }
+            ]
+        });
+    }
+
+    return {
+        floor,
+        encounters,
+        doors: floor.doors,
+        rooms: floor.rooms
+    };
+}
+
+export function createFloorRun(floorNumber = 1, options = {}) {
+    if (Number(floorNumber) === 2) {
+        return createFloor2Run(options);
+    }
+    return createFloor1Run(options);
+}
