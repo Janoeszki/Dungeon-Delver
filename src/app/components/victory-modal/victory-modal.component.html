@@ -1,0 +1,65 @@
+<div
+    class="encounter-overlay"
+    id="victoryModal"
+    [style.display]="gameState.victoryModalOpen() ? 'flex' : 'none'"
+>
+    @let info = gameState.victoryInfo();
+    <div class="encounter-card">
+        <div class="encounter-header">
+            <span class="encounter-icon">👑</span>
+            <div>
+                <h2 class="encounter-title" id="victoryTitle">{{ info.title }}</h2>
+                <span id="victorySubtitle" style="color: var(--gold-bright); font-size: 1.1rem">
+                    {{ info.subtitle }}
+                </span>
+            </div>
+        </div>
+
+        <p class="encounter-story" id="victoryStory">{{ info.story }}</p>
+
+        <div class="trait-box" id="victorySummaryBox" style="gap: 6px; font-size: 1.2rem">
+            <div style="color: var(--gold-bright); font-family: 'Cinzel', serif">EXPEDITION SUMMARY</div>
+            <div id="victoryStatsLine">{{ info.statsLine }}</div>
+            <div id="victoryBankLine" style="color: #4ade80; font-size: 1.15rem">{{ info.bankLine }}</div>
+            <div id="victoryRoomsLine" style="color: var(--cyan-accent); font-size: 1.1rem">{{ info.roomsLine }}</div>
+        </div>
+
+        <button
+            class="primary-action-btn"
+            id="btnDescendFloor2"
+            style="width: 100%; padding: 10px; font-size: 1.35rem; margin-bottom: 4px"
+            [style.display]="info.canDescendFloor2 ? 'block' : 'none'"
+            (click)="onDescendFloor2()"
+        >
+            🔮 DESCEND TO FLOOR 2: THE SUNKEN ARCANUM
+        </button>
+
+        <button
+            class="primary-action-btn"
+            id="btnVictoryShop"
+            style="width: 100%; padding: 10px; font-size: 1.35rem"
+            (click)="onOpenShop()"
+        >
+            🏪 AFTER-DELVE SHOP (SPEND GOLD &amp; EXP)
+        </button>
+
+        <div class="title-secondary-row" style="margin-top: 4px">
+            <button
+                class="result-dismiss-btn"
+                id="btnPlayAgain"
+                style="display: block"
+                (click)="onPlayAgain()"
+            >
+                ⚔️ PLAY AGAIN (NEW DELVE)
+            </button>
+            <button
+                class="start-cta-secondary"
+                id="btnVictoryTitle"
+                style="font-size: 1.35rem; padding: 10px"
+                (click)="onReturnTitle()"
+            >
+                🏰 RETURN TO TITLE
+            </button>
+        </div>
+    </div>
+</div>

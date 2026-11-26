@@ -1,0 +1,356 @@
+<section
+    id="screenCreator"
+    class="screen-view"
+    [style.display]="gameState.mode() === 'creator' ? 'flex' : 'none'"
+>
+    <div id="viewportCreator" #viewportCreator class="canvas-3d"></div>
+
+    <div class="overlay-layer">
+        <!-- Left panel -->
+        <aside class="side-panel">
+            <h2 class="panel-heading">Character Forge</h2>
+
+            <div class="form-group">
+                <label class="form-label" for="heroNameInput">Hero Name</label>
+                <input
+                    type="text"
+                    id="heroNameInput"
+                    class="retro-input"
+                    [value]="hero.heroConfig().name"
+                    maxlength="16"
+                    (input)="onNameInput($event)"
+                />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Ancestry</label>
+                <div class="grid-select-3" id="ancestrySelectGrid">
+                    @for (anc of ancestries; track anc.key) {
+                        @let unlocked = progression.isAncestryUnlocked(anc.key);
+                        @let boostTotal = getAncestryBoostTotal(anc.key);
+                        <div
+                            class="select-card"
+                            [class.active]="hero.heroConfig().ancestry === anc.key"
+                            [class.locked-ancestry]="!unlocked"
+                            [attr.data-ancestry]="anc.key"
+                            (click)="onSelectAncestry(anc.key)"
+                        >
+                            <span class="icon">{{ anc.icon }}</span>
+                            <span class="title">{{ anc.name }}</span>
+                            @if (anc.unlockCost) {
+                                <span
+                                    class="ancestry-lock-tag"
+                                    [attr.data-lock-badge]="anc.key"
+                                    [style.display]="unlocked ? 'none' : 'inline-block'"
+                                >
+                                    🔒 {{ anc.unlockCost }}g
+                                </span>
+                            }
+                            <span
+                                class="ancestry-boost-tag"
+                                [attr.data-boost-badge]="anc.key"
+                                [style.display]="boostTotal > 0 ? 'inline-block' : 'none'"
+                            >
+                                ⭐+{{ boostTotal }}
+                            </span>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Hero Class</label>
+                <div class="grid-select">
+                    <div
+                        class="select-card"
+                        [class.active]="hero.heroConfig().charClass === 'warrior'"
+                        data-class="warrior"
+                        (click)="onSelectClass('warrior')"
+                    >
+                        <span class="icon">⚔️</span><span class="title">Warrior</span>
+                    </div>
+                    <div
+                        class="select-card"
+                        [class.active]="hero.heroConfig().charClass === 'mage'"
+                        data-class="mage"
+                        (click)="onSelectClass('mage')"
+                    >
+                        <span class="icon">🔮</span><span class="title">Mage</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Body Type</label>
+                <div class="grid-select">
+                    <div
+                        class="select-card"
+                        [class.active]="hero.heroConfig().bodyType === 'a'"
+                        data-body-type="a"
+                        (click)="onSelectBodyType('a')"
+                    >
+                        <span class="icon">🛡️</span><span class="title">Type A</span>
+                    </div>
+                    <div
+                        class="select-card"
+                        [class.active]="hero.heroConfig().bodyType === 'b'"
+                        data-body-type="b"
+                        (click)="onSelectBodyType('b')"
+                    >
+                        <span class="icon">✨</span><span class="title">Type B</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Hair / Mane Style</label>
+                <div class="grid-select-4">
+                    @for (h of hairStyles; track h.value) {
+                        <div
+                            class="select-card"
+                            [class.active]="hero.heroConfig().hairStyle === h.value"
+                            [attr.data-hair-style]="h.value"
+                            (click)="onSelectHairStyle(h.value)"
+                        >
+                            <span class="title">{{ h.label }}</span>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Beard / Facial Hair</label>
+                <div class="grid-select-4">
+                    @for (b of beardStyles; track b.value) {
+                        <div
+                            class="select-card"
+                            [class.active]="hero.heroConfig().beardStyle === b.value"
+                            [attr.data-beard-style]="b.value"
+                            (click)="onSelectBeardStyle(b.value)"
+                        >
+                            <span class="title">{{ b.label }}</span>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <label class="checkbox-row">
+                <span class="form-label" style="margin: 0">Equip Helmet / Headgear</span>
+                <input
+                    type="checkbox"
+                    id="checkHelm"
+                    [checked]="hero.heroConfig().showHelm"
+                    (change)="onToggleHelm($event)"
+                />
+            </label>
+
+            <div class="form-group">
+                <label class="form-label">Skin / Fur Complexion</label>
+                <div class="color-palette" id="skinPalette">
+                    @for (item of skinPalette; track item.color) {
+                        <div
+                            class="color-dot"
+                            [class.active]="hero.heroConfig().skinColor.toLowerCase() === item.color.toLowerCase()"
+                            [style.background]="item.color"
+                            [attr.data-color]="item.color"
+                            [title]="item.title"
+                            (click)="onPickSkin(item.color)"
+                        ></div>
+                    }
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Hair / Fur / Beard Hue</label>
+                <div class="color-palette" id="hairPalette">
+                    @for (item of hairPalette; track item.color) {
+                        <div
+                            class="color-dot"
+                            [class.active]="hero.heroConfig().hairColor.toLowerCase() === item.color.toLowerCase()"
+                            [style.background]="item.color"
+                            [attr.data-color]="item.color"
+                            [title]="item.title"
+                            (click)="onPickHair(item.color)"
+                        ></div>
+                    }
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Armor / Robe Tint</label>
+                <div class="color-palette" id="armorPalette">
+                    @for (item of armorPalette; track item.color) {
+                        <div
+                            class="color-dot"
+                            [class.active]="hero.heroConfig().armorColor.toLowerCase() === item.color.toLowerCase()"
+                            [style.background]="item.color"
+                            [attr.data-color]="item.color"
+                            [title]="item.title"
+                            (click)="onPickArmor(item.color)"
+                        ></div>
+                    }
+                </div>
+            </div>
+        </aside>
+
+        <!-- Center showcase -->
+        <div class="center-showcase">
+            <div class="nameplate-banner">
+                <div class="hero-name-badge" id="heroNameBadge">{{ hero.displayName() }}</div>
+                <div class="hero-ancestry-class-badge" id="heroancestryClassBadge">
+                    {{ hero.ancestryClassLabel() }}
+                </div>
+            </div>
+
+            <div class="turntable-controls">
+                <button class="turntable-btn" id="btnRotateLeft" (click)="onRotate(-0.6)">⟲ Left</button>
+                <span style="color: var(--text-muted); line-height: 1.8">| Drag to Orbit |</span>
+                <button class="turntable-btn" id="btnRotateRight" (click)="onRotate(0.6)">Right ⟳</button>
+            </div>
+        </div>
+
+        <!-- Right panel -->
+        <aside class="side-panel">
+            <h2 class="panel-heading">Hero Attributes</h2>
+
+            <div class="stat-row">
+                <div class="stat-header">
+                    <span>❤️ Health Points</span>
+                    <span class="stat-val" id="statHpVal">{{ hero.heroStats().maxHp }}</span>
+                </div>
+                <div class="stat-track">
+                    <div class="stat-fill fill-hp" id="statHpBar" [style.width.%]="hero.hpBarPct()"></div>
+                </div>
+            </div>
+
+            <div class="stat-row">
+                <div class="stat-header">
+                    <span>💧 Mana Pool</span>
+                    <span class="stat-val" id="statMpVal">{{ hero.heroStats().maxMp }}</span>
+                </div>
+                <div class="stat-track">
+                    <div class="stat-fill fill-mp" id="statMpBar" [style.width.%]="hero.mpBarPct()"></div>
+                </div>
+            </div>
+
+            <div class="stat-row">
+                <div class="stat-header">
+                    <span>🗡️ Strength</span>
+                    <span class="stat-val" id="statStrVal">{{ hero.heroStats().str }}</span>
+                </div>
+                <div class="stat-track">
+                    <div class="stat-fill fill-str" id="statStrBar" [style.width.%]="hero.strBarPct()"></div>
+                </div>
+            </div>
+
+            <div class="stat-row">
+                <div class="stat-header">
+                    <span>🛡️ Vitality</span>
+                    <span class="stat-val" id="statVitVal">{{ hero.heroStats().vit }}</span>
+                </div>
+                <div class="stat-track">
+                    <div class="stat-fill fill-vit" id="statVitBar" [style.width.%]="hero.vitBarPct()"></div>
+                </div>
+            </div>
+
+            <div class="stat-row">
+                <div class="stat-header">
+                    <span>🏹 Agility</span>
+                    <span class="stat-val" id="statAgiVal">{{ hero.heroStats().agi }}</span>
+                </div>
+                <div class="stat-track">
+                    <div class="stat-fill fill-agi" id="statAgiBar" [style.width.%]="hero.agiBarPct()"></div>
+                </div>
+            </div>
+
+            <div class="stat-row">
+                <div class="stat-header">
+                    <span>📜 Intelligence</span>
+                    <span class="stat-val" id="statIntVal">{{ hero.heroStats().int }}</span>
+                </div>
+                <div class="stat-track">
+                    <div class="stat-fill fill-int" id="statIntBar" [style.width.%]="hero.intBarPct()"></div>
+                </div>
+            </div>
+
+            <div class="trait-box">
+                <span class="trait-title" id="racialPerkTitle">
+                    {{ hero.ancestryObj().icon }} {{ hero.ancestryObj().name }} Ancestry Trait
+                </span>
+                <span class="trait-desc" id="racialPerkDesc">{{ hero.ancestryObj().perk }}</span>
+            </div>
+
+            <div class="trait-box">
+                <span class="trait-title" id="classAbilityTitle">
+                    {{ hero.classObj().icon }} {{ hero.classObj().name }} Signature
+                </span>
+                <span class="trait-desc" id="classAbilityDesc">{{ hero.classObj().signature }}</span>
+            </div>
+
+            <div class="forge-progression-box" id="forgeProgressionBox">
+                <div style="display: flex; justify-content: space-between; color: var(--gold-bright)">
+                    <span>🍪 HTTPCookie Vault:</span>
+                    <span>
+                        🪙 <strong id="forgeBankGold">{{ progression.gold() }}</strong>g | ⭐
+                        <strong id="forgeBankExp">{{ progression.exp() }}</strong> EXP
+                    </span>
+                </div>
+                <div
+                    id="forgeAncestryBoostSummary"
+                    [style.color]="hero.ancestryBoostSummary().active ? '#4ade80' : '#94a3b8'"
+                >
+                    {{ hero.ancestryBoostSummary().text }}
+                </div>
+                <div id="forgeLoadoutSummary" style="color: var(--text-light)">
+                    <div>
+                        ⚔️ Weapon: <strong style="color: #ffcf40">{{ hero.loadoutSummary().weaponName }}</strong>
+                    </div>
+                    <div>
+                        🛡️ Armor: <strong style="color: #38bdf8">{{ hero.loadoutSummary().armorName }}</strong>
+                    </div>
+                    <div>
+                        ✨ Spells ({{ hero.loadoutSummary().spellCount }}):
+                        <strong style="color: #c084fc">{{ hero.loadoutSummary().spellNames }}</strong>
+                    </div>
+                </div>
+                <button
+                    class="retro-btn"
+                    id="btnOpenShopForge"
+                    style="justify-content: center; width: 100%; margin-top: 4px"
+                    (click)="onOpenShop()"
+                >
+                    🏪 AFTER-DELVE SHOP &amp; UPGRADES
+                </button>
+            </div>
+
+            <div class="form-group" id="floorSelectGroup">
+                <label class="form-label">Select Dungeon Floor</label>
+                <div class="grid-select" id="floorSelectForge">
+                    <div
+                        class="select-card"
+                        [class.active]="gameState.selectedFloor() === 1"
+                        data-floor="1"
+                        (click)="onSelectFloor(1)"
+                    >
+                        <span class="icon">💀</span><span class="title">Floor 1: Crypt</span>
+                    </div>
+                    <div
+                        class="select-card"
+                        [class.active]="gameState.selectedFloor() === 2"
+                        data-floor="2"
+                        (click)="onSelectFloor(2)"
+                    >
+                        <span class="icon">🔮</span><span class="title">Floor 2: Arcanum</span>
+                    </div>
+                </div>
+            </div>
+
+            <button class="primary-action-btn" id="btnEnterDungeon" (click)="onEnterDungeon()">
+                ⚔️ ENTER THE CRYPT ⚔️
+            </button>
+            <div style="font-size: 1.05rem; color: var(--text-muted); text-align: center">
+                Launch 3D Adventure &amp; D20 Rolls
+            </div>
+        </aside>
+    </div>
+</section>

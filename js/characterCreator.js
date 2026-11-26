@@ -15,6 +15,7 @@ export class CharacterCreatorApp {
         this.characterAnchor = null;
 
         this.active = options.active !== undefined ? options.active : true;
+        this.skipDomSync = Boolean(options.skipDomSync);
         this.rafId = null;
 
         // Turntable interaction state
@@ -202,6 +203,7 @@ export class CharacterCreatorApp {
     }
 
     updateStatsUI() {
+        if (this.skipDomSync) return;
         const ancestryKey = this.config.ancestry || this.config.race || 'human';
         const stats = calculateStats(ancestryKey, this.config.charClass, progression);
 
@@ -300,55 +302,92 @@ export class CharacterCreatorApp {
     }
 
     setupEventListeners() {
-        window.addEventListener('resize', () => this.resize());
+        this._onResize = () => this.resize();
+        window.addEventListener('resize', this._onResize);
 
         // Mouse Drag Turntable
         const canvas = this.renderer.domElement;
 
-        canvas.addEventListener('mousedown', (e) => {
+        this._onMouseDown = (e) => {
             this.isDragging = true;
             this.prevMousePos = { x: e.clientX, y: e.clientY };
-        });
+        };
+        canvas.addEventListener('mousedown', this._onMouseDown);
 
-        window.addEventListener('mousemove', (e) => {
+        this._onMouseMove = (e) => {
             if (!this.isDragging) return;
             const deltaX = e.clientX - this.prevMousePos.x;
             this.targetRotationY += deltaX * 0.012;
             this.prevMousePos = { x: e.clientX, y: e.clientY };
-        });
+        };
+        window.addEventListener('mousemove', this._onMouseMove);
 
-        window.addEventListener('mouseup', () => {
+        this._onMouseUp = () => {
             this.isDragging = false;
-        });
+        };
+        window.addEventListener('mouseup', this._onMouseUp);
 
         // Touch support for mobile / tablets
-        canvas.addEventListener('touchstart', (e) => {
+        this._onTouchStart = (e) => {
             if (e.touches.length === 1) {
                 this.isDragging = true;
                 this.prevMousePos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
             }
-        });
+        };
+        canvas.addEventListener('touchstart', this._onTouchStart);
 
-        window.addEventListener('touchmove', (e) => {
+        this._onTouchMove = (e) => {
             if (!this.isDragging || e.touches.length !== 1) return;
             const deltaX = e.touches[0].clientX - this.prevMousePos.x;
             this.targetRotationY += deltaX * 0.015;
             this.prevMousePos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-        });
+        };
+        window.addEventListener('touchmove', this._onTouchMove);
 
-        window.addEventListener('touchend', () => {
+        this._onTouchEnd = () => {
             this.isDragging = false;
-        });
+        };
+        window.addEventListener('touchend', this._onTouchEnd);
 
         // Zoom with wheel
-        canvas.addEventListener('wheel', (e) => {
+        this._onWheel = (e) => {
             e.preventDefault();
             this.targetCameraDistance = THREE.MathUtils.clamp(
                 this.targetCameraDistance + e.deltaY * 0.003,
                 2.5,
                 6.5
             );
-        }, { passive: false });
+        };
+        canvas.addEventListener('wheel', this._onWheel, { passive: false });
+    }
+
+    dispose() {
+        this.active = false;
+        if (this.rafId !== null) {
+            cancelAnimationFrame(this.rafId);
+            this.rafId = null;
+        }
+        if (this._unsubProgression) {
+            this._unsubProgression();
+            this._unsubProgression = null;
+        }
+        if (typeof window !== 'undefined') {
+            if (this._onResize) window.removeEventListener('resize', this._onResize);
+            if (this._onMouseMove) window.removeEventListener('mousemove', this._onMouseMove);
+            if (this._onMouseUp) window.removeEventListener('mouseup', this._onMouseUp);
+            if (this._onTouchMove) window.removeEventListener('touchmove', this._onTouchMove);
+            if (this._onTouchEnd) window.removeEventListener('touchend', this._onTouchEnd);
+        }
+        const canvas = this.renderer?.domElement;
+        if (canvas) {
+            if (this._onMouseDown) canvas.removeEventListener('mousedown', this._onMouseDown);
+            if (this._onTouchStart) canvas.removeEventListener('touchstart', this._onTouchStart);
+            if (this._onWheel) canvas.removeEventListener('wheel', this._onWheel);
+            if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
+        }
+        if (this.renderer && typeof this.renderer.dispose === 'function') {
+            this.renderer.dispose();
+        }
     }
 
     rotateCharacter(deltaAngle) {

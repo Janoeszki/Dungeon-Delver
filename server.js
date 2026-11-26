@@ -24,15 +24,18 @@ const MIME_TYPES = {
     '.gif': 'image/gif',
     '.svg': 'image/svg+xml',
     '.wav': 'audio/wav',
-    '.mp3': 'audio/mpeg'
+    '.mp3': 'audio/mpeg',
+    '.ico': 'image/x-icon',
+    '.woff': 'font/woff',
+    '.woff2': 'font/woff2'
 };
 
 const ROOT = path.resolve(__dirname);
+const DIST_DIR = path.resolve(ROOT, 'dist', 'dungeon-delver', 'browser');
 
 // Only these paths are served statically. Everything else (.git, server.js,
-// tests/, *.md, scripts) returns 404.
+// tests/, *.md, src/, scripts) returns 404.
 const PUBLIC_FILES = new Set([
-    'index.html',
     'dungeon_delver_logo_small.png',
     'dungeon_delver_chronicles-of-phusza.png'
 ]);
@@ -57,8 +60,8 @@ const SECURITY_HEADERS = {
     ].join('; ')
 };
 
-// Returns an absolute path inside ROOT, or null if the URL is malformed or escapes ROOT.
-export function resolveSafe(reqUrl) {
+// Returns an absolute path inside baseDir, or null if the URL is malformed or escapes baseDir.
+export function resolveSafeIn(baseDir, reqUrl) {
     let decoded;
     try {
         decoded = decodeURIComponent(reqUrl);
@@ -67,9 +70,13 @@ export function resolveSafe(reqUrl) {
     }
     if (decoded.includes('\0') || decoded.includes('\\')) return null;
 
-    const filePath = path.resolve(ROOT, '.' + decoded);
-    if (!filePath.startsWith(ROOT + path.sep)) return null;
+    const filePath = path.resolve(baseDir, '.' + decoded);
+    if (!filePath.startsWith(baseDir + path.sep)) return null;
     return filePath;
+}
+
+export function resolveSafe(reqUrl) {
+    return resolveSafeIn(ROOT, reqUrl);
 }
 
 function isPublic(filePath) {
@@ -77,6 +84,11 @@ function isPublic(filePath) {
     if (rel.some((seg) => seg.startsWith('.'))) return false;
     if (rel.length === 1) return PUBLIC_FILES.has(rel[0]);
     return PUBLIC_DIRS.includes(rel[0]);
+}
+
+function isDistPublic(filePath) {
+    const rel = path.relative(DIST_DIR, filePath).split(path.sep);
+    return !rel.some((seg) => seg.startsWith('.'));
 }
 
 export function handleRequest(req, res) {
@@ -164,21 +176,16 @@ export function handleRequest(req, res) {
 
     if (reqUrl === '/') reqUrl = '/index.html';
 
-    const filePath = resolveSafe(reqUrl);
-    if (!filePath) {
+    const distPath = resolveSafeIn(DIST_DIR, reqUrl);
+    const rootPath = resolveSafe(reqUrl);
+    if (!distPath && !rootPath) {
         res.writeHead(400, { 'Content-Type': 'text/plain' });
         res.end('400 Bad Request');
         return;
     }
 
-    fs.stat(filePath, (err, stats) => {
-        if (err || !stats.isFile() || !isPublic(filePath)) {
-            res.writeHead(404, { 'Content-Type': 'text/plain' });
-            res.end('404 Not Found');
-            return;
-        }
-
-        const ext = path.extname(filePath).toLowerCase();
+    const serveFile = (targetPath) => {
+        const ext = path.extname(targetPath).toLowerCase();
         const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
         res.writeHead(200, {
@@ -186,9 +193,38 @@ export function handleRequest(req, res) {
             'Cache-Control': 'no-cache'
         });
 
-        const stream = fs.createReadStream(filePath);
+        const stream = fs.createReadStream(targetPath);
         stream.pipe(res);
-    });
+    };
+
+    const tryRootFallback = () => {
+        if (!rootPath) {
+            res.writeHead(404, { 'Content-Type': 'text/plain' });
+            res.end('404 Not Found');
+            return;
+        }
+        fs.stat(rootPath, (err, stats) => {
+            if (err || !stats.isFile() || !isPublic(rootPath)) {
+                res.writeHead(404, { 'Content-Type': 'text/plain' });
+                res.end('404 Not Found');
+                return;
+            }
+            serveFile(rootPath);
+        });
+    };
+
+    if (distPath && isDistPublic(distPath)) {
+        fs.stat(distPath, (err, stats) => {
+            if (!err && stats.isFile()) {
+                serveFile(distPath);
+                return;
+            }
+            tryRootFallback();
+        });
+        return;
+    }
+
+    tryRootFallback();
 }
 
 export const server = http.createServer(handleRequest);

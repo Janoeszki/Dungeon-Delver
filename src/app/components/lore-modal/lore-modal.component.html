@@ -1,0 +1,43 @@
+<div
+    class="encounter-overlay"
+    id="loreModal"
+    [style.display]="gameState.loreModalOpen() ? 'flex' : 'none'"
+    (click)="onBackdropClick($event)"
+>
+    <div class="encounter-card">
+        <div class="encounter-header">
+            <span class="encounter-icon">📜</span>
+            <div>
+                <h2 class="encounter-title">Chronicles of Phusza</h2>
+                <span style="color: var(--text-muted); font-size: 1.1rem">Realm Lore &amp; Delver's Handbook</span>
+            </div>
+        </div>
+
+        <div class="lore-list">
+            <div class="lore-block">
+                <strong>💠 The Shattered Seal of Phusza</strong>
+                Beneath the moss-choked arches of the forsaken crypt pulses a living shard of Phusza crystal. Warlords, scholars, and treasure seekers descend its torchlit halls seeking ancient relics and the fabled Crown.
+            </div>
+            <div class="lore-block">
+                <strong>⚒️ Forge &amp; D20 Fate</strong>
+                Customize your hero across 6 ancestries (Human, Elf, Dwarf, Orc, Goblin, Catfolk) and wield Warrior steel or Mage flame. Every portcullis, sarcophagus, leyline monolith, and trap resolves with a live D20 + Stat Modifier check.
+            </div>
+            <div class="lore-block">
+                <strong>🖱️ Controls &amp; Shortcuts</strong>
+                • Click anywhere on the dungeon stone floor to walk<br />
+                • Click glowing [⯁] encounter beacons to inspect &amp; roll D20 checks<br />
+                • Drag in Character Forge to inspect your 3D hero on the rune pedestal<br />
+                • Press <strong>M</strong> anytime to toggle the orchestral music
+            </div>
+        </div>
+
+        <button
+            class="result-dismiss-btn"
+            id="btnCloseLore"
+            style="display: block"
+            (click)="onClose()"
+        >
+            RETURN TO GATE
+        </button>
+    </div>
+</div>

@@ -1,0 +1,90 @@
+<section
+    id="screenAdventure"
+    class="screen-view"
+    [style.display]="gameState.mode() === 'adventure' ? 'flex' : 'none'"
+    [class.low-hp-crimson]="gameState.isLowHp()"
+    [class.damage-flash]="gameState.damageFlashActive()"
+>
+    <div id="viewportAdventure" #viewportAdventure class="canvas-3d"></div>
+    <div
+        id="adventureVignette"
+        class="adventure-vignette"
+        [class.low-hp-crimson]="gameState.isLowHp()"
+    ></div>
+
+    <!-- Top HUD -->
+    <div class="adventure-hud-top">
+        <div class="hero-status-card">
+            <div class="status-hero-name">
+                <span id="advHeroName">{{ hero.displayName() }}</span>
+                <span id="advHeroClass" style="color: var(--cyan-accent); font-size: 1.15rem">
+                    {{ hero.ancestryClassLabel() }}
+                </span>
+            </div>
+            <div class="hud-bar-row">
+                <span class="hud-bar-label" style="color: var(--red-hp)">HP</span>
+                <div class="hud-bar-track">
+                    <div
+                        class="stat-fill fill-hp"
+                        id="advHpFill"
+                        [style.width.%]="gameState.hpPct()"
+                    ></div>
+                </div>
+                <span class="hud-bar-val" id="advHpText">
+                    {{ gameState.playerStats().currentHp }} / {{ gameState.playerStats().maxHp }}
+                </span>
+            </div>
+            <div class="hud-bar-row">
+                <span class="hud-bar-label" style="color: var(--blue-mp)">MP</span>
+                <div class="hud-bar-track">
+                    <div
+                        class="stat-fill fill-mp"
+                        id="advMpFill"
+                        [style.width.%]="gameState.mpPct()"
+                    ></div>
+                </div>
+                <span class="hud-bar-val" id="advMpText">
+                    {{ gameState.playerStats().currentMp }} / {{ gameState.playerStats().maxMp }}
+                </span>
+            </div>
+        </div>
+
+        <div id="hudRoom" class="adventure-room-banner">{{ gameState.roomBannerText() }}</div>
+
+        <div class="adventure-inventory-card">
+            <span>🪙 <strong id="advGold">{{ gameState.playerStats().gold }}</strong> Gold</span>
+            <span>⭐ <strong id="advXp">{{ gameState.playerStats().xp }}</strong> XP</span>
+            <span id="advBankBadge" style="color: #fbbf24; font-size: 1.1rem" title="HTTPCookie Bank Vault">
+                🏦 Vault: <strong id="advBankGold">{{ progression.gold() }}</strong>g /
+                <strong id="advBankExp">{{ progression.exp() }}</strong> XP
+            </span>
+            <span id="advItemSlot" style="color: #a78bfa; font-size: 1.15rem">
+                {{ gameState.itemSlotText() }}
+            </span>
+            <button
+                id="btnOpenShopAdventure"
+                class="hud-mini-btn"
+                title="Open After-Delve Shop"
+                (click)="onOpenShop()"
+            >
+                🏪 SHOP
+            </button>
+        </div>
+    </div>
+
+    <!-- Bottom HUD -->
+    <div class="adventure-hud-bottom">
+        <div class="event-log-panel">
+            <div class="log-title">📜 Crypt Chronicle &amp; Skill Checks</div>
+            <div class="log-messages" id="advLog">
+                @for (entry of gameState.logMessages(); track entry.id) {
+                    <div [class]="'log-msg ' + entry.type">{{ entry.text }}</div>
+                }
+            </div>
+        </div>
+
+        <div class="click-hint-banner">
+            ⌨️ WASD / Arrows or 🖱️ Click ground to walk | Click glowing beacons [⯁] to inspect
+        </div>
+    </div>
+</section>

@@ -1,0 +1,306 @@
+<div
+    class="combat-overlay"
+    id="combatModal"
+    [style.display]="combat.isOpen() ? 'flex' : 'none'"
+>
+    @let cs = combat.combatState();
+    @let ps = gameState.playerStats();
+    <div class="combat-arena-card" id="combatArenaCard">
+        <!-- Header -->
+        <div class="encounter-header" style="justify-content: space-between">
+            <div style="display: flex; align-items: center; gap: 12px">
+                <span class="encounter-icon" id="combatMonsterIcon">{{ cs?.monster?.icon || '💀' }}</span>
+                <div>
+                    <h2 class="encounter-title" id="combatArenaTitle">
+                        BATTLE: {{ cs?.monster?.name || 'Skeletal Vanguard' }}
+                    </h2>
+                    <span style="color: var(--text-muted); font-size: 1.1rem">
+                        Turn-Based D&amp;D Tactical Combat
+                    </span>
+                </div>
+            </div>
+            <div id="combatTurnBadge" [class]="turnBadgeClass()">{{ turnBadgeLabel() }}</div>
+        </div>
+
+        <!-- 3D Stage -->
+        <div class="combat-stage" id="combatStage">
+            <div class="combat-viewport-3d" id="combatViewport3D" #combatViewport3D></div>
+
+            <!-- Hero Card -->
+            <div
+                class="combatant-card"
+                id="combatHeroCard"
+                [class.combat-anim-shake]="heroCardAnim()"
+                [class.combat-anim-flash]="heroCardAnim()"
+            >
+                <div class="combatant-name" id="combatHeroName">
+                    🛡️ {{ cs?.player?.name || 'Hero' }} ({{ cs?.player?.stats?.charClass?.name || 'Warrior' }})
+                </div>
+                <div class="combatant-stats-line">
+                    <span>HP</span>
+                    <span id="combatHeroHpVal">{{ ps.currentHp }} / {{ ps.maxHp }}</span>
+                </div>
+                <div class="combat-bar">
+                    <div
+                        class="combat-bar-fill combat-hp-player"
+                        id="combatHeroHpBar"
+                        [style.width.%]="combat.heroHpPct()"
+                    ></div>
+                </div>
+                <div class="combatant-stats-line" style="margin-top: 2px">
+                    <span>MP</span>
+                    <span id="combatHeroMpVal">{{ ps.currentMp }} / {{ ps.maxMp }}</span>
+                </div>
+                <div class="combat-bar" style="height: 14px">
+                    <div
+                        class="combat-bar-fill combat-mp-player"
+                        id="combatHeroMpBar"
+                        [style.width.%]="combat.heroMpPct()"
+                    ></div>
+                </div>
+                <div style="font-size: 1.05rem; color: var(--cyan-accent); margin-top: 2px" id="combatHeroBuffs">
+                    AC: <span id="combatHeroAc">{{ cs?.player?.effectiveAc ?? 14 }}</span> | Stance:
+                    {{ cs?.player?.isDefending ? '🛡️ Guard Stance (+4 AC)' : 'Normal Stance' }}
+                </div>
+            </div>
+
+            <!-- Center D20 -->
+            <div class="combat-vs-divider">
+                <div style="display: flex; flex-direction: column; align-items: flex-end">
+                    <span style="font-family: 'Cinzel', serif; font-size: 1.15rem; color: var(--gold-bright)">
+                        D20 ROLL
+                    </span>
+                    <span id="combatRoundText" style="font-size: 1.05rem; color: var(--text-muted)">
+                        Round {{ cs?.round || 1 }}
+                    </span>
+                </div>
+                <div
+                    class="d20-icosahedron"
+                    id="combatD20"
+                    [class.d20-rolling]="combat.d20Rolling()"
+                    style="width: 42px; height: 42px; font-size: 1.35rem"
+                >
+                    <span class="d20-num" id="combatD20Val">{{ combat.d20Value() }}</span>
+                </div>
+            </div>
+
+            <!-- Monster Card -->
+            <div
+                class="combatant-card"
+                id="combatEnemyCard"
+                [class.combat-anim-shake]="enemyCardAnim()"
+                [class.combat-anim-flash]="enemyCardAnim()"
+            >
+                <div class="combatant-name" id="combatMonsterName">
+                    {{ cs?.monster?.icon || '💀' }} {{ cs?.monster?.name || 'Skeletal Vanguard' }}
+                </div>
+                <div class="combatant-stats-line">
+                    <span>HP</span>
+                    <span id="combatMonsterHpVal">
+                        {{ cs?.monster?.currentHp ?? 38 }} / {{ cs?.monster?.maxHp ?? 38 }}
+                    </span>
+                </div>
+                <div class="combat-bar">
+                    <div
+                        class="combat-bar-fill combat-hp-enemy"
+                        id="combatMonsterHpBar"
+                        [style.width.%]="combat.monsterHpPct()"
+                    ></div>
+                </div>
+                <div
+                    style="font-size: 1rem; color: #f87171; margin-top: 4px; line-height: 1.2"
+                    id="combatMonsterBuffs"
+                >
+                    AC: <span id="combatMonsterAc">{{ cs?.monster?.ac ?? 12 }}</span> |
+                    {{ cs?.monster?.description || 'Undead Crypt Guard' }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Deck -->
+        <div class="combat-bottom-deck">
+            <div class="combat-log-box" id="combatLogBox">
+                @for (entry of combat.combatLogs(); track entry.id) {
+                    <div [class]="'combat-log-entry ' + entry.type">{{ entry.text }}</div>
+                }
+            </div>
+
+            <div
+                class="combat-actions-panel"
+                id="combatActionsPanel"
+                [style.display]="cs?.turn === 'ended' ? 'none' : 'flex'"
+            >
+                <div class="combat-menu-tabs">
+                    <button
+                        class="combat-tab-btn"
+                        id="btnTabAttack"
+                        [class.active]="cs?.currentTab === 'attack'"
+                        (click)="combat.switchTab('attack')"
+                    >
+                        ⚔️ ATTACK
+                    </button>
+                    <button
+                        class="combat-tab-btn"
+                        id="btnTabSpells"
+                        [class.active]="cs?.currentTab === 'spells'"
+                        (click)="combat.switchTab('spells')"
+                    >
+                        ✨ SPELLS
+                    </button>
+                    <button
+                        class="combat-tab-btn"
+                        id="btnTabDefend"
+                        [class.active]="cs?.currentTab === 'defend'"
+                        (click)="combat.switchTab('defend')"
+                    >
+                        🛡️ DEFEND
+                    </button>
+                    <button
+                        class="combat-tab-btn"
+                        id="btnTabItems"
+                        [class.active]="cs?.currentTab === 'items'"
+                        (click)="combat.switchTab('items')"
+                    >
+                        🎒 ITEMS
+                    </button>
+                    <button
+                        class="combat-tab-btn"
+                        id="btnTabFlee"
+                        [class.active]="cs?.currentTab === 'flee'"
+                        (click)="combat.switchTab('flee')"
+                    >
+                        🏃 FLEE
+                    </button>
+                </div>
+
+                <div class="combat-submenu-container" id="combatSubmenu">
+                    @if (!cs || cs.turn !== 'player' || cs.busy) {
+                        <span style="color: var(--text-muted); font-size: 1.2rem; padding: 6px">
+                            Waiting for turn resolution...
+                        </span>
+                    } @else {
+                        @switch (cs.currentTab) {
+                            @case ('attack') {
+                                @if (cs.player.charClass === 'warrior') {
+                                    <button
+                                        class="combat-action-btn"
+                                        (click)="combat.executePlayerAttack('basic_melee')"
+                                    >
+                                        <span>⚔️ Weapon Strike</span>
+                                        <span class="combat-action-cost">
+                                            +{{ attackMods().strPlusWpn }} vs AC
+                                        </span>
+                                    </button>
+                                    <button
+                                        class="combat-action-btn"
+                                        [disabled]="ps.currentMp < 15"
+                                        (click)="combat.executePlayerAttack('special_cleave', 15)"
+                                    >
+                                        <span>🌪️ Whirlwind Cleave</span>
+                                        <span class="combat-action-cost">15 MP | High DMG</span>
+                                    </button>
+                                } @else {
+                                    <button
+                                        class="combat-action-btn"
+                                        (click)="combat.executePlayerAttack('basic_magic')"
+                                    >
+                                        <span>🪄 Arcane Bolt</span>
+                                        <span class="combat-action-cost">
+                                            +{{ attackMods().intPlusWpn }} vs AC
+                                        </span>
+                                    </button>
+                                    <button
+                                        class="combat-action-btn"
+                                        [disabled]="ps.currentMp < 18"
+                                        (click)="combat.executePlayerAttack('special_firebolt', 18)"
+                                    >
+                                        <span>🔥 Firebolt Flare</span>
+                                        <span class="combat-action-cost">18 MP | Massive DMG</span>
+                                    </button>
+                                }
+
+                                @for (spell of progression.ownedSpells(); track spell.id) {
+                                    <button
+                                        class="combat-action-btn"
+                                        [attr.data-spell-id]="spell.id"
+                                        [disabled]="ps.currentMp < spell.mpCost"
+                                        (click)="combat.executePlayerSpell(spell.id)"
+                                    >
+                                        <span>{{ spell.icon }} {{ spell.name }}</span>
+                                        <span class="combat-action-cost">{{ spell.mpCost }} MP | Spell</span>
+                                    </button>
+                                }
+                            }
+
+                            @case ('spells') {
+                                @if (progression.ownedSpells().length === 0) {
+                                    <span style="color: var(--text-muted); font-size: 1.2rem; padding: 6px">
+                                        No grimoire spells learned yet! Unlock Frost Nova, Arcane Missile Volley,
+                                        Crimson Soul Drain, or Phusza Storm Strike in the After-Delve Shop.
+                                    </span>
+                                } @else {
+                                    @for (spell of progression.ownedSpells(); track spell.id) {
+                                        <button
+                                            class="combat-action-btn"
+                                            [attr.data-spell-id]="spell.id"
+                                            [disabled]="ps.currentMp < spell.mpCost"
+                                            (click)="combat.executePlayerSpell(spell.id)"
+                                        >
+                                            <span>{{ spell.icon }} {{ spell.name }}</span>
+                                            <span class="combat-action-cost">{{ spell.mpCost }} MP | Spell</span>
+                                        </button>
+                                    }
+                                }
+                            }
+
+                            @case ('defend') {
+                                <button class="combat-action-btn" (click)="combat.executePlayerDefend()">
+                                    <span>🛡️ Shield / Ward Stance</span>
+                                    <span class="combat-action-cost">+4 AC &amp; Half Damage</span>
+                                </button>
+                            }
+
+                            @case ('items') {
+                                @if (combat.groupedConsumables().length === 0) {
+                                    <span style="color: var(--text-muted); font-size: 1.2rem; padding: 6px">
+                                        Your battle belt holds no potions or consumables!
+                                    </span>
+                                } @else {
+                                    @for (item of combat.groupedConsumables(); track item.name) {
+                                        <button
+                                            class="combat-action-btn"
+                                            (click)="combat.executePlayerItem(item.name)"
+                                        >
+                                            <span>{{ item.icon }} {{ item.name }} (x{{ item.count }})</span>
+                                            <span class="combat-action-cost">{{ item.desc }}</span>
+                                        </button>
+                                    }
+                                }
+                            }
+
+                            @case ('flee') {
+                                <button class="combat-action-btn" (click)="combat.executePlayerFlee()">
+                                    <span>🏃 Tactical Retreat</span>
+                                    <span class="combat-action-cost">D20 + AGI Check</span>
+                                </button>
+                            }
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+
+        <button
+            class="result-dismiss-btn"
+            id="btnDismissCombat"
+            [style.display]="cs?.turn === 'ended' ? 'block' : 'none'"
+            (click)="combat.dismiss()"
+        >
+            {{
+                cs?.outcome === 'defeat'
+                    ? 'RESTORE & RETREAT TO ENTRANCE'
+                    : 'CLAIM VICTORY & CONTINUE'
+            }}
+        </button>
+    </div>
+</div>

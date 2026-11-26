@@ -1,0 +1,47 @@
+<header id="mainHeader" [style.display]="gameState.showHeader() ? 'flex' : 'none'">
+    <div
+        class="game-title"
+        id="headerTitleLogo"
+        style="cursor: pointer"
+        title="Return to Title Screen"
+        (click)="onReturnTitle()"
+    >
+        <img
+            src="dungeon_delver_logo_small.png"
+            alt="Dungeon Delver Logo"
+            class="header-logo-img"
+        />
+        <h1>DUNGEON DELVER</h1>
+        <span>| Chronicles of Phusza</span>
+    </div>
+    <div class="top-actions">
+        <span id="headerBankBadge" class="bank-vault-pill" title="Persistent HTTPCookie Bank">
+            🍪 Vault: <strong id="headerBankGold">{{ progression.gold() }}</strong>g |
+            <strong id="headerBankExp">{{ progression.exp() }}</strong> EXP
+        </span>
+        <button id="btnOpenShopHeader" class="retro-btn" (click)="onOpenShop()">🏪 SHOP</button>
+        <button id="btnReturnTitle" class="retro-btn" (click)="onReturnTitle()">🏰 TITLE</button>
+        <button id="btnMusicToggle" class="retro-btn" (click)="onToggleMusic()">
+            {{ audio.headerMusicLabel() }}
+        </button>
+        <button id="btnSoundToggle" class="retro-btn" (click)="onToggleSfx()">
+            {{ audio.headerSfxLabel() }}
+        </button>
+        <button
+            id="btnSwitchMode"
+            class="retro-btn"
+            [style.display]="gameState.showSwitchToForgeBtn() ? 'flex' : 'none'"
+            (click)="onSwitchToForge()"
+        >
+            🏕️ CHARACTER FORGE
+        </button>
+        <button
+            id="btnRandomize"
+            class="retro-btn"
+            [style.display]="gameState.showRandomizeBtn() ? 'flex' : 'none'"
+            (click)="onRandomize()"
+        >
+            🎲 RANDOM HERO
+        </button>
+    </div>
+</header>

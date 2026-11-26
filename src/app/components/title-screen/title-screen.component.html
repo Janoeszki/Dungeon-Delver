@@ -1,0 +1,121 @@
+<section
+    id="screenStart"
+    class="screen-view"
+    [style.display]="gameState.mode() === 'start' ? 'flex' : 'none'"
+>
+    <div id="viewportStart" #viewportStart class="canvas-3d"></div>
+    <div class="start-vignette"></div>
+
+    <div class="start-ui">
+        <div class="start-topbar">
+            <div class="realm-badge">
+                <span>💠</span>
+                <strong>REALM OF PHUSZA</strong>
+                <span>• 3D D20 DUNGEON RPG</span>
+                <button
+                    id="btnStartShop"
+                    class="hud-mini-btn"
+                    style="margin-left: 8px"
+                    (click)="onOpenShop()"
+                >
+                    🏪 SHOP (<span id="startBankGold">{{ progression.gold() }}</span>g /
+                    <span id="startBankExp">{{ progression.exp() }}</span> EXP)
+                </button>
+            </div>
+
+            <div class="music-player-hud">
+                <div class="visualizer-bars" id="musicVisualizer" aria-hidden="true">
+                    @for (slot of visualizerSlots; track slot) {
+                        <span class="vis-bar" #visBar></span>
+                    }
+                </div>
+                <div class="track-meta">
+                    <span class="track-kicker" id="musicStatusText">{{ audio.musicStatusText() }}</span>
+                    <span class="track-name" id="musicTrackLabel">{{ audio.trackTitle() }}</span>
+                </div>
+                <button
+                    id="btnStartMusicToggle"
+                    class="hud-mini-btn"
+                    [class.needs-awaken]="audio.needsAwaken()"
+                    (click)="onToggleMusic()"
+                >
+                    {{ audio.startMusicButtonLabel() }}
+                </button>
+                <div class="volume-wrap" title="Music Volume">
+                    <input
+                        id="musicVolumeSlider"
+                        class="music-slider"
+                        type="range"
+                        min="0"
+                        max="100"
+                        [value]="audio.musicVolume()"
+                        aria-label="Music Volume"
+                        (input)="onVolumeChange($event)"
+                    />
+                </div>
+                <button id="btnStartSfxToggle" class="hud-mini-btn" (click)="onToggleSfx()">
+                    {{ audio.startSfxLabel() }}
+                </button>
+            </div>
+        </div>
+
+        <div class="start-centerpiece">
+            <div
+                class="title-logo-stage"
+                id="titleLogoStage"
+                [class.burst]="logoBurst()"
+                title="Click the Runic Arch"
+                (click)="onLogoClick()"
+            >
+                <div class="logo-aura-crystal"></div>
+                <div class="logo-aura-brazier left"></div>
+                <div class="logo-aura-brazier right"></div>
+                <img
+                    src="dungeon_delver_chronicles-of-phusza.png"
+                    alt="Dungeon Delver: Chronicles of Phusza"
+                    class="title-logo-img"
+                />
+            </div>
+
+            <div class="title-menu-frame">
+                <span class="corner-gem tl"></span>
+                <span class="corner-gem tr"></span>
+                <span class="corner-gem bl"></span>
+                <span class="corner-gem br"></span>
+
+                <p class="title-tagline">
+                    Beyond the shattered seal lies <strong>Phusza's sunken sanctum</strong>.
+                    Forge an adventurer of steel or arcane fire, and test your fate against the D20.
+                </p>
+
+                <button id="btnStartForge" class="start-cta-primary" (click)="onStartForge()">
+                    ⚔️ FORGE YOUR HERO
+                </button>
+
+                <div class="title-secondary-row">
+                    <button id="btnQuickDelve" class="start-cta-secondary" (click)="onQuickDelve()">
+                        🎲 QUICK DELVE
+                    </button>
+                    <button id="btnShowLore" class="start-cta-secondary" (click)="onShowLore()">
+                        📜 CHRONICLES &amp; GUIDE
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="start-footer">
+            <button
+                id="audioPromptPill"
+                class="audio-prompt-pill"
+                [class.needs-gesture]="audio.needsAwaken()"
+                [class.playing]="!audio.needsAwaken()"
+                (click)="onAudioPromptClick()"
+            >
+                {{ audio.audioPromptText() }}
+            </button>
+            <div class="start-credits">
+                6 Playable Ancestries • 3D Point-and-Click Crypt • Live Web Audio Orchestral Score
+            </div>
+        </div>
+    </div>
+</section>

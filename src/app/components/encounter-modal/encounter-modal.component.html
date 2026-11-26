@@ -1,0 +1,73 @@
+<div
+    class="encounter-overlay"
+    id="encounterModal"
+    [style.display]="encounterService.isOpen() ? 'flex' : 'none'"
+>
+    @let enc = encounterService.currentEncounter();
+    <div class="encounter-card">
+        <div class="encounter-header">
+            <span class="encounter-icon" id="encIcon">{{ enc?.icon || '🚪' }}</span>
+            <div>
+                <h2 class="encounter-title" id="encTitle">{{ enc?.name || 'Encounter' }}</h2>
+                <span style="color: var(--text-muted); font-size: 1.1rem">Skill Check Encounter</span>
+            </div>
+        </div>
+
+        <p class="encounter-story" id="encStory">{{ enc?.description || '' }}</p>
+
+        <!-- Action Options -->
+        <div
+            class="encounter-options-group"
+            id="encOptionsList"
+            [style.display]="encounterService.stage() === 'choices' ? 'flex' : 'none'"
+        >
+            @for (item of encounterService.options(); track item.option.label) {
+                <button
+                    class="encounter-choice-btn"
+                    (click)="encounterService.executeCheck(item.option, item.statVal)"
+                >
+                    <span>⚔️ {{ item.option.label }}</span>
+                    <span class="check-badge">{{ item.badgeText }}</span>
+                </button>
+            }
+        </div>
+
+        <!-- Dice Roll Stage -->
+        <div
+            class="dice-roll-stage"
+            id="diceRollStage"
+            [style.display]="encounterService.stage() !== 'choices' ? 'flex' : 'none'"
+        >
+            <div
+                class="d20-icosahedron"
+                id="d20Die"
+                [class.d20-rolling]="encounterService.isRolling()"
+            >
+                <span class="d20-num" id="d20Value">{{ encounterService.d20Value() }}</span>
+            </div>
+            <div class="roll-formula-text" id="rollFormula">{{ encounterService.rollFormula() }}</div>
+            <div
+                [class]="'roll-outcome-banner ' + encounterService.outcomeClass()"
+                id="rollOutcomeBanner"
+                [style.display]="encounterService.stage() === 'result' ? 'block' : 'none'"
+            >
+                {{ encounterService.outcomeBanner() }}
+            </div>
+            <p
+                id="rollResultText"
+                style="font-size: 1.2rem; color: var(--text-light); text-align: center; padding: 0 8px"
+            >
+                {{ encounterService.resultText() }}
+            </p>
+        </div>
+
+        <button
+            class="result-dismiss-btn"
+            id="btnDismissEncounter"
+            [style.display]="encounterService.canDismiss() ? 'block' : 'none'"
+            (click)="encounterService.dismiss()"
+        >
+            CONTINUE ADVENTURE
+        </button>
+    </div>
+</div>

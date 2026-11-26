@@ -356,6 +356,25 @@ export class TitleSceneApp {
         }
     }
 
+    dispose() {
+        this.active = false;
+        if (this.rafId !== null) {
+            cancelAnimationFrame(this.rafId);
+            this.rafId = null;
+        }
+        if (typeof window !== 'undefined') {
+            if (this._onResize) window.removeEventListener('resize', this._onResize);
+            if (this._onPointerMove) window.removeEventListener('pointermove', this._onPointerMove);
+        }
+        const canvas = this.renderer?.domElement;
+        if (canvas && canvas.parentNode) {
+            canvas.parentNode.removeChild(canvas);
+        }
+        if (this.renderer && typeof this.renderer.dispose === 'function') {
+            this.renderer.dispose();
+        }
+    }
+
     animate() {
         if (!this.active) return;
         this.rafId = requestAnimationFrame(() => this.animate());

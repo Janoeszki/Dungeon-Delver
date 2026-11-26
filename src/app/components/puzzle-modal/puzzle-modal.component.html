@@ -1,0 +1,154 @@
+<div
+    class="encounter-overlay"
+    id="puzzleModal"
+    [style.display]="puzzleService.isOpen() ? 'flex' : 'none'"
+>
+    @let def = puzzleService.definition();
+    @let state = puzzleService.puzzleState();
+    <div class="encounter-card" style="width: 600px">
+        <div class="encounter-header">
+            <span class="encounter-icon" id="puzzleIcon">{{ def?.icon || '🔮' }}</span>
+            <div>
+                <h2 class="encounter-title" id="puzzleTitle">{{ def?.name || 'Arcane Puzzle' }}</h2>
+                <span style="color: var(--cyan-accent); font-size: 1.1rem">
+                    Floor 2 Mechanism • Solve to Unbind Rewards &amp; Gates
+                </span>
+            </div>
+        </div>
+
+        <p class="encounter-story" id="puzzleStory">{{ def?.description || '' }}</p>
+        <div class="puzzle-clue-box" id="puzzleClue">{{ def ? 'Clue: ' + def.clue : '' }}</div>
+
+        <div class="puzzle-stage" id="puzzleStage">
+            @if (def && state) {
+                @switch (def.puzzleType) {
+                    @case ('rune_sequence') {
+                        <div class="puzzle-sequence-bar">
+                            @for (slot of runeSlots(); track slot.index) {
+                                <div class="puzzle-slot" [class.filled]="slot.filled">
+                                    {{ slot.display }}
+                                </div>
+                            }
+                        </div>
+                        <div class="puzzle-grid-2">
+                            @for (glyph of def.glyphs || []; track glyph.id) {
+                                <button
+                                    class="puzzle-tile-btn"
+                                    [disabled]="state.solved || state.sequence.includes(glyph.id)"
+                                    (click)="puzzleService.sendInput({ type: 'select_rune', runeId: glyph.id })"
+                                >
+                                    <span style="font-size: 1.7rem">{{ glyph.icon }}</span>
+                                    <span>{{ glyph.label }}</span>
+                                </button>
+                            }
+                        </div>
+                        @if (!state.solved) {
+                            <button
+                                class="retro-btn"
+                                style="justify-content: center"
+                                (click)="puzzleService.sendInput({ type: 'reset_runes' })"
+                            >
+                                ↺ CLEAR SEQUENCE
+                            </button>
+                        }
+                    }
+
+                    @case ('mirror_alignment') {
+                        <div class="puzzle-grid-3">
+                            @for (mirror of def.mirrors || []; track mirror.id; let idx = $index) {
+                                @let angle = state.mirrorAngles[idx];
+                                <button
+                                    class="puzzle-tile-btn"
+                                    [disabled]="state.solved"
+                                    (click)="puzzleService.sendInput({ type: 'rotate_mirror', index: idx })"
+                                >
+                                    <strong>{{ mirror.label }}</strong>
+                                    <span style="color: var(--cyan-accent); font-size: 1.35rem">
+                                        {{ dirLabels[angle] || angle }}
+                                    </span>
+                                    <span style="font-size: 0.95rem; color: var(--text-muted)">
+                                        Click to Rotate
+                                    </span>
+                                </button>
+                            }
+                        </div>
+                        @if (!state.solved) {
+                            <button
+                                class="primary-action-btn"
+                                style="padding: 8px"
+                                (click)="puzzleService.evaluate()"
+                            >
+                                ✨ ALIGN STARLIGHT BEAM
+                            </button>
+                        }
+                    }
+
+                    @case ('alchemist_scales') {
+                        <div style="text-align: center; font-size: 1.25rem; color: var(--gold-bright)">
+                            Selected: {{ state.selectedWeights.length }} / {{ def.requiredCount }} weights | Total:
+                            {{ puzzleService.currentWeightSum() }} / {{ def.targetSum }}
+                        </div>
+                        <div class="puzzle-grid-3">
+                            @for (w of def.weights || []; track w.value) {
+                                @let selected = state.selectedWeights.includes(w.value);
+                                <button
+                                    class="puzzle-tile-btn"
+                                    [class.active]="selected"
+                                    [disabled]="
+                                        state.solved ||
+                                        (!selected && state.selectedWeights.length >= (def.requiredCount || 3))
+                                    "
+                                    (click)="puzzleService.sendInput({ type: 'toggle_weight', weight: w.value })"
+                                >
+                                    <span style="font-size: 1.4rem">⚖️ {{ w.value }}</span>
+                                    <span>{{ w.label }}</span>
+                                </button>
+                            }
+                        </div>
+                        @if (!state.solved) {
+                            <button
+                                class="primary-action-btn"
+                                style="padding: 8px"
+                                (click)="puzzleService.evaluate()"
+                            >
+                                ⚖️ WEIGH THE SCALE
+                            </button>
+                        }
+                    }
+                }
+            }
+        </div>
+
+        <div [class]="getStatusBannerClass()" id="puzzleStatusText">
+            {{ puzzleService.statusMessage() }}
+        </div>
+
+        <div class="title-secondary-row">
+            <button
+                class="start-cta-secondary"
+                id="btnPuzzleHint"
+                [style.display]="state?.solved ? 'none' : 'block'"
+                (click)="puzzleService.inspectHint()"
+            >
+                🔍 INSPECT CLUE (INT DC {{ def?.hintDc || 11 }})
+            </button>
+            <button
+                class="start-cta-secondary"
+                id="btnPuzzleStepBack"
+                [style.display]="state?.solved ? 'none' : 'block'"
+                (click)="puzzleService.stepBack()"
+            >
+                ↩ STEP BACK
+            </button>
+        </div>
+
+        <button
+            class="result-dismiss-btn"
+            id="btnPuzzleContinue"
+            [style.display]="state?.solved ? 'block' : 'none'"
+            (click)="puzzleService.continueAdventure()"
+        >
+            CONTINUE ADVENTURE
+        </button>
+    </div>
+</div>

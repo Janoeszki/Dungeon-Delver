@@ -40,8 +40,20 @@ import { DungeonWorldApp } from '../../js/dungeonWorld.js';
 import { ANCESTRY_DATA, CLASS_DATA, calculateStats } from '../../js/stats.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const indexHtmlPath = path.resolve(__dirname, '../../index.html');
-const indexHtml = fs.readFileSync(indexHtmlPath, 'utf8');
+const appDir = path.resolve(__dirname, '../../src/app');
+
+function readDirFiles(dir, ext) {
+    let out = '';
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) out += readDirFiles(full, ext);
+        else if (entry.name.endsWith(ext)) out += '\n' + fs.readFileSync(full, 'utf8');
+    }
+    return out;
+}
+
+const appTemplates = readDirFiles(appDir, '.html');
+const appScripts = readDirFiles(appDir, '.ts');
 
 function aabbOverlapArea(a, b) {
     const ox = Math.max(0, Math.min(a.maxX, b.maxX) - Math.max(a.minX, b.minX));
@@ -415,7 +427,7 @@ describe('Floor 2 run factory, DungeonWorldApp & index.html wiring', () => {
         app.dispose();
     });
 
-    it('contains Floor 2 DOM controls and valid module script syntax in index.html', () => {
+    it('contains Floor 2 DOM controls and valid Angular wiring in src/app', () => {
         for (const id of [
             'floorSelectForge',
             'btnDescendFloor2',
@@ -430,15 +442,10 @@ describe('Floor 2 run factory, DungeonWorldApp & index.html wiring', () => {
             'btnPuzzleStepBack',
             'btnPuzzleContinue'
         ]) {
-            assert.match(indexHtml, new RegExp(`id=["']${id}["']`), `Missing #${id}`);
+            assert.match(appTemplates, new RegExp(`id=["']${id}["']`), `Missing #${id}`);
         }
-        assert.match(indexHtml, /getMonsterTemplate\s*\(/);
-        assert.match(indexHtml, /createPuzzleState\s*\(/);
-        assert.match(indexHtml, /floorNumber:\s*currentFloor/);
-
-        const match = indexHtml.match(/<script type="module">([\s\S]*?)<\/script>/);
-        assert.ok(match);
-        const strippedImports = match[1].replace(/^\s*import\s+[\s\S]*?from\s+['"][^'"]+['"];?\s*$/gm, '');
-        assert.doesNotThrow(() => new Function(strippedImports));
+        assert.match(appScripts, /getMonsterTemplate\s*\(/);
+        assert.match(appScripts, /createPuzzleState\s*\(/);
+        assert.match(appScripts, /floorNumber\s*[,:]/);
     });
 });

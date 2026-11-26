@@ -1,0 +1,452 @@
+<div
+    class="encounter-overlay shop-overlay"
+    id="shopModal"
+    [style.display]="gameState.shopModalOpen() ? 'flex' : 'none'"
+    (click)="onBackdropClick($event)"
+>
+    <div class="shop-modal-card" id="shopModalCard">
+        <div class="shop-header-bar">
+            <div style="display: flex; align-items: center; gap: 12px">
+                <span style="font-size: 2.1rem">🏪</span>
+                <div>
+                    <h2 class="encounter-title" id="shopTitle">AFTER-DUNGEON-DELVE EMPORIUM</h2>
+                    <span id="shopCookieBadge" style="color: var(--cyan-accent); font-size: 1.05rem">
+                        🍪 HTTPCookie Persistent Vault (dd_progression • dd_gold • dd_exp)
+                    </span>
+                </div>
+            </div>
+            <div class="shop-bank-strip">
+                <div class="shop-currency-badge" title="Total Accumulated Gold (Persisted via HTTPCookie)">
+                    <span>🪙 GOLD:</span>
+                    <strong id="shopGoldBalance">{{ progression.gold() }}</strong>
+                </div>
+                <div class="shop-currency-badge exp" title="Total Accumulated EXP (Persisted via HTTPCookie)">
+                    <span>⭐ EXP:</span>
+                    <strong id="shopExpBalance">{{ progression.exp() }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="shop-haul-banner" id="shopDelveHaulBanner">
+            <div>
+                🏆 <strong>Latest Delve Haul:</strong>
+                +<span id="shopLastDelveGold" style="color: var(--gold-bright)">{{ lastDelveGold() }}</span> Gold &amp;
+                +<span id="shopLastDelveExp" style="color: var(--cyan-accent)">{{ lastDelveExp() }}</span> EXP
+                (<span id="shopDelvesCount">{{ progression.delvesCompleted() }}</span> Delves Completed)
+            </div>
+            <div id="shopActiveLoadoutText" style="color: #c084fc">{{ activeLoadoutText() }}</div>
+        </div>
+
+        <div
+            class="shop-feedback-banner"
+            id="shopFeedbackBanner"
+            [class.success]="gameState.shopFeedback().kind === 'success'"
+            [class.error]="gameState.shopFeedback().kind === 'error'"
+        >
+            {{ gameState.shopFeedback().message }}
+        </div>
+
+        <div class="shop-tabs-row" id="shopTabsRow">
+            @for (tab of tabs; track tab.key) {
+                <button
+                    class="shop-tab-btn"
+                    [id]="tab.id"
+                    [class.active]="gameState.shopTab() === tab.key"
+                    [attr.data-shop-tab]="tab.key"
+                    (click)="onSelectTab(tab.key)"
+                >
+                    {{ tab.label }}
+                </button>
+            }
+        </div>
+
+        <div class="shop-content-scroll" id="shopContentGrid">
+            <!-- 1. Better Armor -->
+            <div
+                class="shop-section-card"
+                id="shopSectionArmor"
+                data-shop-section="armor"
+                [style.display]="isSectionVisible('armor') ? 'flex' : 'none'"
+            >
+                <div class="shop-section-title">
+                    <span>🛡️ BETTER ARMOR (GOLD)</span>
+                    <span style="font-size: 1rem; color: var(--text-muted)">
+                        Boosts AC, Max HP/MP &amp; Mitigation
+                    </span>
+                </div>
+                <div class="shop-items-list" id="shopArmorList">
+                    @for (item of progression.armorCatalog; track item.id) {
+                        @let isOwned = progression.ownedArmor().includes(item.id);
+                        @let isEquipped = progression.equippedArmorId() === item.id;
+                        <div
+                            class="shop-item-row"
+                            [class.equipped]="isEquipped"
+                            [class.owned]="!isEquipped && isOwned"
+                            [attr.data-shop-armor]="item.id"
+                        >
+                            <div class="shop-item-info">
+                                <div class="shop-item-name">
+                                    {{ item.icon }} {{ item.name }}
+                                    <span style="font-size: 0.95rem; color: var(--cyan-accent)">
+                                        [Tier {{ item.tier }}]
+                                    </span>
+                                </div>
+                                <div class="shop-item-desc">{{ item.desc }}</div>
+                            </div>
+                            @if (isEquipped) {
+                                <button
+                                    [id]="'btnArmor_' + item.id"
+                                    [attr.data-buy-armor]="item.id"
+                                    class="shop-buy-btn equipped-btn"
+                                >
+                                    ✅ EQUIPPED
+                                </button>
+                            } @else if (isOwned) {
+                                <button
+                                    [id]="'btnArmor_' + item.id"
+                                    [attr.data-buy-armor]="item.id"
+                                    class="shop-buy-btn equip-btn"
+                                    (click)="onEquipArmor(item.id)"
+                                >
+                                    🛡️ EQUIP
+                                </button>
+                            } @else {
+                                <button
+                                    [id]="'btnArmor_' + item.id"
+                                    [attr.data-buy-armor]="item.id"
+                                    class="shop-buy-btn"
+                                    [disabled]="progression.gold() < item.cost"
+                                    (click)="onBuyArmor(item.id)"
+                                >
+                                    🪙 BUY ({{ item.cost }}g)
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- 2. Better Weapons -->
+            <div
+                class="shop-section-card"
+                id="shopSectionWeapons"
+                data-shop-section="weapons"
+                [style.display]="isSectionVisible('weapons') ? 'flex' : 'none'"
+            >
+                <div class="shop-section-title">
+                    <span>⚔️ BETTER WEAPONS (GOLD)</span>
+                    <span style="font-size: 1rem; color: var(--text-muted)">
+                        Boosts Attack Hit, Damage, STR/INT &amp; Crit
+                    </span>
+                </div>
+                <div class="shop-items-list" id="shopWeaponsList">
+                    @for (item of progression.weaponCatalog; track item.id) {
+                        @let isOwned = progression.ownedWeapons().includes(item.id);
+                        @let isEquipped = progression.equippedWeaponId() === item.id;
+                        <div
+                            class="shop-item-row"
+                            [class.equipped]="isEquipped"
+                            [class.owned]="!isEquipped && isOwned"
+                            [attr.data-shop-weapon]="item.id"
+                        >
+                            <div class="shop-item-info">
+                                <div class="shop-item-name">
+                                    {{ item.icon }} {{ item.name }}
+                                    <span style="font-size: 0.95rem; color: var(--cyan-accent)">
+                                        [Tier {{ item.tier }}]
+                                    </span>
+                                </div>
+                                <div class="shop-item-desc">{{ item.desc }}</div>
+                            </div>
+                            @if (isEquipped) {
+                                <button
+                                    [id]="'btnWeapon_' + item.id"
+                                    [attr.data-buy-weapon]="item.id"
+                                    class="shop-buy-btn equipped-btn"
+                                >
+                                    ✅ EQUIPPED
+                                </button>
+                            } @else if (isOwned) {
+                                <button
+                                    [id]="'btnWeapon_' + item.id"
+                                    [attr.data-buy-weapon]="item.id"
+                                    class="shop-buy-btn equip-btn"
+                                    (click)="onEquipWeapon(item.id)"
+                                >
+                                    ⚔️ EQUIP
+                                </button>
+                            } @else {
+                                <button
+                                    [id]="'btnWeapon_' + item.id"
+                                    [attr.data-buy-weapon]="item.id"
+                                    class="shop-buy-btn"
+                                    [disabled]="progression.gold() < item.cost"
+                                    (click)="onBuyWeapon(item.id)"
+                                >
+                                    🪙 BUY ({{ item.cost }}g)
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- 3. New Spells -->
+            <div
+                class="shop-section-card"
+                id="shopSectionSpells"
+                data-shop-section="spells"
+                [style.display]="isSectionVisible('spells') ? 'flex' : 'none'"
+            >
+                <div class="shop-section-title">
+                    <span>✨ NEW ARCANE SPELLS (GOLD)</span>
+                    <span style="font-size: 1rem; color: var(--text-muted)">
+                        Usable in Tactical Dungeon Combat
+                    </span>
+                </div>
+                <div class="shop-items-list" id="shopSpellsList">
+                    @for (item of progression.spellCatalog; track item.id) {
+                        @let isOwned = progression.ownedSpellIds().includes(item.id);
+                        <div
+                            class="shop-item-row"
+                            [class.equipped]="isOwned"
+                            [attr.data-shop-spell]="item.id"
+                        >
+                            <div class="shop-item-info">
+                                <div class="shop-item-name">
+                                    {{ item.icon }} {{ item.name }}
+                                    <span style="font-size: 0.95rem; color: #c084fc">
+                                        [{{ item.mpCost }} MP]
+                                    </span>
+                                </div>
+                                <div class="shop-item-desc">{{ item.desc }}</div>
+                            </div>
+                            @if (isOwned) {
+                                <button
+                                    [id]="'btnSpell_' + item.id"
+                                    [attr.data-buy-spell]="item.id"
+                                    class="shop-buy-btn equipped-btn"
+                                >
+                                    ✨ LEARNED
+                                </button>
+                            } @else {
+                                <button
+                                    [id]="'btnSpell_' + item.id"
+                                    [attr.data-buy-spell]="item.id"
+                                    class="shop-buy-btn"
+                                    [disabled]="progression.gold() < item.cost"
+                                    (click)="onBuySpell(item.id)"
+                                >
+                                    🪙 LEARN ({{ item.cost }}g)
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- 4. New Ancestries -->
+            <div
+                class="shop-section-card"
+                id="shopSectionAncestries"
+                data-shop-section="ancestries"
+                [style.display]="isSectionVisible('ancestries') ? 'flex' : 'none'"
+            >
+                <div class="shop-section-title">
+                    <span>🐉 UNLOCK NEW ANCESTRIES (GOLD)</span>
+                    <span style="font-size: 1rem; color: var(--text-muted)">
+                        Playable Bloodlines in Character Forge
+                    </span>
+                </div>
+                <div class="shop-items-list" id="shopAncestriesList">
+                    @for (item of progression.ancestryCatalog; track item.id) {
+                        @let isUnlocked = progression.isAncestryUnlocked(item.id);
+                        @let isActive = hero.heroConfig().ancestry === item.id;
+                        <div
+                            class="shop-item-row"
+                            [class.equipped]="isActive"
+                            [class.owned]="!isActive && isUnlocked"
+                            [attr.data-shop-ancestry]="item.id"
+                        >
+                            <div class="shop-item-info">
+                                <div class="shop-item-name">{{ item.icon }} {{ item.name }}</div>
+                                <div class="shop-item-desc">{{ item.perk }}</div>
+                            </div>
+                            @if (isUnlocked) {
+                                <button
+                                    [id]="'btnAncestry_' + item.id"
+                                    [attr.data-buy-ancestry]="item.id"
+                                    [class]="isActive ? 'shop-buy-btn equipped-btn' : 'shop-buy-btn equip-btn'"
+                                    (click)="onSelectAncestryHero(item.id, item.name)"
+                                >
+                                    {{ isActive ? '✅ SELECTED' : '🐉 SELECT HERO' }}
+                                </button>
+                            } @else {
+                                <button
+                                    [id]="'btnAncestry_' + item.id"
+                                    [attr.data-buy-ancestry]="item.id"
+                                    class="shop-buy-btn"
+                                    [disabled]="progression.gold() < item.cost"
+                                    (click)="onBuyAncestry(item.id)"
+                                >
+                                    🪙 UNLOCK ({{ item.cost }}g)
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- 5. Per-Ancestry Stat Increases -->
+            <div
+                class="shop-section-card full-span"
+                id="shopSectionStats"
+                data-shop-section="stats"
+                [style.display]="isSectionVisible('stats') ? 'flex' : 'none'"
+            >
+                <div class="shop-section-title">
+                    <span>📈 ANCESTRY STAT INCREASES (SPEND EXP)</span>
+                    <span style="font-size: 1rem; color: var(--cyan-accent)">
+                        Permanent Stat Boosts Applying in Floor 1 &amp; Beyond
+                    </span>
+                </div>
+                <div style="font-size: 1.1rem; color: var(--text-muted)">
+                    Select an unlocked Ancestry to train with accumulated EXP (Cost: 40 EXP + 20 EXP per level):
+                </div>
+                <div class="shop-ancestry-pills" id="shopStatAncestryTabs">
+                    @for (ancKey of progression.allAncestries; track ancKey) {
+                        @let ancObj = hero.ancestryData[ancKey];
+                        @if (ancObj) {
+                            @let unlocked = progression.isAncestryUnlocked(ancKey);
+                            @let total = getAncestryTotalBoosts(ancKey);
+                            <button
+                                class="shop-ancestry-pill"
+                                [class.active]="resolvedStatAncestry() === ancKey"
+                                [class.locked]="!unlocked"
+                                [attr.data-stat-ancestry]="ancKey"
+                                (click)="onSelectStatAncestry(ancKey)"
+                            >
+                                {{ ancObj.icon }} {{ ancObj.name
+                                }}{{ !unlocked ? ' 🔒' : total > 0 ? ' (+' + total + ')' : '' }}
+                            </button>
+                        }
+                    }
+                </div>
+
+                <div class="shop-floor1-preview" id="shopFloor1StatPreview">
+                    <div>
+                        <strong style="color: var(--gold-bright)">
+                            {{ targetAncestryObj().icon }} {{ targetAncestryObj().name }} Floor 1 Starting Stats
+                            (with EXP Boosts &amp; Gear):
+                        </strong>
+                    </div>
+                    <div>
+                        ⚔️ <strong>Warrior:</strong> {{ warriorPreview().maxHp }} HP /
+                        {{ warriorPreview().maxMp }} MP • STR {{ warriorPreview().str }} • VIT
+                        {{ warriorPreview().vit }} • AGI {{ warriorPreview().agi }} • INT
+                        {{ warriorPreview().int }}
+                    </div>
+                    <div>
+                        🔮 <strong>Mage:</strong> {{ magePreview().maxHp }} HP / {{ magePreview().maxMp }} MP •
+                        INT {{ magePreview().int }} • AGI {{ magePreview().agi }} • VIT
+                        {{ magePreview().vit }} • STR {{ magePreview().str }}
+                    </div>
+                </div>
+
+                <div class="shop-stat-upgrade-grid" id="shopStatUpgradeGrid">
+                    @let maxLvl = progression.statUpgradeConfig.maxBoostPerStat;
+                    @for (meta of statUpgradeMeta; track meta.key) {
+                        @let lvl = targetAncestryBoosts()[meta.key] || 0;
+                        @let cost = progression.getStatUpgradeCost(resolvedStatAncestry(), meta.key);
+                        @let baseBonus = targetAncestryObj().bonuses[meta.key] || 0;
+                        <div class="shop-stat-card" [attr.data-stat-card]="meta.key">
+                            <div>
+                                <div
+                                    style="
+                                        display: flex;
+                                        justify-content: space-between;
+                                        font-size: 1.18rem;
+                                        color: var(--gold-bright);
+                                    "
+                                >
+                                    <strong>{{ meta.label }}</strong>
+                                    <span style="color: #4ade80">EXP Boost: +{{ lvl }} / +{{ maxLvl }}</span>
+                                </div>
+                                <div style="font-size: 1rem; color: var(--text-muted)">{{ meta.desc }}</div>
+                                <div style="font-size: 1.05rem; color: var(--cyan-accent)">
+                                    Ancestry Mod: {{ formatMod(baseBonus) }} → Effective:
+                                    {{ formatMod(baseBonus + lvl) }}
+                                </div>
+                            </div>
+
+                            @if (!targetAncestryUnlocked()) {
+                                <button
+                                    [id]="'btnUpgradeStat_' + meta.key"
+                                    [attr.data-upgrade-stat]="meta.key"
+                                    [attr.data-upgrade-ancestry]="resolvedStatAncestry()"
+                                    class="shop-buy-btn"
+                                    disabled
+                                >
+                                    🔒 UNLOCK ANCESTRY FIRST
+                                </button>
+                            } @else if (lvl >= maxLvl) {
+                                <button
+                                    [id]="'btnUpgradeStat_' + meta.key"
+                                    [attr.data-upgrade-stat]="meta.key"
+                                    [attr.data-upgrade-ancestry]="resolvedStatAncestry()"
+                                    class="shop-buy-btn equipped-btn"
+                                    disabled
+                                >
+                                    🌟 MAX BOOST (+10)
+                                </button>
+                            } @else {
+                                <button
+                                    [id]="'btnUpgradeStat_' + meta.key"
+                                    [attr.data-upgrade-stat]="meta.key"
+                                    [attr.data-upgrade-ancestry]="resolvedStatAncestry()"
+                                    class="shop-buy-btn"
+                                    [disabled]="progression.exp() < cost"
+                                    (click)="onUpgradeStat(meta.key)"
+                                >
+                                    ⭐ BOOST +1 {{ meta.key.toUpperCase() }} ({{ cost }} EXP)
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="shop-footer-bar">
+            <div style="display: flex; gap: 10px; flex-wrap: wrap">
+                <button
+                    class="primary-action-btn"
+                    id="btnShopNewDelve"
+                    style="padding: 8px 18px; font-size: 1.3rem"
+                    (click)="onLaunchFloor(1)"
+                >
+                    ⚔️ LAUNCH FLOOR 1 DELVE
+                </button>
+                <button
+                    class="retro-btn"
+                    id="btnShopFloor2Delve"
+                    style="padding: 8px 16px"
+                    (click)="onLaunchFloor(2)"
+                >
+                    🔮 DELVE FLOOR 2
+                </button>
+                <button class="retro-btn" id="btnShopToForge" (click)="onGoForge()">
+                    🏕️ CHARACTER FORGE
+                </button>
+            </div>
+            <button
+                class="result-dismiss-btn"
+                id="btnCloseShop"
+                style="display: block; padding: 8px 18px"
+                (click)="onClose()"
+            >
+                ✖ CLOSE SHOP
+            </button>
+        </div>
+    </div>
+</div>
